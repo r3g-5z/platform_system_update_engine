@@ -24,21 +24,28 @@
 #include "update_engine/common/hardware_interface.h"
 #include "update_engine/update_manager/system_provider.h"
 
-namespace chromeos_update_engine {
-class LibCrosProxy;
-}
+namespace org {
+namespace chromium {
+class LibCrosServiceInterfaceProxyInterface;
+}  // namespace chromium
+}  // namespace org
 
 namespace chromeos_update_manager {
 
 // SystemProvider concrete implementation.
 class RealSystemProvider : public SystemProvider {
  public:
-  RealSystemProvider(chromeos_update_engine::HardwareInterface* hardware,
-                     chromeos_update_engine::BootControlInterface* boot_control,
-                     chromeos_update_engine::LibCrosProxy* libcros_proxy)
+  RealSystemProvider(
+      chromeos_update_engine::HardwareInterface* hardware,
+      chromeos_update_engine::BootControlInterface* boot_control,
+      org::chromium::LibCrosServiceInterfaceProxyInterface* libcros_proxy)
       : hardware_(hardware),
+#if USE_CHROME_KIOSK_APP
         boot_control_(boot_control),
         libcros_proxy_(libcros_proxy) {}
+#else
+        boot_control_(boot_control) {}
+#endif  // USE_CHROME_KIOSK_APP
 
   // Initializes the provider and returns whether it succeeded.
   bool Init();
@@ -75,7 +82,9 @@ class RealSystemProvider : public SystemProvider {
 
   chromeos_update_engine::HardwareInterface* const hardware_;
   chromeos_update_engine::BootControlInterface* const boot_control_;
-  chromeos_update_engine::LibCrosProxy* const libcros_proxy_ ALLOW_UNUSED_TYPE;
+#if USE_CHROME_KIOSK_APP
+  org::chromium::LibCrosServiceInterfaceProxyInterface* const libcros_proxy_;
+#endif  // USE_CHROME_KIOSK_APP
 
   DISALLOW_COPY_AND_ASSIGN(RealSystemProvider);
 };

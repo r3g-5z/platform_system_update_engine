@@ -53,7 +53,7 @@ base::Time TimeFromStructTimespec(struct timespec *ts);
 std::string StringVectorToString(const std::vector<std::string> &vec_str);
 
 // Calculates the p2p file id from payload hash and size
-std::string CalculateP2PFileId(const std::string& payload_hash,
+std::string CalculateP2PFileId(const brillo::Blob& payload_hash,
                                size_t payload_size);
 
 // Parse the firmware version from one line of output from the
@@ -192,6 +192,12 @@ bool MountFilesystem(const std::string& device,
                      const std::string& fs_mount_options);
 bool UnmountFilesystem(const std::string& mountpoint);
 
+// Return whether the passed |mountpoint| path is a directory where a filesystem
+// is mounted. Due to detection mechanism limitations, when used on directories
+// where another part of the tree was bind mounted returns true only if bind
+// mounted on top of a different filesystem (not inside the same filesystem).
+bool IsMountpoint(const std::string& mountpoint);
+
 // Returns a human-readable string with the file format based on magic constants
 // on the header of the file.
 std::string GetFileFormat(const std::string& path);
@@ -301,9 +307,6 @@ bool ConvertToOmahaInstallDate(base::Time time, int *out_num_days);
 // |minor_version| to that value. Return whether the value was found and valid.
 bool GetMinorVersion(const brillo::KeyValueStore& store,
                      uint32_t* minor_version);
-
-// Returns whether zlib |fingerprint| is compatible with zlib we are using.
-bool IsZlibCompatible(const std::string& fingerprint);
 
 // This function reads the specified data in |extents| into |out_data|. The
 // extents are read from the file at |path|. |out_data_size| is the size of

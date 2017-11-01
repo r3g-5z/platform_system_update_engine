@@ -31,11 +31,10 @@
 #include <policy/libpolicy.h>
 #include <policy/mock_device_policy.h>
 
-#if USE_LIBCROS
-#include "libcros/dbus-proxies.h"
-#include "libcros/dbus-proxy-mocks.h"
-#include "update_engine/libcros_proxy.h"
-#endif // USE_LIBCROS
+#if USE_CHROME_NETWORK_PROXY
+#include "network_proxy/dbus-proxies.h"
+#include "network_proxy/dbus-proxy-mocks.h"
+#endif  // USE_CHROME_NETWORK_PROXY
 #include "update_engine/common/fake_clock.h"
 #include "update_engine/common/fake_prefs.h"
 #include "update_engine/common/mock_action.h"
@@ -49,20 +48,26 @@
 #include "update_engine/fake_system_state.h"
 #include "update_engine/mock_p2p_manager.h"
 #include "update_engine/mock_payload_state.h"
+#include "update_engine/mock_service_observer.h"
 #include "update_engine/payload_consumer/filesystem_verifier_action.h"
 #include "update_engine/payload_consumer/install_plan.h"
 #include "update_engine/payload_consumer/payload_constants.h"
 #include "update_engine/payload_consumer/postinstall_runner_action.h"
 
+namespace org {
+namespace chromium {
+class NetworkProxyServiceInterfaceProxyMock;
+}  // namespace chromium
+}  // namespace org
+
 using base::Time;
 using base::TimeDelta;
-#if USE_LIBCROS
-using org::chromium::LibCrosServiceInterfaceProxyMock;
-using org::chromium::UpdateEngineLibcrosProxyResolvedInterfaceProxyMock;
-#endif // USE_LIBCROS
+using org::chromium::NetworkProxyServiceInterfaceProxyInterface;
+using org::chromium::NetworkProxyServiceInterfaceProxyMock;
 using std::string;
 using std::unique_ptr;
 using testing::DoAll;
+using testing::Field;
 using testing::InSequence;
 using testing::Ne;
 using testing::NiceMock;
@@ -72,6 +77,7 @@ using testing::ReturnPointee;
 using testing::SaveArg;
 using testing::SetArgumentPointee;
 using testing::_;
+using update_engine::UpdateEngineStatus;
 using update_engine::UpdateStatus;
 
 namespace chromeos_update_engine {
@@ -81,9 +87,10 @@ namespace chromeos_update_engine {
 // methods.
 class UpdateAttempterUnderTest : public UpdateAttempter {
  public:
-  UpdateAttempterUnderTest(SystemState* system_state,
-                           LibCrosProxy* libcros_proxy)
-      : UpdateAttempter(system_state, nullptr, libcros_proxy) {}
+  UpdateAttempterUnderTest(
+      SystemState* system_state,
+      NetworkProxyServiceInterfaceProxyInterface* network_proxy_service_proxy)
+      : UpdateAttempter(system_state, nullptr, network_proxy_service_proxy) {}
 
   // Wrap the update scheduling method, allowing us to opt out of scheduled
   // updates for testing purposes.
@@ -112,16 +119,7 @@ class UpdateAttempterUnderTest : public UpdateAttempter {
 class UpdateAttempterTest : public ::testing::Test {
  protected:
   UpdateAttempterTest()
-      :
-#if USE_LIBCROS
-        service_interface_mock_(new LibCrosServiceInterfaceProxyMock()),
-        ue_proxy_resolved_interface_mock_(
-            new NiceMock<UpdateEngineLibcrosProxyResolvedInterfaceProxyMock>()),
-        libcros_proxy_(
-            brillo::make_unique_ptr(service_interface_mock_),
-            brillo::make_unique_ptr(ue_proxy_resolved_interface_mock_)),
-#endif  // USE_LIBCROS
-        certificate_checker_(fake_system_state_.mock_prefs(),
+      : certificate_checker_(fake_system_state_.mock_prefs(),
                              &openssl_wrapper_) {
     // Override system state members.
     fake_system_state_.set_connection_manager(&mock_connection_manager);
@@ -141,7 +139,7 @@ class UpdateAttempterTest : public ::testing::Test {
     EXPECT_EQ(0.0, attempter_.download_progress_);
     EXPECT_EQ(0, attempter_.last_checked_time_);
     EXPECT_EQ("0.0.0.0", attempter_.new_version_);
-    EXPECT_EQ(0, attempter_.new_payload_size_);
+    EXPECT_EQ(0ULL, attempter_.new_payload_size_);
     processor_ = new NiceMock<MockActionProcessor>();
     attempter_.processor_.reset(processor_);  // Transfers ownership.
     prefs_ = fake_system_state_.mock_prefs();
@@ -192,15 +190,13 @@ class UpdateAttempterTest : public ::testing::Test {
   brillo::BaseMessageLoop loop_{&base_loop_};
 
   FakeSystemState fake_system_state_;
-#if USE_LIBCROS
-  LibCrosServiceInterfaceProxyMock* service_interface_mock_;
-  UpdateEngineLibcrosProxyResolvedInterfaceProxyMock*
-      ue_proxy_resolved_interface_mock_;
-  LibCrosProxy libcros_proxy_;
-  UpdateAttempterUnderTest attempter_{&fake_system_state_, &libcros_proxy_};
+#if USE_CHROME_NETWORK_PROXY
+  NetworkProxyServiceInterfaceProxyMock network_proxy_service_proxy_mock_;
+  UpdateAttempterUnderTest attempter_{&fake_system_state_,
+                                      &network_proxy_service_proxy_mock_};
 #else
   UpdateAttempterUnderTest attempter_{&fake_system_state_, nullptr};
-#endif  // USE_LIBCROS
+#endif  // USE_CHROME_NETWORK_PROXY
   OpenSSLWrapper openssl_wrapper_;
   CertificateChecker certificate_checker_;
 
@@ -225,8 +221,8 @@ TEST_F(UpdateAttempterTest, ActionCompletedDownloadTest) {
   DownloadAction action(prefs_, nullptr, nullptr, nullptr, fetcher.release());
   EXPECT_CALL(*prefs_, GetInt64(kPrefsDeltaUpdateFailures, _)).Times(0);
   attempter_.ActionCompleted(nullptr, &action, ErrorCode::kSuccess);
-  EXPECT_EQ(503, attempter_.http_response_code());
   EXPECT_EQ(UpdateStatus::FINALIZING, attempter_.status());
+  EXPECT_EQ(0.0, attempter_.download_progress_);
   ASSERT_EQ(nullptr, attempter_.error_event_.get());
 }
 
@@ -238,6 +234,86 @@ TEST_F(UpdateAttempterTest, ActionCompletedErrorTest) {
       .WillOnce(Return(false));
   attempter_.ActionCompleted(nullptr, &action, ErrorCode::kError);
   ASSERT_NE(nullptr, attempter_.error_event_.get());
+}
+
+TEST_F(UpdateAttempterTest, DownloadProgressAccumulationTest) {
+  // Simple test case, where all the values match (nothing was skipped)
+  uint64_t bytes_progressed_1 = 1024 * 1024;  // 1MB
+  uint64_t bytes_progressed_2 = 1024 * 1024;  // 1MB
+  uint64_t bytes_received_1 = bytes_progressed_1;
+  uint64_t bytes_received_2 = bytes_received_1 + bytes_progressed_2;
+  uint64_t bytes_total = 20 * 1024 * 1024;  // 20MB
+
+  double progress_1 =
+      static_cast<double>(bytes_received_1) / static_cast<double>(bytes_total);
+  double progress_2 =
+      static_cast<double>(bytes_received_2) / static_cast<double>(bytes_total);
+
+  EXPECT_EQ(0.0, attempter_.download_progress_);
+  // This is set via inspecting the InstallPlan payloads when the
+  // OmahaResponseAction is completed
+  attempter_.new_payload_size_ = bytes_total;
+  NiceMock<MockServiceObserver> observer;
+  EXPECT_CALL(observer,
+              SendStatusUpdate(AllOf(
+                  Field(&UpdateEngineStatus::progress, progress_1),
+                  Field(&UpdateEngineStatus::status, UpdateStatus::DOWNLOADING),
+                  Field(&UpdateEngineStatus::new_size_bytes, bytes_total))));
+  EXPECT_CALL(observer,
+              SendStatusUpdate(AllOf(
+                  Field(&UpdateEngineStatus::progress, progress_2),
+                  Field(&UpdateEngineStatus::status, UpdateStatus::DOWNLOADING),
+                  Field(&UpdateEngineStatus::new_size_bytes, bytes_total))));
+  attempter_.AddObserver(&observer);
+  attempter_.BytesReceived(bytes_progressed_1, bytes_received_1, bytes_total);
+  EXPECT_EQ(progress_1, attempter_.download_progress_);
+  // This iteration validates that a later set of updates to the variables are
+  // properly handled (so that |getStatus()| will return the same progress info
+  // as the callback is receiving.
+  attempter_.BytesReceived(bytes_progressed_2, bytes_received_2, bytes_total);
+  EXPECT_EQ(progress_2, attempter_.download_progress_);
+}
+
+TEST_F(UpdateAttempterTest, ChangeToDownloadingOnReceivedBytesTest) {
+  // The transition into UpdateStatus::DOWNLOADING happens when the
+  // first bytes are received.
+  uint64_t bytes_progressed = 1024 * 1024;    // 1MB
+  uint64_t bytes_received = 2 * 1024 * 1024;  // 2MB
+  uint64_t bytes_total = 20 * 1024 * 1024;    // 300MB
+  attempter_.status_ = UpdateStatus::CHECKING_FOR_UPDATE;
+  // This is set via inspecting the InstallPlan payloads when the
+  // OmahaResponseAction is completed
+  attempter_.new_payload_size_ = bytes_total;
+  EXPECT_EQ(0.0, attempter_.download_progress_);
+  NiceMock<MockServiceObserver> observer;
+  EXPECT_CALL(observer,
+              SendStatusUpdate(AllOf(
+                  Field(&UpdateEngineStatus::status, UpdateStatus::DOWNLOADING),
+                  Field(&UpdateEngineStatus::new_size_bytes, bytes_total))));
+  attempter_.AddObserver(&observer);
+  attempter_.BytesReceived(bytes_progressed, bytes_received, bytes_total);
+  EXPECT_EQ(UpdateStatus::DOWNLOADING, attempter_.status_);
+}
+
+TEST_F(UpdateAttempterTest, BroadcastCompleteDownloadTest) {
+  // There is a special case to ensure that at 100% downloaded,
+  // download_progress_ is updated and that value broadcast. This test confirms
+  // that.
+  uint64_t bytes_progressed = 0;              // ignored
+  uint64_t bytes_received = 5 * 1024 * 1024;  // ignored
+  uint64_t bytes_total = 5 * 1024 * 1024;     // 300MB
+  attempter_.status_ = UpdateStatus::DOWNLOADING;
+  attempter_.new_payload_size_ = bytes_total;
+  EXPECT_EQ(0.0, attempter_.download_progress_);
+  NiceMock<MockServiceObserver> observer;
+  EXPECT_CALL(observer,
+              SendStatusUpdate(AllOf(
+                  Field(&UpdateEngineStatus::progress, 1.0),
+                  Field(&UpdateEngineStatus::status, UpdateStatus::DOWNLOADING),
+                  Field(&UpdateEngineStatus::new_size_bytes, bytes_total))));
+  attempter_.AddObserver(&observer);
+  attempter_.BytesReceived(bytes_progressed, bytes_received, bytes_total);
+  EXPECT_EQ(1.0, attempter_.download_progress_);
 }
 
 TEST_F(UpdateAttempterTest, ActionCompletedOmahaRequestTest) {
@@ -346,8 +422,7 @@ TEST_F(UpdateAttempterTest, ScheduleErrorEventActionNoEventTest) {
       .Times(0);
   OmahaResponse response;
   string url1 = "http://url1";
-  response.payload_urls.push_back(url1);
-  response.payload_urls.push_back("https://url");
+  response.packages.push_back({.payload_urls = {url1, "https://url"}});
   EXPECT_CALL(*(fake_system_state_.mock_payload_state()), GetCurrentUrl())
       .WillRepeatedly(Return(url1));
   fake_system_state_.mock_payload_state()->SetResponse(response);
@@ -976,6 +1051,16 @@ TEST_F(UpdateAttempterTest, CheckForUpdateScheduledAUTest) {
   fake_system_state_.fake_hardware()->SetAreDevFeaturesEnabled(false);
   attempter_.CheckForUpdate("", "autest-scheduled", true);
   EXPECT_EQ(constants::kOmahaDefaultAUTestURL, attempter_.forced_omaha_url());
+}
+
+TEST_F(UpdateAttempterTest, TargetVersionPrefixSetAndReset) {
+  attempter_.CalculateUpdateParams("", "", "", "1234", false, false);
+  EXPECT_EQ("1234",
+            fake_system_state_.request_params()->target_version_prefix());
+
+  attempter_.CalculateUpdateParams("", "", "", "", false, false);
+  EXPECT_TRUE(
+      fake_system_state_.request_params()->target_version_prefix().empty());
 }
 
 }  // namespace chromeos_update_engine

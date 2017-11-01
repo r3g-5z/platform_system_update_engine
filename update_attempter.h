@@ -29,9 +29,9 @@
 #include <base/time/time.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
-#if USE_LIBCROS
+#if USE_CHROME_NETWORK_PROXY
 #include "update_engine/chrome_browser_proxy_resolver.h"
-#endif  // USE_LIBCROS
+#endif  // USE_CHROME_NETWORK_PROXY
 #include "update_engine/certificate_checker.h"
 #include "update_engine/client_library/include/update_engine/update_status.h"
 #include "update_engine/common/action_processor.h"
@@ -45,9 +45,12 @@
 #include "update_engine/system_state.h"
 #include "update_engine/update_manager/policy.h"
 #include "update_engine/update_manager/update_manager.h"
-#include "update_engine/weave_service_interface.h"
 
-class MetricsLibraryInterface;
+namespace org {
+namespace chromium {
+class NetworkProxyServiceInterfaceProxyInterface;
+}  // namespace chromium
+}  // namespace org
 
 namespace policy {
 class PolicyProvider;
@@ -55,13 +58,11 @@ class PolicyProvider;
 
 namespace chromeos_update_engine {
 
-class LibCrosProxy;
 class UpdateEngineAdaptor;
 
 class UpdateAttempter : public ActionProcessorDelegate,
                         public DownloadActionDelegate,
                         public CertificateChecker::Observer,
-                        public WeaveServiceInterface::DelegateInterface,
                         public PostinstallRunnerAction::DelegateInterface {
  public:
   using UpdateStatus = update_engine::UpdateStatus;
@@ -69,7 +70,8 @@ class UpdateAttempter : public ActionProcessorDelegate,
 
   UpdateAttempter(SystemState* system_state,
                   CertificateChecker* cert_checker,
-                  LibCrosProxy* libcros_proxy);
+                  org::chromium::NetworkProxyServiceInterfaceProxyInterface*
+                      network_proxy_service_proxy);
   ~UpdateAttempter() override;
 
   // Further initialization to be done post construction.
@@ -100,16 +102,6 @@ class UpdateAttempter : public ActionProcessorDelegate,
                        AbstractAction* action,
                        ErrorCode code) override;
 
-  // WeaveServiceInterface::DelegateInterface overrides.
-  bool OnCheckForUpdates(brillo::ErrorPtr* error) override;
-  bool OnTrackChannel(const std::string& channel,
-                      brillo::ErrorPtr* error) override;
-  bool GetWeaveState(int64_t* last_checked_time,
-                     double* progress,
-                     UpdateStatus* update_status,
-                     std::string* current_channel,
-                     std::string* tracking_channel) override;
-
   // PostinstallRunnerAction::DelegateInterface
   void ProgressUpdate(double progress) override;
 
@@ -120,12 +112,8 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // for testing purposes.
   virtual bool ResetStatus();
 
-  // Returns the current status in the out params. Returns true on success.
-  virtual bool GetStatus(int64_t* last_checked_time,
-                         double* progress,
-                         std::string* current_operation,
-                         std::string* new_version,
-                         int64_t* new_size);
+  // Returns the current status in the out param. Returns true on success.
+  virtual bool GetStatus(update_engine::UpdateEngineStatus* out_status);
 
   // Runs chromeos-setgoodkernel, whose responsibility it is to mark the
   // currently booted partition has high priority/permanent/etc. The execution
@@ -180,9 +168,6 @@ class UpdateAttempter : public ActionProcessorDelegate,
 
   // Broadcasts the current status to all observers.
   void BroadcastStatus();
-
-  // Broadcasts the current tracking channel to all observers.
-  void BroadcastChannel();
 
   // Returns the special flags to be added to ErrorCode values based on the
   // parameters used in the current update attempt.
@@ -261,16 +246,20 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest, ActionCompletedDownloadTest);
   FRIEND_TEST(UpdateAttempterTest, ActionCompletedErrorTest);
   FRIEND_TEST(UpdateAttempterTest, ActionCompletedOmahaRequestTest);
+  FRIEND_TEST(UpdateAttempterTest, BootTimeInUpdateMarkerFile);
+  FRIEND_TEST(UpdateAttempterTest, BroadcastCompleteDownloadTest);
+  FRIEND_TEST(UpdateAttempterTest, ChangeToDownloadingOnReceivedBytesTest);
   FRIEND_TEST(UpdateAttempterTest, CreatePendingErrorEventTest);
   FRIEND_TEST(UpdateAttempterTest, CreatePendingErrorEventResumedTest);
   FRIEND_TEST(UpdateAttempterTest, DisableDeltaUpdateIfNeededTest);
+  FRIEND_TEST(UpdateAttempterTest, DownloadProgressAccumulationTest);
   FRIEND_TEST(UpdateAttempterTest, MarkDeltaUpdateFailureTest);
   FRIEND_TEST(UpdateAttempterTest, PingOmahaTest);
+  FRIEND_TEST(UpdateAttempterTest, ReportDailyMetrics);
   FRIEND_TEST(UpdateAttempterTest, ScheduleErrorEventActionNoEventTest);
   FRIEND_TEST(UpdateAttempterTest, ScheduleErrorEventActionTest);
+  FRIEND_TEST(UpdateAttempterTest, TargetVersionPrefixSetAndReset);
   FRIEND_TEST(UpdateAttempterTest, UpdateTest);
-  FRIEND_TEST(UpdateAttempterTest, ReportDailyMetrics);
-  FRIEND_TEST(UpdateAttempterTest, BootTimeInUpdateMarkerFile);
 
   // CertificateChecker::Observer method.
   // Report metrics about the certificate being checked.
@@ -288,9 +277,6 @@ class UpdateAttempter : public ActionProcessorDelegate,
 
   // Sets the status to the given status and notifies a status update over dbus.
   void SetStatusAndNotify(UpdateStatus status);
-
-  // Sets up the download parameters after receiving the update check response.
-  void SetupDownload();
 
   // Creates an error event object in |error_event_| to be included in an
   // OmahaRequestAction once the current action processor is done.
@@ -315,13 +301,13 @@ class UpdateAttempter : public ActionProcessorDelegate,
   void MarkDeltaUpdateFailure();
 
   ProxyResolver* GetProxyResolver() {
-#if USE_LIBCROS
+#if USE_CHROME_NETWORK_PROXY
     return obeying_proxies_ ?
         reinterpret_cast<ProxyResolver*>(&chrome_proxy_resolver_) :
         reinterpret_cast<ProxyResolver*>(&direct_proxy_resolver_);
 #else
     return &direct_proxy_resolver_;
-#endif  // USE_LIBCROS
+#endif  // USE_CHROME_NETWORK_PROXY
   }
 
   // Sends a ping to Omaha.
@@ -449,7 +435,8 @@ class UpdateAttempter : public ActionProcessorDelegate,
   int64_t last_checked_time_ = 0;
   std::string prev_version_;
   std::string new_version_ = "0.0.0.0";
-  int64_t new_payload_size_ = 0;
+  std::string new_system_version_;
+  uint64_t new_payload_size_ = 0;
 
   // Common parameters for all Omaha requests.
   OmahaRequestParams* omaha_request_params_ = nullptr;
@@ -463,9 +450,9 @@ class UpdateAttempter : public ActionProcessorDelegate,
 
   // Our two proxy resolvers
   DirectProxyResolver direct_proxy_resolver_;
-#if USE_LIBCROS
+#if USE_CHROME_NETWORK_PROXY
   ChromeBrowserProxyResolver chrome_proxy_resolver_;
-#endif  // USE_LIBCROS
+#endif  // USE_CHROME_NETWORK_PROXY
 
   // Originally, both of these flags are false. Once UpdateBootFlags is called,
   // |update_boot_flags_running_| is set to true. As soon as UpdateBootFlags

@@ -57,7 +57,6 @@
 #include "update_engine/common/prefs_interface.h"
 #include "update_engine/common/subprocess.h"
 #include "update_engine/payload_consumer/file_descriptor.h"
-#include "update_engine/payload_consumer/payload_constants.h"
 
 using base::Time;
 using base::TimeDelta;
@@ -703,6 +702,32 @@ bool UnmountFilesystem(const string& mountpoint) {
   return true;
 }
 
+bool IsMountpoint(const std::string& mountpoint) {
+  struct stat stdir, stparent;
+
+  // Check whether the passed mountpoint is a directory and the /.. is in the
+  // same device or not. If mountpoint/.. is in a different device it means that
+  // there is a filesystem mounted there. If it is not, but they both point to
+  // the same inode it basically is the special case of /.. pointing to /. This
+  // test doesn't play well with bind mount but that's out of the scope of what
+  // we want to detect here.
+  if (lstat(mountpoint.c_str(), &stdir) != 0) {
+    PLOG(ERROR) << "Error stat'ing " << mountpoint;
+    return false;
+  }
+  if (!S_ISDIR(stdir.st_mode))
+    return false;
+
+  base::FilePath parent(mountpoint);
+  parent = parent.Append("..");
+  if (lstat(parent.value().c_str(), &stparent) != 0) {
+    PLOG(ERROR) << "Error stat'ing " << parent.value();
+    return false;
+  }
+  return S_ISDIR(stparent.st_mode) &&
+         (stparent.st_dev != stdir.st_dev || stparent.st_ino == stdir.st_ino);
+}
+
 // Tries to parse the header of an ELF file to obtain a human-readable
 // description of it on the |output| string.
 static bool GetFileFormatELF(const uint8_t* buffer, size_t size,
@@ -918,8 +943,16 @@ string StringVectorToString(const vector<string> &vec_str) {
   return str;
 }
 
-string CalculateP2PFileId(const string& payload_hash, size_t payload_size) {
-  string encoded_hash = brillo::data_encoding::Base64Encode(payload_hash);
+// The P2P file id should be the same for devices running new version and old
+// version so that they can share it with each other. The hash in the response
+// was base64 encoded, but now that we switched to use "hash_sha256" field which
+// is hex encoded, we have to convert them back to base64 for P2P. However, the
+// base64 encoded hash was base64 encoded here again historically for some
+// reason, so we keep the same behavior here.
+string CalculateP2PFileId(const brillo::Blob& payload_hash,
+                          size_t payload_size) {
+  string encoded_hash = brillo::data_encoding::Base64Encode(
+      brillo::data_encoding::Base64Encode(payload_hash));
   return base::StringPrintf("cros_update_size_%" PRIuS "_hash_%s",
                             payload_size,
                             encoded_hash.c_str());
@@ -997,19 +1030,6 @@ bool GetMinorVersion(const brillo::KeyValueStore& store,
       return false;
     }
     return true;
-  }
-  return false;
-}
-
-bool IsZlibCompatible(const string& fingerprint) {
-  if (fingerprint.size() != sizeof(kCompatibleZlibFingerprint[0]) - 1) {
-    LOG(ERROR) << "Invalid fingerprint: " << fingerprint;
-    return false;
-  }
-  for (auto& f : kCompatibleZlibFingerprint) {
-    if (base::CompareCaseInsensitiveASCII(fingerprint, f) == 0) {
-      return true;
-    }
   }
   return false;
 }

@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 {
+  'variables': {
+    'USE_chrome_network_proxy': '1',
+    'USE_chrome_kiosk_app': '1',
+  },
   'target_defaults': {
     'variables': {
       'deps': [
@@ -23,13 +27,7 @@
       # The -DUSE_* flags are passed from platform2.py. We use sane defaults
       # here when these USE flags are not defined. You can set the default value
       # for the USE flag in the ebuild.
-      'USE_binder%': '0',
-      'USE_dbus%': '1',
       'USE_hwid_override%': '0',
-      'USE_libcros%': '1',
-      'USE_mtd%': '0',
-      'USE_power_management%': '0',
-      'USE_buffet%': '0',
     },
     'cflags': [
       '-g',
@@ -53,11 +51,11 @@
       'USE_BINDER=<(USE_binder)',
       'USE_DBUS=<(USE_dbus)',
       'USE_HWID_OVERRIDE=<(USE_hwid_override)',
-      'USE_LIBCROS=<(USE_libcros)',
+      'USE_CHROME_KIOSK_APP=<(USE_chrome_kiosk_app)',
+      'USE_CHROME_NETWORK_PROXY=<(USE_chrome_network_proxy)',
       'USE_MTD=<(USE_mtd)',
       'USE_OMAHA=1',
       'USE_SHILL=1',
-      'USE_WEAVE=<(USE_buffet)',
     ],
     'include_dirs': [
       # We need this include dir because we include all the local code as
@@ -105,21 +103,34 @@
       'includes': ['../../../platform2/common-mk/generate-dbus-adaptors.gypi'],
     },
     {
-      'target_name': 'update_engine-other-dbus-proxies',
+      'target_name': 'update_engine-dbus-libcros-client',
       'type': 'none',
-      'actions': [
-        {
-          'action_name': 'update_engine-dbus-libcros-client',
-          'variables': {
-            'mock_output_file': 'include/libcros/dbus-proxy-mocks.h',
-            'proxy_output_file': 'include/libcros/dbus-proxies.h'
-          },
-          'sources': [
-            'dbus_bindings/org.chromium.LibCrosService.dbus-xml',
-          ],
-          'includes': ['../../../platform2/common-mk/generate-dbus-proxies.gypi'],
+      'actions': [{
+        'action_name': 'update_engine-dbus-libcros-client-action',
+        'variables': {
+          'mock_output_file': 'include/libcros/dbus-proxy-mocks.h',
+          'proxy_output_file': 'include/libcros/dbus-proxies.h'
         },
-      ],
+        'sources': [
+          'dbus_bindings/org.chromium.LibCrosService.dbus-xml',
+        ],
+        'includes': ['../../../platform2/common-mk/generate-dbus-proxies.gypi'],
+      }],
+    },
+    {
+      'target_name': 'update_engine-dbus-chrome_network_proxy-client',
+      'type': 'none',
+      'actions': [{
+        'action_name': 'update_engine-dbus-chrome_network_proxy-client-action',
+        'variables': {
+          'mock_output_file': 'include/network_proxy/dbus-proxy-mocks.h',
+          'proxy_output_file': 'include/network_proxy/dbus-proxies.h'
+        },
+        'sources': [
+          'dbus_bindings/org.chromium.NetworkProxyService.dbus-xml',
+        ],
+        'includes': ['../../../platform2/common-mk/generate-dbus-proxies.gypi'],
+      }],
     },
     # The payload application component and common dependencies.
     {
@@ -133,7 +144,6 @@
       'variables': {
         'exported_deps': [
           'libcrypto',
-          'libimgpatch',
           'xz-embedded',
         ],
         'deps': ['<@(exported_deps)'],
@@ -152,6 +162,7 @@
           ],
         },
         'libraries': [
+          '-lbspatch',
           '-lbz2',
           '-lrt',
         ],
@@ -178,6 +189,7 @@
         'payload_consumer/download_action.cc',
         'payload_consumer/extent_writer.cc',
         'payload_consumer/file_descriptor.cc',
+        'payload_consumer/file_descriptor_utils.cc',
         'payload_consumer/file_writer.cc',
         'payload_consumer/filesystem_verifier_action.cc',
         'payload_consumer/install_plan.cc',
@@ -208,7 +220,6 @@
         'libpayload_consumer',
         'update_metadata-protos',
         'update_engine-dbus-adaptor',
-        'update_engine-other-dbus-proxies',
       ],
       'variables': {
         'exported_deps': [
@@ -257,9 +268,8 @@
         'dbus_service.cc',
         'hardware_chromeos.cc',
         'image_properties_chromeos.cc',
-        'libcros_proxy.cc',
         'libcurl_http_fetcher.cc',
-        'metrics.cc',
+        'metrics_reporter_omaha.cc',
         'metrics_utils.cc',
         'omaha_request_action.cc',
         'omaha_request_params.cc',
@@ -287,25 +297,19 @@
         'update_manager/state_factory.cc',
         'update_manager/update_manager.cc',
         'update_status_utils.cc',
-        'weave_service_factory.cc',
       ],
       'conditions': [
-        ['USE_buffet == 1', {
-          'sources': [
-            'weave_service.cc',
-          ],
-          'variables': {
-            'exported_deps': [
-              'libweave-<(libbase_ver)',
-            ],
-          },
-        }],
-        ['USE_libcros == 1', {
+        ['USE_chrome_network_proxy == 1', {
           'dependencies': [
-            'update_engine-other-dbus-proxies',
+            'update_engine-dbus-chrome_network_proxy-client',
           ],
           'sources': [
             'chrome_browser_proxy_resolver.cc',
+          ],
+        }],
+        ['USE_chrome_kiosk_app == 1', {
+          'dependencies': [
+            'update_engine-dbus-libcros-client',
           ],
         }],
       ],
@@ -381,6 +385,9 @@
             '<@(exported_deps)',
           ],
         },
+        'libraries': [
+          '-lbsdiff',
+        ],
       },
       'sources': [
         'payload_generator/ab_generator.cc',
@@ -516,6 +523,7 @@
             'fake_system_state.cc',
             'hardware_chromeos_unittest.cc',
             'image_properties_chromeos_unittest.cc',
+            'metrics_reporter_omaha_unittest.cc',
             'metrics_utils_unittest.cc',
             'omaha_request_action_unittest.cc',
             'omaha_request_params_unittest.cc',
@@ -527,6 +535,8 @@
             'payload_consumer/delta_performer_unittest.cc',
             'payload_consumer/download_action_unittest.cc',
             'payload_consumer/extent_writer_unittest.cc',
+            'payload_consumer/fake_file_descriptor.cc',
+            'payload_consumer/file_descriptor_utils_unittest.cc',
             'payload_consumer/file_writer_unittest.cc',
             'payload_consumer/filesystem_verifier_action_unittest.cc',
             'payload_consumer/postinstall_runner_action_unittest.cc',
@@ -551,6 +561,7 @@
             'payload_generator/topological_sort_unittest.cc',
             'payload_generator/zip_unittest.cc',
             'payload_state_unittest.cc',
+            'proxy_resolver_unittest.cc',
             'update_attempter_unittest.cc',
             'update_manager/boxed_value_unittest.cc',
             'update_manager/chromeos_policy_unittest.cc',
@@ -570,9 +581,17 @@
             'testrunner.cc',
           ],
           'conditions': [
-            ['USE_libcros == 1', {
+            ['USE_chrome_network_proxy == 1', {
+              'dependencies': [
+                'update_engine-dbus-chrome_network_proxy-client',
+              ],
               'sources': [
                 'chrome_browser_proxy_resolver_unittest.cc',
+              ],
+            }],
+            ['USE_chrome_kiosk_app == 1', {
+              'dependencies': [
+                'update_engine-dbus-libcros-client',
               ],
             }],
           ],

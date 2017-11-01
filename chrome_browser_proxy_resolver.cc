@@ -16,138 +16,37 @@
 
 #include "update_engine/chrome_browser_proxy_resolver.h"
 
-#include <deque>
-#include <map>
-#include <string>
 #include <utility>
 
 #include <base/bind.h>
+#include <base/memory/ptr_util.h>
 #include <base/strings/string_tokenizer.h>
 #include <base/strings/string_util.h>
 
-#include "update_engine/common/utils.h"
+#include "network_proxy/dbus-proxies.h"
 
 namespace chromeos_update_engine {
 
 using base::StringTokenizer;
-using base::TimeDelta;
-using brillo::MessageLoop;
 using std::deque;
-using std::make_pair;
-using std::pair;
 using std::string;
-
-const char kLibCrosServiceName[] = "org.chromium.LibCrosService";
-const char kLibCrosProxyResolveName[] = "ProxyResolved";
-const char kLibCrosProxyResolveSignalInterface[] =
-    "org.chromium.UpdateEngineLibcrosProxyResolvedInterface";
 
 namespace {
 
-const int kTimeout = 5;  // seconds
+// Timeout for D-Bus calls in milliseconds.
+constexpr int kTimeoutMs = 5000;
 
 }  // namespace
 
 ChromeBrowserProxyResolver::ChromeBrowserProxyResolver(
-    LibCrosProxy* libcros_proxy)
-    : libcros_proxy_(libcros_proxy), timeout_(kTimeout) {}
+    org::chromium::NetworkProxyServiceInterfaceProxyInterface* dbus_proxy)
+    : dbus_proxy_(dbus_proxy),
+      next_request_id_(kProxyRequestIdNull + 1),
+      weak_ptr_factory_(this) {}
 
-bool ChromeBrowserProxyResolver::Init() {
-  libcros_proxy_->ue_proxy_resolved_interface()
-      ->RegisterProxyResolvedSignalHandler(
-          base::Bind(&ChromeBrowserProxyResolver::OnProxyResolvedSignal,
-                     base::Unretained(this)),
-          base::Bind(&ChromeBrowserProxyResolver::OnSignalConnected,
-                     base::Unretained(this)));
-  return true;
-}
+ChromeBrowserProxyResolver::~ChromeBrowserProxyResolver() = default;
 
-ChromeBrowserProxyResolver::~ChromeBrowserProxyResolver() {
-  // Kill outstanding timers.
-  for (auto& timer : timers_) {
-    MessageLoop::current()->CancelTask(timer.second);
-    timer.second = MessageLoop::kTaskIdNull;
-  }
-}
-
-bool ChromeBrowserProxyResolver::GetProxiesForUrl(const string& url,
-                                                  ProxiesResolvedFn callback,
-                                                  void* data) {
-  int timeout = timeout_;
-  brillo::ErrorPtr error;
-  if (!libcros_proxy_->service_interface_proxy()->ResolveNetworkProxy(
-          url.c_str(),
-          kLibCrosProxyResolveSignalInterface,
-          kLibCrosProxyResolveName,
-          &error)) {
-    LOG(WARNING) << "Can't resolve the proxy. Continuing with no proxy.";
-    timeout = 0;
-  }
-
-  callbacks_.insert(make_pair(url, make_pair(callback, data)));
-  MessageLoop::TaskId timer = MessageLoop::current()->PostDelayedTask(
-      FROM_HERE,
-      base::Bind(&ChromeBrowserProxyResolver::HandleTimeout,
-                 base::Unretained(this),
-                 url),
-      TimeDelta::FromSeconds(timeout));
-  timers_.insert(make_pair(url, timer));
-  return true;
-}
-
-bool ChromeBrowserProxyResolver::DeleteUrlState(
-    const string& source_url,
-    bool delete_timer,
-    pair<ProxiesResolvedFn, void*>* callback) {
-  {
-    CallbacksMap::iterator it = callbacks_.lower_bound(source_url);
-    TEST_AND_RETURN_FALSE(it != callbacks_.end());
-    TEST_AND_RETURN_FALSE(it->first == source_url);
-    if (callback)
-      *callback = it->second;
-    callbacks_.erase(it);
-  }
-  {
-    TimeoutsMap::iterator it = timers_.lower_bound(source_url);
-    TEST_AND_RETURN_FALSE(it != timers_.end());
-    TEST_AND_RETURN_FALSE(it->first == source_url);
-    if (delete_timer)
-      MessageLoop::current()->CancelTask(it->second);
-    timers_.erase(it);
-  }
-  return true;
-}
-
-void ChromeBrowserProxyResolver::OnSignalConnected(const string& interface_name,
-                                                   const string& signal_name,
-                                                   bool successful) {
-  if (!successful) {
-    LOG(ERROR) << "Couldn't connect to the signal " << interface_name << "."
-               << signal_name;
-  }
-}
-
-void ChromeBrowserProxyResolver::OnProxyResolvedSignal(
-    const string& source_url,
-    const string& proxy_info,
-    const string& error_message) {
-  pair<ProxiesResolvedFn, void*> callback;
-  TEST_AND_RETURN(DeleteUrlState(source_url, true, &callback));
-  if (!error_message.empty()) {
-    LOG(WARNING) << "ProxyResolved error: " << error_message;
-  }
-  (*callback.first)(ParseProxyString(proxy_info), callback.second);
-}
-
-void ChromeBrowserProxyResolver::HandleTimeout(string source_url) {
-  LOG(INFO) << "Timeout handler called. Seems Chrome isn't responding.";
-  pair<ProxiesResolvedFn, void*> callback;
-  TEST_AND_RETURN(DeleteUrlState(source_url, false, &callback));
-  deque<string> proxies;
-  proxies.push_back(kNoProxy);
-  (*callback.first)(proxies, callback.second);
-}
-
+// static
 deque<string> ChromeBrowserProxyResolver::ParseProxyString(
     const string& input) {
   deque<string> ret;
@@ -190,4 +89,50 @@ deque<string> ChromeBrowserProxyResolver::ParseProxyString(
   return ret;
 }
 
-}  // namespace chromeos_update_engine
+ProxyRequestId ChromeBrowserProxyResolver::GetProxiesForUrl(
+    const string& url, const ProxiesResolvedFn& callback) {
+  const ProxyRequestId id = next_request_id_++;
+  dbus_proxy_->ResolveProxyAsync(
+      url,
+      base::Bind(&ChromeBrowserProxyResolver::OnResolveProxyResponse,
+                 weak_ptr_factory_.GetWeakPtr(), id),
+      base::Bind(&ChromeBrowserProxyResolver::OnResolveProxyError,
+                 weak_ptr_factory_.GetWeakPtr(), id),
+      kTimeoutMs);
+  pending_callbacks_[id] = callback;
+  return id;
+}
+
+bool ChromeBrowserProxyResolver::CancelProxyRequest(ProxyRequestId request) {
+  return pending_callbacks_.erase(request) != 0;
+}
+
+void ChromeBrowserProxyResolver::OnResolveProxyResponse(
+    ProxyRequestId request_id,
+    const std::string& proxy_info,
+    const std::string& error_message) {
+  if (!error_message.empty())
+    LOG(WARNING) << "Got error resolving proxy: " << error_message;
+  RunCallback(request_id, ParseProxyString(proxy_info));
+}
+
+void ChromeBrowserProxyResolver::OnResolveProxyError(ProxyRequestId request_id,
+                                                     brillo::Error* error) {
+  LOG(WARNING) << "Failed to resolve proxy: "
+               << (error ? error->GetMessage() : "[null]");
+  RunCallback(request_id, deque<string>{kNoProxy});
+}
+
+void ChromeBrowserProxyResolver::RunCallback(
+    ProxyRequestId request_id,
+    const std::deque<std::string>& proxies) {
+  auto it = pending_callbacks_.find(request_id);
+  if (it == pending_callbacks_.end())
+    return;
+
+  ProxiesResolvedFn callback = it->second;
+  pending_callbacks_.erase(it);
+  callback.Run(proxies);
+}
+
+} // namespace chromeos_update_engine

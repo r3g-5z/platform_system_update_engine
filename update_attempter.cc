@@ -32,6 +32,7 @@
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/bind_lambda.h>
+#include <brillo/data_encoding.h>
 #include <brillo/errors/error_codes.h>
 #include <brillo/make_unique_ptr.h>
 #include <brillo/message_loops/message_loop.h>
@@ -44,13 +45,12 @@
 #include "update_engine/common/clock_interface.h"
 #include "update_engine/common/constants.h"
 #include "update_engine/common/hardware_interface.h"
-#include "update_engine/common/multi_range_http_fetcher.h"
 #include "update_engine/common/platform_constants.h"
 #include "update_engine/common/prefs_interface.h"
 #include "update_engine/common/subprocess.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/libcurl_http_fetcher.h"
-#include "update_engine/metrics.h"
+#include "update_engine/metrics_reporter_interface.h"
 #include "update_engine/omaha_request_action.h"
 #include "update_engine/omaha_request_params.h"
 #include "update_engine/omaha_response_handler_action.h"
@@ -78,6 +78,7 @@ using std::set;
 using std::shared_ptr;
 using std::string;
 using std::vector;
+using update_engine::UpdateEngineStatus;
 
 namespace chromeos_update_engine {
 
@@ -119,17 +120,19 @@ ErrorCode GetErrorCodeForAction(AbstractAction* action,
   return code;
 }
 
-UpdateAttempter::UpdateAttempter(SystemState* system_state,
-                                 CertificateChecker* cert_checker,
-                                 LibCrosProxy* libcros_proxy)
+UpdateAttempter::UpdateAttempter(
+    SystemState* system_state,
+    CertificateChecker* cert_checker,
+    org::chromium::NetworkProxyServiceInterfaceProxyInterface*
+        network_proxy_service_proxy)
     : processor_(new ActionProcessor()),
       system_state_(system_state),
-#if USE_LIBCROS
+#if USE_CHROME_NETWORK_PROXY
       cert_checker_(cert_checker),
-      chrome_proxy_resolver_(libcros_proxy) {
+      chrome_proxy_resolver_(network_proxy_service_proxy) {
 #else
       cert_checker_(cert_checker) {
-#endif  // USE_LIBCROS
+#endif  // USE_CHROME_NETWORK_PROXY
 }
 
 UpdateAttempter::~UpdateAttempter() {
@@ -157,10 +160,6 @@ void UpdateAttempter::Init() {
     status_ = UpdateStatus::UPDATED_NEED_REBOOT;
   else
     status_ = UpdateStatus::IDLE;
-
-#if USE_LIBCROS
-  chrome_proxy_resolver_.Init();
-#endif  // USE_LIBCROS
 }
 
 void UpdateAttempter::ScheduleUpdates() {
@@ -180,9 +179,8 @@ void UpdateAttempter::ScheduleUpdates() {
 
 void UpdateAttempter::CertificateChecked(ServerToCheck server_to_check,
                                          CertificateCheckResult result) {
-  metrics::ReportCertificateCheckMetrics(system_state_,
-                                         server_to_check,
-                                         result);
+  system_state_->metrics_reporter()->ReportCertificateCheckMetrics(
+      server_to_check, result);
 }
 
 bool UpdateAttempter::CheckAndReportDailyMetrics() {
@@ -243,7 +241,7 @@ void UpdateAttempter::ReportOSAge() {
     return;
   }
 
-  metrics::ReportDailyMetrics(system_state_, age);
+  system_state_->metrics_reporter()->ReportDailyMetrics(age);
 }
 
 void UpdateAttempter::Update(const string& app_version,
@@ -271,10 +269,11 @@ void UpdateAttempter::Update(const string& app_version,
     // not performing an update check because of this.
     LOG(INFO) << "Not updating b/c we already updated and we're waiting for "
               << "reboot, we'll ping Omaha instead";
-    metrics::ReportUpdateCheckMetrics(system_state_,
-                                      metrics::CheckResult::kRebootPending,
-                                      metrics::CheckReaction::kUnset,
-                                      metrics::DownloadErrorCode::kUnset);
+    system_state_->metrics_reporter()->ReportUpdateCheckMetrics(
+        system_state_,
+        metrics::CheckResult::kRebootPending,
+        metrics::CheckReaction::kUnset,
+        metrics::DownloadErrorCode::kUnset);
     PingOmaha();
     return;
   }
@@ -371,9 +370,8 @@ bool UpdateAttempter::CalculateUpdateParams(const string& app_version,
   // Refresh the policy before computing all the update parameters.
   RefreshDevicePolicy();
 
-  // Set the target version prefix, if provided.
-  if (!target_version_prefix.empty())
-    omaha_request_params_->set_target_version_prefix(target_version_prefix);
+  // Update the target version prefix.
+  omaha_request_params_->set_target_version_prefix(target_version_prefix);
 
   CalculateScatteringParams(interactive);
 
@@ -409,8 +407,6 @@ bool UpdateAttempter::CalculateUpdateParams(const string& app_version,
                                                  &error_message)) {
       LOG(ERROR) << "Setting the channel failed: " << error_message;
     }
-    // Notify observers the target channel change.
-    BroadcastChannel();
 
     // Since this is the beginning of a new attempt, update the download
     // channel. The download channel won't be updated until the next attempt,
@@ -623,12 +619,12 @@ void UpdateAttempter::BuildUpdateActions(bool interactive) {
   LibcurlHttpFetcher* download_fetcher =
       new LibcurlHttpFetcher(GetProxyResolver(), system_state_->hardware());
   download_fetcher->set_server_to_check(ServerToCheck::kDownload);
-  shared_ptr<DownloadAction> download_action(new DownloadAction(
-      prefs_,
-      system_state_->boot_control(),
-      system_state_->hardware(),
-      system_state_,
-      new MultiRangeHttpFetcher(download_fetcher)));  // passes ownership
+  shared_ptr<DownloadAction> download_action(
+      new DownloadAction(prefs_,
+                         system_state_->boot_control(),
+                         system_state_->hardware(),
+                         system_state_,
+                         download_fetcher));  // passes ownership
   shared_ptr<OmahaRequestAction> download_finished_action(
       new OmahaRequestAction(
           system_state_,
@@ -943,8 +939,12 @@ void UpdateAttempter::ProcessingDone(const ActionProcessor* processor,
           response_handler_action_->install_plan();
 
       // Generate an unique payload identifier.
-      const string target_version_uid =
-          install_plan.payload_hash + ":" + install_plan.metadata_signature;
+      string target_version_uid;
+      for (const auto& payload : install_plan.payloads) {
+        target_version_uid +=
+            brillo::data_encoding::Base64Encode(payload.hash) + ":" +
+            payload.metadata_signature + ":";
+      }
 
       // Expect to reboot into the new version to send the proper metric during
       // next boot.
@@ -1035,8 +1035,10 @@ void UpdateAttempter::ActionCompleted(ActionProcessor* processor,
     const InstallPlan& plan = response_handler_action_->install_plan();
     UpdateLastCheckedTime();
     new_version_ = plan.version;
-    new_payload_size_ = plan.payload_size;
-    SetupDownload();
+    new_system_version_ = plan.system_version;
+    new_payload_size_ = 0;
+    for (const auto& payload : plan.payloads)
+      new_payload_size_ += payload.size;
     cpu_limiter_.StartLimiter();
     SetStatusAndNotify(UpdateStatus::UPDATE_AVAILABLE);
   } else if (type == DownloadAction::StaticType()) {
@@ -1064,44 +1066,6 @@ void UpdateAttempter::BytesReceived(uint64_t bytes_progressed,
 
 void UpdateAttempter::DownloadComplete() {
   system_state_->payload_state()->DownloadComplete();
-}
-
-bool UpdateAttempter::OnCheckForUpdates(brillo::ErrorPtr* error) {
-  CheckForUpdate(
-      "" /* app_version */, "" /* omaha_url */, true /* interactive */);
-  return true;
-}
-
-bool UpdateAttempter::OnTrackChannel(const string& channel,
-                                     brillo::ErrorPtr* error) {
-  LOG(INFO) << "Setting destination channel to: " << channel;
-  string error_message;
-  if (!system_state_->request_params()->SetTargetChannel(
-          channel, false /* powerwash_allowed */, &error_message)) {
-    brillo::Error::AddTo(error,
-                         FROM_HERE,
-                         brillo::errors::dbus::kDomain,
-                         "set_target_error",
-                         error_message);
-    return false;
-  }
-  // Notify observers the target channel change.
-  BroadcastChannel();
-  return true;
-}
-
-bool UpdateAttempter::GetWeaveState(int64_t* last_checked_time,
-                                    double* progress,
-                                    UpdateStatus* update_status,
-                                    string* current_channel,
-                                    string* tracking_channel) {
-  *last_checked_time = last_checked_time_;
-  *progress = download_progress_;
-  *update_status = status_;
-  OmahaRequestParams* rp = system_state_->request_params();
-  *current_channel = rp->current_channel();
-  *tracking_channel = rp->target_channel();
-  return true;
 }
 
 void UpdateAttempter::ProgressUpdate(double progress) {
@@ -1165,16 +1129,15 @@ bool UpdateAttempter::ResetStatus() {
   }
 }
 
-bool UpdateAttempter::GetStatus(int64_t* last_checked_time,
-                                double* progress,
-                                string* current_operation,
-                                string* new_version,
-                                int64_t* new_payload_size) {
-  *last_checked_time = last_checked_time_;
-  *progress = download_progress_;
-  *current_operation = UpdateStatusToString(status_);
-  *new_version = new_version_;
-  *new_payload_size = new_payload_size_;
+bool UpdateAttempter::GetStatus(UpdateEngineStatus* out_status) {
+  out_status->last_checked_time_ms = last_checked_time_;
+  out_status->status = status_;
+  out_status->current_version = omaha_request_params_->app_version();
+  out_status->current_system_version = omaha_request_params_->system_version();
+  out_status->progress = download_progress_;
+  out_status->new_size_bytes = new_payload_size_;
+  out_status->new_version = new_version_;
+  out_status->new_system_version = new_system_version_;
   return true;
 }
 
@@ -1211,21 +1174,14 @@ void UpdateAttempter::CompleteUpdateBootFlags(bool successful) {
 }
 
 void UpdateAttempter::BroadcastStatus() {
+  UpdateEngineStatus broadcast_status;
+  // Use common method for generating the current status.
+  GetStatus(&broadcast_status);
+
   for (const auto& observer : service_observers_) {
-    observer->SendStatusUpdate(last_checked_time_,
-                               download_progress_,
-                               status_,
-                               new_version_,
-                               new_payload_size_);
+    observer->SendStatusUpdate(broadcast_status);
   }
   last_notify_time_ = TimeTicks::Now();
-}
-
-void UpdateAttempter::BroadcastChannel() {
-  for (const auto& observer : service_observers_) {
-    observer->SendChannelChangeUpdate(
-        system_state_->request_params()->target_channel());
-  }
 }
 
 uint32_t UpdateAttempter::GetErrorCodeFlags()  {
@@ -1367,32 +1323,6 @@ void UpdateAttempter::MarkDeltaUpdateFailure() {
     delta_failures = 0;
   }
   prefs_->SetInt64(kPrefsDeltaUpdateFailures, ++delta_failures);
-}
-
-void UpdateAttempter::SetupDownload() {
-  MultiRangeHttpFetcher* fetcher =
-      static_cast<MultiRangeHttpFetcher*>(download_action_->http_fetcher());
-  fetcher->ClearRanges();
-  if (response_handler_action_->install_plan().is_resume) {
-    // Resuming an update so fetch the update manifest metadata first.
-    int64_t manifest_metadata_size = 0;
-    int64_t manifest_signature_size = 0;
-    prefs_->GetInt64(kPrefsManifestMetadataSize, &manifest_metadata_size);
-    prefs_->GetInt64(kPrefsManifestSignatureSize, &manifest_signature_size);
-    fetcher->AddRange(0, manifest_metadata_size + manifest_signature_size);
-    // If there're remaining unprocessed data blobs, fetch them. Be careful not
-    // to request data beyond the end of the payload to avoid 416 HTTP response
-    // error codes.
-    int64_t next_data_offset = 0;
-    prefs_->GetInt64(kPrefsUpdateStateNextDataOffset, &next_data_offset);
-    uint64_t resume_offset =
-        manifest_metadata_size + manifest_signature_size + next_data_offset;
-    if (resume_offset < response_handler_action_->install_plan().payload_size) {
-      fetcher->AddRange(resume_offset);
-    }
-  } else {
-    fetcher->AddRange(0);
-  }
 }
 
 void UpdateAttempter::PingOmaha() {

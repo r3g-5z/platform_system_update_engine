@@ -21,18 +21,22 @@
 #include <sys/types.h>
 
 #include <algorithm>
+#include <memory>
 
 #include <bootloader.h>
 
+#include <android-base/properties.h>
 #include <base/files/file_util.h>
+#include <base/strings/stringprintf.h>
 #include <brillo/make_unique_ptr.h>
-#include <cutils/properties.h>
 
 #include "update_engine/common/hardware.h"
 #include "update_engine/common/platform_constants.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/utils_android.h"
 
+using android::base::GetBoolProperty;
+using android::base::GetProperty;
 using std::string;
 
 namespace chromeos_update_engine {
@@ -44,6 +48,15 @@ const char kAndroidRecoveryPowerwashCommand[] =
     "recovery\n"
     "--wipe_data\n"
     "--reason=wipe_data_from_ota\n";
+
+// Android properties that identify the hardware and potentially non-updatable
+// parts of the bootloader (such as the bootloader version and the baseband
+// version).
+const char kPropBootBootloader[] = "ro.boot.bootloader";
+const char kPropBootBaseband[] = "ro.boot.baseband";
+const char kPropProductManufacturer[] = "ro.product.manufacturer";
+const char kPropBootHardwareSKU[] = "ro.boot.hardware.sku";
+const char kPropBootRevision[] = "ro.boot.revision";
 
 // Write a recovery command line |message| to the BCB. The arguments to recovery
 // must be separated by '\n'. An empty string will erase the BCB.
@@ -61,8 +74,7 @@ bool WriteBootloaderRecoveryMessage(const string& message) {
            std::min(message.size(), sizeof(boot.recovery) - 1));
   }
 
-  int fd =
-      HANDLE_EINTR(open(misc_device.value().c_str(), O_WRONLY | O_SYNC, 0600));
+  int fd = HANDLE_EINTR(open(misc_device.value().c_str(), O_WRONLY | O_SYNC));
   if (fd < 0) {
     PLOG(ERROR) << "Opening misc";
     return false;
@@ -111,7 +123,7 @@ bool HardwareAndroid::IsOfficialBuild() const {
   //
   // In case of a non-bool value, we take the most restrictive option and
   // assume we are in an official-build.
-  return property_get_bool("ro.secure", 1) != 0;
+  return GetBoolProperty("ro.secure", true);
 }
 
 bool HardwareAndroid::IsNormalBootMode() const {
@@ -119,7 +131,7 @@ bool HardwareAndroid::IsNormalBootMode() const {
   // update_engine will allow extra developers options, such as providing a
   // different update URL. In case of error, we assume the build is in
   // normal-mode.
-  return property_get_bool("ro.debuggable", 0) != 1;
+  return !GetBoolProperty("ro.debuggable", false);
 }
 
 bool HardwareAndroid::AreDevFeaturesEnabled() const {
@@ -139,18 +151,19 @@ bool HardwareAndroid::IsOOBEComplete(base::Time* out_time_of_oobe) const {
 }
 
 string HardwareAndroid::GetHardwareClass() const {
-  LOG(WARNING) << "STUB: GetHardwareClass().";
-  return "ANDROID";
+  auto manufacturer = GetProperty(kPropProductManufacturer, "");
+  auto sku = GetProperty(kPropBootHardwareSKU, "");
+  auto revision = GetProperty(kPropBootRevision, "");
+
+  return manufacturer + ":" + sku + ":" + revision;
 }
 
 string HardwareAndroid::GetFirmwareVersion() const {
-  LOG(WARNING) << "STUB: GetFirmwareVersion().";
-  return "0";
+  return GetProperty(kPropBootBootloader, "");
 }
 
 string HardwareAndroid::GetECVersion() const {
-  LOG(WARNING) << "STUB: GetECVersion().";
-  return "0";
+  return GetProperty(kPropBootBaseband, "");
 }
 
 int HardwareAndroid::GetPowerwashCount() const {

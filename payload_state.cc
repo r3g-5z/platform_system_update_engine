@@ -32,6 +32,7 @@
 #include "update_engine/common/prefs.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/connection_manager_interface.h"
+#include "update_engine/metrics_reporter_interface.h"
 #include "update_engine/metrics_utils.h"
 #include "update_engine/omaha_request_params.h"
 #include "update_engine/payload_consumer/install_plan.h"
@@ -43,6 +44,8 @@ using std::min;
 using std::string;
 
 namespace chromeos_update_engine {
+
+using metrics_utils::GetPersistedValue;
 
 const TimeDelta PayloadState::kDurationSlack = TimeDelta::FromSeconds(600);
 
@@ -122,11 +125,16 @@ void PayloadState::SetResponse(const OmahaResponse& omaha_response) {
     return;
   }
 
+  // Always start from payload index 0, even for resume, to download partition
+  // info from previous payloads.
+  payload_index_ = 0;
+
   // This is the earliest point at which we can validate whether the URL index
   // we loaded from the persisted state is a valid value. If the response
   // hasn't changed but the URL index is invalid, it's indicative of some
   // tampering of the persisted state.
-  if (static_cast<uint32_t>(url_index_) >= candidate_urls_.size()) {
+  if (payload_index_ >= candidate_urls_.size() ||
+      url_index_ >= candidate_urls_[payload_index_].size()) {
     LOG(INFO) << "Resetting all payload state as the url index seems to have "
                  "been tampered with";
     ResetPersistedState();
@@ -230,8 +238,8 @@ void PayloadState::UpdateSucceeded() {
       break;
 
     case AttemptType::kRollback:
-      metrics::ReportRollbackMetrics(system_state_,
-                                     metrics::RollbackResult::kSuccess);
+      system_state_->metrics_reporter()->ReportRollbackMetrics(
+          metrics::RollbackResult::kSuccess);
       break;
   }
   attempt_error_code_ = ErrorCode::kSuccess;
@@ -239,8 +247,9 @@ void PayloadState::UpdateSucceeded() {
   // Reset the number of responses seen since it counts from the last
   // successful update, e.g. now.
   SetNumResponsesSeen(0);
+  SetPayloadIndex(0);
 
-  CreateSystemUpdatedMarkerFile();
+  metrics_utils::SetSystemUpdatedMarker(system_state_->clock(), prefs_);
 }
 
 void PayloadState::UpdateFailed(ErrorCode error) {
@@ -264,8 +273,8 @@ void PayloadState::UpdateFailed(ErrorCode error) {
       break;
 
     case AttemptType::kRollback:
-      metrics::ReportRollbackMetrics(system_state_,
-                                     metrics::RollbackResult::kFailed);
+      system_state_->metrics_reporter()->ReportRollbackMetrics(
+          metrics::RollbackResult::kFailed);
       break;
   }
 
@@ -385,14 +394,16 @@ bool PayloadState::ShouldBackoffDownload() {
     LOG(INFO) << "Payload backoff disabled for interactive update checks.";
     return false;
   }
-  if (response_.is_delta_payload) {
-    // If delta payloads fail, we want to fallback quickly to full payloads as
-    // they are more likely to succeed. Exponential backoffs would greatly
-    // slow down the fallback to full payloads.  So we don't backoff for delta
-    // payloads.
-    LOG(INFO) << "No backoffs for delta payloads. "
-              << "Can proceed with the download";
-    return false;
+  for (const auto& package : response_.packages) {
+    if (package.is_delta) {
+      // If delta payloads fail, we want to fallback quickly to full payloads as
+      // they are more likely to succeed. Exponential backoffs would greatly
+      // slow down the fallback to full payloads.  So we don't backoff for delta
+      // payloads.
+      LOG(INFO) << "No backoffs for delta payloads. "
+                << "Can proceed with the download";
+      return false;
+    }
   }
 
   if (!system_state_->hardware()->IsOfficialBuild()) {
@@ -433,7 +444,7 @@ void PayloadState::IncrementPayloadAttemptNumber() {
 
 void PayloadState::IncrementFullPayloadAttemptNumber() {
   // Update the payload attempt number for full payloads and the backoff time.
-  if (response_.is_delta_payload) {
+  if (response_.packages[payload_index_].is_delta) {
     LOG(INFO) << "Not incrementing payload attempt number for delta payloads";
     return;
   }
@@ -444,21 +455,23 @@ void PayloadState::IncrementFullPayloadAttemptNumber() {
 }
 
 void PayloadState::IncrementUrlIndex() {
-  uint32_t next_url_index = GetUrlIndex() + 1;
-  if (next_url_index < candidate_urls_.size()) {
+  size_t next_url_index = url_index_ + 1;
+  size_t max_url_size = 0;
+  for (const auto& urls : candidate_urls_)
+    max_url_size = std::max(max_url_size, urls.size());
+  if (next_url_index < max_url_size) {
     LOG(INFO) << "Incrementing the URL index for next attempt";
     SetUrlIndex(next_url_index);
   } else {
-    LOG(INFO) << "Resetting the current URL index (" << GetUrlIndex() << ") to "
-              << "0 as we only have " << candidate_urls_.size()
-              << " candidate URL(s)";
+    LOG(INFO) << "Resetting the current URL index (" << url_index_ << ") to "
+              << "0 as we only have " << max_url_size << " candidate URL(s)";
     SetUrlIndex(0);
     IncrementPayloadAttemptNumber();
     IncrementFullPayloadAttemptNumber();
   }
 
   // If we have multiple URLs, record that we just switched to another one
-  if (candidate_urls_.size() > 1)
+  if (max_url_size > 1)
     SetUrlSwitchCount(url_switch_count_ + 1);
 
   // Whenever we update the URL index, we should also clear the URL failure
@@ -519,12 +532,14 @@ void PayloadState::UpdateCurrentDownloadSource() {
 
   if (using_p2p_for_downloading_) {
     current_download_source_ = kDownloadSourceHttpPeer;
-  } else if (GetUrlIndex() < candidate_urls_.size())  {
-    string current_url = candidate_urls_[GetUrlIndex()];
-    if (base::StartsWith(current_url, "https://",
-                         base::CompareCase::INSENSITIVE_ASCII)) {
+  } else if (payload_index_ < candidate_urls_.size() &&
+             candidate_urls_[payload_index_].size() != 0) {
+    const string& current_url = candidate_urls_[payload_index_][GetUrlIndex()];
+    if (base::StartsWith(
+            current_url, "https://", base::CompareCase::INSENSITIVE_ASCII)) {
       current_download_source_ = kDownloadSourceHttpsServer;
-    } else if (base::StartsWith(current_url, "http://",
+    } else if (base::StartsWith(current_url,
+                                "http://",
                                 base::CompareCase::INSENSITIVE_ASCII)) {
       current_download_source_ = kDownloadSourceHttpServer;
     }
@@ -548,16 +563,17 @@ void PayloadState::UpdateBytesDownloaded(size_t count) {
 }
 
 PayloadType PayloadState::CalculatePayloadType() {
-  PayloadType payload_type;
-  OmahaRequestParams* params = system_state_->request_params();
-  if (response_.is_delta_payload) {
-    payload_type = kPayloadTypeDelta;
-  } else if (params->delta_okay()) {
-    payload_type = kPayloadTypeFull;
-  } else {  // Full payload, delta was not allowed by request.
-    payload_type = kPayloadTypeForcedFull;
+  for (const auto& package : response_.packages) {
+    if (package.is_delta) {
+      return kPayloadTypeDelta;
+    }
   }
-  return payload_type;
+  OmahaRequestParams* params = system_state_->request_params();
+  if (params->delta_okay()) {
+    return kPayloadTypeFull;
+  }
+  // Full payload, delta was not allowed by request.
+  return kPayloadTypeForcedFull;
 }
 
 // TODO(zeuthen): Currently we don't report the UpdateEngine.Attempt.*
@@ -569,7 +585,7 @@ void PayloadState::CollectAndReportAttemptMetrics(ErrorCode code) {
 
   PayloadType payload_type = CalculatePayloadType();
 
-  int64_t payload_size = response_.size;
+  int64_t payload_size = GetPayloadSize();
 
   int64_t payload_bytes_downloaded = attempt_num_bytes_downloaded_;
 
@@ -622,19 +638,22 @@ void PayloadState::CollectAndReportAttemptMetrics(ErrorCode code) {
       break;
   }
 
-  metrics::ReportUpdateAttemptMetrics(system_state_,
-                                      attempt_number,
-                                      payload_type,
-                                      duration,
-                                      duration_uptime,
-                                      payload_size,
-                                      payload_bytes_downloaded,
-                                      payload_download_speed_bps,
-                                      download_source,
-                                      attempt_result,
-                                      internal_error_code,
-                                      payload_download_error_code,
-                                      attempt_connection_type_);
+  system_state_->metrics_reporter()->ReportUpdateAttemptMetrics(
+      system_state_,
+      attempt_number,
+      payload_type,
+      duration,
+      duration_uptime,
+      payload_size,
+      attempt_result,
+      internal_error_code);
+
+  system_state_->metrics_reporter()->ReportUpdateAttemptDownloadMetrics(
+      payload_bytes_downloaded,
+      payload_download_speed_bps,
+      download_source,
+      payload_download_error_code,
+      attempt_connection_type_);
 }
 
 void PayloadState::PersistAttemptMetrics() {
@@ -659,7 +678,8 @@ void PayloadState::ReportAndClearPersistedAttemptMetrics() {
   if (!attempt_in_progress)
     return;
 
-  metrics::ReportAbnormallyTerminatedUpdateAttemptMetrics(system_state_);
+  system_state_->metrics_reporter()
+      ->ReportAbnormallyTerminatedUpdateAttemptMetrics();
 
   ClearPersistedAttemptMetrics();
 }
@@ -715,22 +735,22 @@ void PayloadState::CollectAndReportSuccessfulUpdateMetrics() {
 
   PayloadType payload_type = CalculatePayloadType();
 
-  int64_t payload_size = response_.size;
+  int64_t payload_size = GetPayloadSize();
 
   int attempt_count = GetPayloadAttemptNumber();
 
   int updates_abandoned_count = num_responses_seen_ - 1;
 
-  metrics::ReportSuccessfulUpdateMetrics(system_state_,
-                                         attempt_count,
-                                         updates_abandoned_count,
-                                         payload_type,
-                                         payload_size,
-                                         total_bytes_by_source,
-                                         download_overhead_percentage,
-                                         duration,
-                                         reboot_count,
-                                         url_switch_count);
+  system_state_->metrics_reporter()->ReportSuccessfulUpdateMetrics(
+      attempt_count,
+      updates_abandoned_count,
+      payload_type,
+      payload_size,
+      total_bytes_by_source,
+      download_overhead_percentage,
+      duration,
+      reboot_count,
+      url_switch_count);
 }
 
 void PayloadState::UpdateNumReboots() {
@@ -744,16 +764,14 @@ void PayloadState::UpdateNumReboots() {
 }
 
 void PayloadState::SetNumReboots(uint32_t num_reboots) {
-  CHECK(prefs_);
   num_reboots_ = num_reboots;
-  prefs_->SetInt64(kPrefsNumReboots, num_reboots);
-  LOG(INFO) << "Number of Reboots during current update attempt = "
-            << num_reboots_;
+  metrics_utils::SetNumReboots(num_reboots, prefs_);
 }
 
 void PayloadState::ResetPersistedState() {
   SetPayloadAttemptNumber(0);
   SetFullPayloadAttemptNumber(0);
+  SetPayloadIndex(0);
   SetUrlIndex(0);
   SetUrlFailureCount(0);
   SetUrlSwitchCount(0);
@@ -784,46 +802,34 @@ void PayloadState::ResetDownloadSourcesOnNewUpdate() {
   }
 }
 
-int64_t PayloadState::GetPersistedValue(const string& key) {
-  CHECK(prefs_);
-  if (!prefs_->Exists(key))
-    return 0;
+string PayloadState::CalculateResponseSignature() {
+  string response_sign;
+  for (size_t i = 0; i < response_.packages.size(); i++) {
+    const auto& package = response_.packages[i];
+    response_sign += base::StringPrintf(
+        "Payload %zu:\n"
+        "  Size = %ju\n"
+        "  Sha256 Hash = %s\n"
+        "  Metadata Size = %ju\n"
+        "  Metadata Signature = %s\n"
+        "  Is Delta = %d\n"
+        "  NumURLs = %zu\n",
+        i,
+        static_cast<uintmax_t>(package.size),
+        package.hash.c_str(),
+        static_cast<uintmax_t>(package.metadata_size),
+        package.metadata_signature.c_str(),
+        package.is_delta,
+        candidate_urls_[i].size());
 
-  int64_t stored_value;
-  if (!prefs_->GetInt64(key, &stored_value))
-    return 0;
-
-  if (stored_value < 0) {
-    LOG(ERROR) << key << ": Invalid value (" << stored_value
-               << ") in persisted state. Defaulting to 0";
-    return 0;
+    for (size_t j = 0; j < candidate_urls_[i].size(); j++)
+      response_sign += base::StringPrintf(
+          "  Candidate Url%zu = %s\n", j, candidate_urls_[i][j].c_str());
   }
 
-  return stored_value;
-}
-
-string PayloadState::CalculateResponseSignature() {
-  string response_sign = base::StringPrintf(
-      "NumURLs = %d\n", static_cast<int>(candidate_urls_.size()));
-
-  for (size_t i = 0; i < candidate_urls_.size(); i++)
-    response_sign += base::StringPrintf("Candidate Url%d = %s\n",
-                                        static_cast<int>(i),
-                                        candidate_urls_[i].c_str());
-
   response_sign += base::StringPrintf(
-      "Payload Size = %ju\n"
-      "Payload Sha256 Hash = %s\n"
-      "Metadata Size = %ju\n"
-      "Metadata Signature = %s\n"
-      "Is Delta Payload = %d\n"
       "Max Failure Count Per Url = %d\n"
       "Disable Payload Backoff = %d\n",
-      static_cast<uintmax_t>(response_.size),
-      response_.hash.c_str(),
-      static_cast<uintmax_t>(response_.metadata_size),
-      response_.metadata_signature.c_str(),
-      response_.is_delta_payload,
       response_.max_failure_count_per_url,
       response_.disable_payload_backoff);
   return response_sign;
@@ -846,19 +852,18 @@ void PayloadState::SetResponseSignature(const string& response_signature) {
 }
 
 void PayloadState::LoadPayloadAttemptNumber() {
-  SetPayloadAttemptNumber(GetPersistedValue(kPrefsPayloadAttemptNumber));
+  SetPayloadAttemptNumber(
+      GetPersistedValue(kPrefsPayloadAttemptNumber, prefs_));
 }
 
 void PayloadState::LoadFullPayloadAttemptNumber() {
-  SetFullPayloadAttemptNumber(GetPersistedValue(
-      kPrefsFullPayloadAttemptNumber));
+  SetFullPayloadAttemptNumber(
+      GetPersistedValue(kPrefsFullPayloadAttemptNumber, prefs_));
 }
 
 void PayloadState::SetPayloadAttemptNumber(int payload_attempt_number) {
-  CHECK(prefs_);
   payload_attempt_number_ = payload_attempt_number;
-  LOG(INFO) << "Payload Attempt Number = " << payload_attempt_number_;
-  prefs_->SetInt64(kPrefsPayloadAttemptNumber, payload_attempt_number_);
+  metrics_utils::SetPayloadAttemptNumber(payload_attempt_number, prefs_);
 }
 
 void PayloadState::SetFullPayloadAttemptNumber(
@@ -870,8 +875,22 @@ void PayloadState::SetFullPayloadAttemptNumber(
       full_payload_attempt_number_);
 }
 
+void PayloadState::SetPayloadIndex(size_t payload_index) {
+  CHECK(prefs_);
+  payload_index_ = payload_index;
+  LOG(INFO) << "Payload Index = " << payload_index_;
+  prefs_->SetInt64(kPrefsUpdateStatePayloadIndex, payload_index_);
+}
+
+bool PayloadState::NextPayload() {
+  if (payload_index_ + 1 >= candidate_urls_.size())
+    return false;
+  SetPayloadIndex(payload_index_ + 1);
+  return true;
+}
+
 void PayloadState::LoadUrlIndex() {
-  SetUrlIndex(GetPersistedValue(kPrefsCurrentUrlIndex));
+  SetUrlIndex(GetPersistedValue(kPrefsCurrentUrlIndex, prefs_));
 }
 
 void PayloadState::SetUrlIndex(uint32_t url_index) {
@@ -886,8 +905,8 @@ void PayloadState::SetUrlIndex(uint32_t url_index) {
 }
 
 void PayloadState::LoadScatteringWaitPeriod() {
-  SetScatteringWaitPeriod(
-      TimeDelta::FromSeconds(GetPersistedValue(kPrefsWallClockWaitPeriod)));
+  SetScatteringWaitPeriod(TimeDelta::FromSeconds(
+      GetPersistedValue(kPrefsWallClockWaitPeriod, prefs_)));
 }
 
 void PayloadState::SetScatteringWaitPeriod(TimeDelta wait_period) {
@@ -904,7 +923,7 @@ void PayloadState::SetScatteringWaitPeriod(TimeDelta wait_period) {
 }
 
 void PayloadState::LoadUrlSwitchCount() {
-  SetUrlSwitchCount(GetPersistedValue(kPrefsUrlSwitchCount));
+  SetUrlSwitchCount(GetPersistedValue(kPrefsUrlSwitchCount, prefs_));
 }
 
 void PayloadState::SetUrlSwitchCount(uint32_t url_switch_count) {
@@ -915,7 +934,7 @@ void PayloadState::SetUrlSwitchCount(uint32_t url_switch_count) {
 }
 
 void PayloadState::LoadUrlFailureCount() {
-  SetUrlFailureCount(GetPersistedValue(kPrefsCurrentUrlFailureCount));
+  SetUrlFailureCount(GetPersistedValue(kPrefsCurrentUrlFailureCount, prefs_));
 }
 
 void PayloadState::SetUrlFailureCount(uint32_t url_failure_count) {
@@ -998,12 +1017,8 @@ void PayloadState::LoadUpdateTimestampStart() {
 }
 
 void PayloadState::SetUpdateTimestampStart(const Time& value) {
-  CHECK(prefs_);
   update_timestamp_start_ = value;
-  prefs_->SetInt64(kPrefsUpdateTimestampStart,
-                   update_timestamp_start_.ToInternalValue());
-  LOG(INFO) << "Update Timestamp Start = "
-            << utils::ToString(update_timestamp_start_);
+  metrics_utils::SetUpdateTimestampStart(value, prefs_);
 }
 
 void PayloadState::SetUpdateTimestampEnd(const Time& value) {
@@ -1049,7 +1064,7 @@ void PayloadState::LoadUpdateDurationUptime() {
 }
 
 void PayloadState::LoadNumReboots() {
-  SetNumReboots(GetPersistedValue(kPrefsNumReboots));
+  SetNumReboots(GetPersistedValue(kPrefsNumReboots, prefs_));
 }
 
 void PayloadState::LoadRollbackVersion() {
@@ -1101,7 +1116,7 @@ string PayloadState::GetPrefsKey(const string& prefix, DownloadSource source) {
 
 void PayloadState::LoadCurrentBytesDownloaded(DownloadSource source) {
   string key = GetPrefsKey(kPrefsCurrentBytesDownloaded, source);
-  SetCurrentBytesDownloaded(source, GetPersistedValue(key), true);
+  SetCurrentBytesDownloaded(source, GetPersistedValue(key, prefs_), true);
 }
 
 void PayloadState::SetCurrentBytesDownloaded(
@@ -1125,7 +1140,7 @@ void PayloadState::SetCurrentBytesDownloaded(
 
 void PayloadState::LoadTotalBytesDownloaded(DownloadSource source) {
   string key = GetPrefsKey(kPrefsTotalBytesDownloaded, source);
-  SetTotalBytesDownloaded(source, GetPersistedValue(key), true);
+  SetTotalBytesDownloaded(source, GetPersistedValue(key, prefs_), true);
 }
 
 void PayloadState::SetTotalBytesDownloaded(
@@ -1149,7 +1164,7 @@ void PayloadState::SetTotalBytesDownloaded(
 }
 
 void PayloadState::LoadNumResponsesSeen() {
-  SetNumResponsesSeen(GetPersistedValue(kPrefsNumResponsesSeen));
+  SetNumResponsesSeen(GetPersistedValue(kPrefsNumResponsesSeen, prefs_));
 }
 
 void PayloadState::SetNumResponsesSeen(int num_responses_seen) {
@@ -1172,38 +1187,22 @@ void PayloadState::ComputeCandidateUrls() {
   }
 
   candidate_urls_.clear();
-  for (size_t i = 0; i < response_.payload_urls.size(); i++) {
-    string candidate_url = response_.payload_urls[i];
-    if (base::StartsWith(candidate_url, "http://",
-                         base::CompareCase::INSENSITIVE_ASCII) &&
-        !http_url_ok) {
-      continue;
+  for (const auto& package : response_.packages) {
+    candidate_urls_.emplace_back();
+    for (const string& candidate_url : package.payload_urls) {
+      if (base::StartsWith(
+              candidate_url, "http://", base::CompareCase::INSENSITIVE_ASCII) &&
+          !http_url_ok) {
+        continue;
+      }
+      candidate_urls_.back().push_back(candidate_url);
+      LOG(INFO) << "Candidate Url" << (candidate_urls_.back().size() - 1)
+                << ": " << candidate_url;
     }
-    candidate_urls_.push_back(candidate_url);
-    LOG(INFO) << "Candidate Url" << (candidate_urls_.size() - 1)
-              << ": " << candidate_url;
+    LOG(INFO) << "Found " << candidate_urls_.back().size() << " candidate URLs "
+              << "out of " << package.payload_urls.size()
+              << " URLs supplied in package " << candidate_urls_.size() - 1;
   }
-
-  LOG(INFO) << "Found " << candidate_urls_.size() << " candidate URLs "
-            << "out of " << response_.payload_urls.size() << " URLs supplied";
-}
-
-void PayloadState::CreateSystemUpdatedMarkerFile() {
-  CHECK(prefs_);
-  int64_t value = system_state_->clock()->GetWallclockTime().ToInternalValue();
-  prefs_->SetInt64(kPrefsSystemUpdatedMarker, value);
-}
-
-void PayloadState::BootedIntoUpdate(TimeDelta time_to_reboot) {
-  // Send |time_to_reboot| as a UMA stat.
-  string metric = metrics::kMetricTimeToRebootMinutes;
-  system_state_->metrics_lib()->SendToUMA(metric,
-                                          time_to_reboot.InMinutes(),
-                                          0,         // min: 0 minute
-                                          30*24*60,  // max: 1 month (approx)
-                                          kNumDefaultUmaBuckets);
-  LOG(INFO) << "Uploading " << utils::FormatTimeDelta(time_to_reboot)
-            << " for metric " <<  metric;
 }
 
 void PayloadState::UpdateEngineStarted() {
@@ -1215,24 +1214,11 @@ void PayloadState::UpdateEngineStarted() {
   if (!system_state_->system_rebooted())
     return;
 
-  // Figure out if we just booted into a new update
-  if (prefs_->Exists(kPrefsSystemUpdatedMarker)) {
-    int64_t stored_value;
-    if (prefs_->GetInt64(kPrefsSystemUpdatedMarker, &stored_value)) {
-      Time system_updated_at = Time::FromInternalValue(stored_value);
-      if (!system_updated_at.is_null()) {
-        TimeDelta time_to_reboot =
-            system_state_->clock()->GetWallclockTime() - system_updated_at;
-        if (time_to_reboot.ToInternalValue() < 0) {
-          LOG(ERROR) << "time_to_reboot is negative - system_updated_at: "
-                     << utils::ToString(system_updated_at);
-        } else {
-          BootedIntoUpdate(time_to_reboot);
-        }
-      }
-    }
-    prefs_->Delete(kPrefsSystemUpdatedMarker);
-  }
+  // Report time_to_reboot if we booted into a new update.
+  metrics_utils::LoadAndReportTimeToReboot(
+      system_state_->metrics_reporter(), prefs_, system_state_->clock());
+  prefs_->Delete(kPrefsSystemUpdatedMarker);
+
   // Check if it is needed to send metrics about a failed reboot into a new
   // version.
   ReportFailedBootIfNeeded();
@@ -1266,15 +1252,8 @@ void PayloadState::ReportFailedBootIfNeeded() {
       }
 
       // Report the UMA metric of the current boot failure.
-      string metric = metrics::kMetricFailedUpdateCount;
-      LOG(INFO) << "Uploading " << target_attempt
-                << " (count) for metric " <<  metric;
-      system_state_->metrics_lib()->SendToUMA(
-           metric,
-           target_attempt,
-           1,    // min value
-           50,   // max value
-           kNumDefaultUmaBuckets);
+      system_state_->metrics_reporter()->ReportFailedUpdateCount(
+          target_attempt);
     } else {
       prefs_->Delete(kPrefsTargetVersionAttempt);
       prefs_->Delete(kPrefsTargetVersionUniqueId);
@@ -1331,7 +1310,7 @@ void PayloadState::SetP2PNumAttempts(int value) {
 }
 
 void PayloadState::LoadP2PNumAttempts() {
-  SetP2PNumAttempts(GetPersistedValue(kPrefsP2PNumAttempts));
+  SetP2PNumAttempts(GetPersistedValue(kPrefsP2PNumAttempts, prefs_));
 }
 
 Time PayloadState::GetP2PFirstAttemptTimestamp() {
@@ -1348,7 +1327,8 @@ void PayloadState::SetP2PFirstAttemptTimestamp(const Time& time) {
 }
 
 void PayloadState::LoadP2PFirstAttemptTimestamp() {
-  int64_t stored_value = GetPersistedValue(kPrefsP2PFirstAttemptTimestamp);
+  int64_t stored_value =
+      GetPersistedValue(kPrefsP2PFirstAttemptTimestamp, prefs_);
   Time stored_time = Time::FromInternalValue(stored_value);
   SetP2PFirstAttemptTimestamp(stored_time);
 }
@@ -1392,6 +1372,13 @@ bool PayloadState::P2PAttemptAllowed() {
   }
 
   return true;
+}
+
+int64_t PayloadState::GetPayloadSize() {
+  int64_t payload_size = 0;
+  for (const auto& package : response_.packages)
+    payload_size += package.size;
+  return payload_size;
 }
 
 }  // namespace chromeos_update_engine

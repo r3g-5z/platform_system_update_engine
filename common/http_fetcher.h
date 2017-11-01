@@ -66,8 +66,7 @@ class HttpFetcher {
   void SetPostData(const void* data, size_t size);
 
   // Proxy methods to set the proxies, then to pop them off.
-  // Returns true on success.
-  bool ResolveProxiesForUrl(const std::string& url,
+  void ResolveProxiesForUrl(const std::string& url,
                             const base::Closure& callback);
 
   void SetProxies(const std::deque<std::string>& proxies) {
@@ -134,6 +133,11 @@ class HttpFetcher {
   ProxyResolver* proxy_resolver() const { return proxy_resolver_; }
 
  protected:
+  // Cancels a proxy resolution in progress. The callback passed to
+  // ResolveProxiesForUrl() will not be called. Returns whether there was a
+  // pending proxy resolution to be canceled.
+  bool CancelProxyResolution();
+
   // The URL we're actively fetching from
   std::string url_;
 
@@ -165,14 +169,14 @@ class HttpFetcher {
  private:
   // Callback from the proxy resolver
   void ProxiesResolved(const std::deque<std::string>& proxies);
-  static void StaticProxiesResolved(const std::deque<std::string>& proxies,
-                                    void* data) {
-    reinterpret_cast<HttpFetcher*>(data)->ProxiesResolved(proxies);
-  }
 
   // Callback used to run the proxy resolver callback when there is no
   // |proxy_resolver_|.
   void NoProxyResolverCallback();
+
+  // Stores the ongoing proxy request id if there is one, otherwise
+  // kProxyRequestIdNull.
+  ProxyRequestId proxy_request_{kProxyRequestIdNull};
 
   DISALLOW_COPY_AND_ASSIGN(HttpFetcher);
 };

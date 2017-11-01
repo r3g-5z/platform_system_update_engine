@@ -107,6 +107,10 @@ class LibcurlHttpFetcher : public HttpFetcher {
   }
 
  private:
+  // libcurl's CURLOPT_CLOSESOCKETFUNCTION callback function. Called when
+  // closing a socket created with the CURLOPT_OPENSOCKETFUNCTION callback.
+  static int LibcurlCloseSocketCallback(void* clientp, curl_socket_t item);
+
   // Callback for when proxy resolution has completed. This begins the
   // transfer.
   void ProxiesResolved();
@@ -232,6 +236,9 @@ class LibcurlHttpFetcher : public HttpFetcher {
 
   // Seconds to wait before retrying a resume.
   int retry_seconds_{20};
+
+  // When waiting for a retry, the task id of the retry callback.
+  brillo::MessageLoop::TaskId retry_task_id_{brillo::MessageLoop::kTaskIdNull};
 
   // Number of resumes due to no network (e.g., HTTP response code 0).
   int no_network_retry_count_{0};

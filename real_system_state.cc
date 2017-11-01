@@ -24,14 +24,20 @@
 #include <base/time/time.h>
 #include <brillo/make_unique_ptr.h>
 #include <brillo/message_loops/message_loop.h>
+#if USE_CHROME_KIOSK_APP || USE_CHROME_NETWORK_PROXY
+#include <chromeos/dbus/service_constants.h>
+#endif  // USE_CHROME_KIOSK_APP || USE_CHROME_NETWORK_PROXY
 
 #include "update_engine/common/boot_control.h"
 #include "update_engine/common/boot_control_stub.h"
 #include "update_engine/common/constants.h"
 #include "update_engine/common/hardware.h"
 #include "update_engine/common/utils.h"
+#include "update_engine/metrics_reporter_omaha.h"
+#if USE_DBUS
+#include "update_engine/dbus_connection.h"
+#endif  // USE_DBUS
 #include "update_engine/update_manager/state_factory.h"
-#include "update_engine/weave_service_factory.h"
 
 using brillo::MessageLoop;
 
@@ -45,7 +51,7 @@ RealSystemState::~RealSystemState() {
 }
 
 bool RealSystemState::Initialize() {
-  metrics_lib_.Init();
+  metrics_reporter_.Initialize();
 
   boot_control_ = boot_control::CreateBootControl();
   if (!boot_control_) {
@@ -59,6 +65,17 @@ bool RealSystemState::Initialize() {
     LOG(ERROR) << "Error intializing the HardwareInterface.";
     return false;
   }
+
+#if USE_CHROME_KIOSK_APP
+  libcros_proxy_.reset(new org::chromium::LibCrosServiceInterfaceProxy(
+      DBusConnection::Get()->GetDBus(), chromeos::kLibCrosServiceName));
+#endif  // USE_CHROME_KIOSK_APP
+#if USE_CHROME_NETWORK_PROXY
+  network_proxy_service_proxy_.reset(
+      new org::chromium::NetworkProxyServiceInterfaceProxy(
+          DBusConnection::Get()->GetDBus(),
+          chromeos::kNetworkProxyServiceName));
+#endif  // USE_CHROME_NETWORK_PROXY
 
   LOG_IF(INFO, !hardware_->IsNormalBootMode()) << "Booted in dev mode.";
   LOG_IF(INFO, !hardware_->IsOfficialBuild()) << "Booted non-official build.";
@@ -129,25 +146,28 @@ bool RealSystemState::Initialize() {
       new CertificateChecker(prefs_.get(), &openssl_wrapper_));
   certificate_checker_->Init();
 
-#if USE_LIBCROS
-  LibCrosProxy* libcros_proxy = &libcros_proxy_;
+  update_attempter_.reset(
+      new UpdateAttempter(this,
+                          certificate_checker_.get(),
+#if USE_CHROME_NETWORK_PROXY
+                          network_proxy_service_proxy_.get()));
 #else
-  LibCrosProxy* libcros_proxy = nullptr;
-#endif  // USE_LIBCROS
+                          nullptr));
+#endif  // USE_CHROME_NETWORK_PROXY
 
   // Initialize the UpdateAttempter before the UpdateManager.
-  update_attempter_.reset(
-      new UpdateAttempter(this, certificate_checker_.get(), libcros_proxy));
   update_attempter_->Init();
-
-  weave_service_ = ConstructWeaveService(update_attempter_.get());
-  if (weave_service_)
-    update_attempter_->AddObserver(weave_service_.get());
 
   // Initialize the Update Manager using the default state factory.
   chromeos_update_manager::State* um_state =
-      chromeos_update_manager::DefaultStateFactory(
-          &policy_provider_, libcros_proxy, this);
+      chromeos_update_manager::DefaultStateFactory(&policy_provider_,
+#if USE_CHROME_KIOSK_APP
+                                                   libcros_proxy_.get(),
+#else
+                                                   nullptr,
+#endif  // USE_CHROME_KIOSK_APP
+                                                   this);
+
   if (!um_state) {
     LOG(ERROR) << "Failed to initialize the Update Manager.";
     return false;

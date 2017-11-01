@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2015 The Android Open Source Project
+// Copyright (C) 2017 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,22 +14,22 @@
 // limitations under the License.
 //
 
-#ifndef UPDATE_ENGINE_WEAVE_SERVICE_FACTORY_H_
-#define UPDATE_ENGINE_WEAVE_SERVICE_FACTORY_H_
+#ifndef UPDATE_ENGINE_MOCK_SERVICE_OBSERVER_H_
+#define UPDATE_ENGINE_MOCK_SERVICE_OBSERVER_H_
 
-#include <memory>
-
-#include <base/memory/ref_counted.h>
-
-#include "update_engine/weave_service_interface.h"
+#include <gmock/gmock.h>
+#include "update_engine/service_observer_interface.h"
 
 namespace chromeos_update_engine {
 
-// Create a new WeaveServiceInterface instance. In case of error or when weaved
-// is disabled, returns an empty pointer.
-std::unique_ptr<WeaveServiceInterface> ConstructWeaveService(
-    WeaveServiceInterface::DelegateInterface* delegate);
+class MockServiceObserver : public ServiceObserverInterface {
+ public:
+  MOCK_METHOD1(
+      SendStatusUpdate,
+      void(const update_engine::UpdateEngineStatus& update_engine_status));
+  MOCK_METHOD1(SendPayloadApplicationComplete, void(ErrorCode error_code));
+};
 
 }  // namespace chromeos_update_engine
 
-#endif  // UPDATE_ENGINE_WEAVE_SERVICE_FACTORY_H_
+#endif  // UPDATE_ENGINE_MOCK_SERVICE_OBSERVER_H_

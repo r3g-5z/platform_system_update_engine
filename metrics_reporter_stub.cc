@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2015 The Android Open Source Project
+// Copyright (C) 2017 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,27 +14,18 @@
 // limitations under the License.
 //
 
-#include "update_engine/weave_service_factory.h"
+#include "update_engine/metrics_reporter_stub.h"
 
-#if USE_WEAVE
-#include "update_engine/weave_service.h"
-#endif
+#include <memory>
 
 namespace chromeos_update_engine {
 
-std::unique_ptr<WeaveServiceInterface> ConstructWeaveService(
-    WeaveServiceInterface::DelegateInterface* delegate) {
-  std::unique_ptr<WeaveServiceInterface> result;
-  if (!delegate)
-    return result;
+namespace metrics {
 
-#if USE_WEAVE
-  WeaveService* weave_service = new WeaveService();
-  result.reset(weave_service);
-  if (!weave_service->Init(delegate))
-    result.reset();
-#endif
-  return result;
+std::unique_ptr<MetricsReporterInterface> CreateMetricsReporter() {
+  return std::make_unique<MetricsReporterStub>();
 }
+
+}  // namespace metrics
 
 }  // namespace chromeos_update_engine
