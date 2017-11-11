@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+ifneq ($(TARGET_BUILD_PDK),true)
+
 LOCAL_PATH := $(my-dir)
 
 # Default values for the USE flags. Override these USE flags from your product
@@ -103,6 +105,7 @@ ue_libpayload_consumer_exported_static_libraries := \
     libxz \
     libbz \
     libbspatch \
+    libbrotli \
     $(ue_update_metadata_protos_exported_static_libraries)
 ue_libpayload_consumer_exported_shared_libraries := \
     libcrypto \
@@ -601,6 +604,7 @@ ue_libpayload_generator_exported_static_libraries := \
     libbsdiff \
     libdivsufsort \
     libdivsufsort64 \
+    libbrotli \
     libpayload_consumer \
     liblzma \
     update_metadata-protos \
@@ -1021,3 +1025,5 @@ LOCAL_REQUIRED_MODULES := \
     simg2img
 include $(BUILD_PREBUILT)
 endif  # HOST_OS == linux
+
+endif  # ifneq ($(TARGET_BUILD_PDK),true)
