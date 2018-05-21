@@ -22,6 +22,7 @@ LOCAL_PATH := $(my-dir)
 # by setting BRILLO_USE_* values. Note that we define local variables like
 # local_use_* to prevent leaking our default setting for other packages.
 local_use_binder := $(if $(BRILLO_USE_BINDER),$(BRILLO_USE_BINDER),1)
+local_use_fec := 1
 local_use_hwid_override := \
     $(if $(BRILLO_USE_HWID_OVERRIDE),$(BRILLO_USE_HWID_OVERRIDE),0)
 local_use_mtd := $(if $(BRILLO_USE_MTD),$(BRILLO_USE_MTD),0)
@@ -35,6 +36,7 @@ ue_common_cflags := \
     -DUSE_BINDER=$(local_use_binder) \
     -DUSE_CHROME_NETWORK_PROXY=$(local_use_chrome_network_proxy) \
     -DUSE_CHROME_KIOSK_APP=$(local_use_chrome_kiosk_app) \
+    -DUSE_FEC=$(local_use_fec) \
     -DUSE_HWID_OVERRIDE=$(local_use_hwid_override) \
     -DUSE_MTD=$(local_use_mtd) \
     -DUSE_OMAHA=$(local_use_omaha) \
@@ -106,6 +108,7 @@ ue_libpayload_consumer_exported_static_libraries := \
     libbz \
     libbspatch \
     libbrotli \
+    libpuffpatch \
     $(ue_update_metadata_protos_exported_static_libraries)
 ue_libpayload_consumer_exported_shared_libraries := \
     libcrypto \
@@ -130,18 +133,29 @@ ue_libpayload_consumer_src_files := \
     common/terminator.cc \
     common/utils.cc \
     payload_consumer/bzip_extent_writer.cc \
+    payload_consumer/cached_file_descriptor.cc \
     payload_consumer/delta_performer.cc \
     payload_consumer/download_action.cc \
+    payload_consumer/extent_reader.cc \
     payload_consumer/extent_writer.cc \
     payload_consumer/file_descriptor.cc \
     payload_consumer/file_descriptor_utils.cc \
     payload_consumer/file_writer.cc \
     payload_consumer/filesystem_verifier_action.cc \
     payload_consumer/install_plan.cc \
+    payload_consumer/mount_history.cc \
     payload_consumer/payload_constants.cc \
+    payload_consumer/payload_metadata.cc \
     payload_consumer/payload_verifier.cc \
     payload_consumer/postinstall_runner_action.cc \
     payload_consumer/xz_extent_writer.cc
+
+ifeq ($(local_use_fec),1)
+ue_libpayload_consumer_src_files += \
+    payload_consumer/fec_file_descriptor.cc
+ue_libpayload_consumer_exported_shared_libraries += \
+    libfec
+endif  # local_use_fec == 1
 
 ifeq ($(HOST_OS),linux)
 # Build for the host.
@@ -149,7 +163,7 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := libpayload_consumer
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 LOCAL_CPP_EXTENSION := .cc
-LOCAL_CFLAGS := $(ue_common_cflags)
+LOCAL_CFLAGS := $(filter-out -DUSE_FEC=%,$(ue_common_cflags)) -DUSE_FEC=0
 LOCAL_CPPFLAGS := $(ue_common_cppflags)
 LOCAL_LDFLAGS := $(ue_common_ldflags)
 LOCAL_C_INCLUDES := \
@@ -211,8 +225,7 @@ LOCAL_CFLAGS := $(ue_common_cflags)
 LOCAL_CPPFLAGS := $(ue_common_cppflags)
 LOCAL_LDFLAGS := $(ue_common_ldflags)
 LOCAL_C_INCLUDES := \
-    $(ue_common_c_includes) \
-    bootable/recovery
+    $(ue_common_c_includes)
 LOCAL_STATIC_LIBRARIES := \
     $(ue_common_static_libraries) \
     $(ue_libupdate_engine_boot_control_exported_static_libraries)
@@ -234,6 +247,7 @@ ue_libupdate_engine_exported_c_includes := \
 ue_libupdate_engine_exported_static_libraries := \
     libpayload_consumer \
     update_metadata-protos \
+    libbootloader_message \
     libbz \
     libfs_mgr \
     libbase \
@@ -270,8 +284,7 @@ LOCAL_CPPFLAGS := $(ue_common_cppflags)
 LOCAL_LDFLAGS := $(ue_common_ldflags)
 LOCAL_C_INCLUDES := \
     $(ue_common_c_includes) \
-    $(ue_libupdate_engine_exported_c_includes) \
-    bootable/recovery
+    $(ue_libupdate_engine_exported_c_includes)
 LOCAL_STATIC_LIBRARIES := \
     libpayload_consumer \
     update_metadata-protos \
@@ -351,6 +364,7 @@ endif  # local_use_binder == 1
 # loop to apply payloads provided by the upper layer via a Binder interface.
 ue_libupdate_engine_android_exported_static_libraries := \
     libpayload_consumer \
+    libbootloader_message \
     libfs_mgr \
     libbase \
     liblog \
@@ -378,8 +392,7 @@ LOCAL_CFLAGS := $(ue_common_cflags)
 LOCAL_CPPFLAGS := $(ue_common_cppflags)
 LOCAL_LDFLAGS := $(ue_common_ldflags)
 LOCAL_C_INCLUDES := \
-    $(ue_common_c_includes) \
-    bootable/recovery
+    $(ue_common_c_includes)
 #TODO(deymo): Remove external/cros/system_api/dbus once the strings are moved
 # out of the DBus interface.
 LOCAL_C_INCLUDES += \
@@ -467,8 +480,7 @@ LOCAL_CFLAGS := \
 LOCAL_CPPFLAGS := $(ue_common_cppflags)
 LOCAL_LDFLAGS := $(ue_common_ldflags)
 LOCAL_C_INCLUDES := \
-    $(ue_common_c_includes) \
-    bootable/recovery
+    $(ue_common_c_includes)
 #TODO(deymo): Remove external/cros/system_api/dbus once the strings are moved
 # out of the DBus interface.
 LOCAL_C_INCLUDES += \
@@ -485,6 +497,7 @@ LOCAL_SRC_FILES := \
     update_status_utils.cc \
     utils_android.cc
 LOCAL_STATIC_LIBRARIES := \
+    libbootloader_message \
     libfs_mgr \
     libbase \
     liblog \
@@ -505,6 +518,21 @@ LOCAL_STATIC_LIBRARIES += \
     libevent \
     libmodpb64 \
     libgtest_prod
+
+ifeq ($(local_use_fec),1)
+# The static library "libfec" depends on a bunch of other static libraries, but
+# such dependency is not handled by the build system, so we need to add them
+# here.
+LOCAL_STATIC_LIBRARIES += \
+    libext4_utils \
+    libsquashfs_utils \
+    libcutils \
+    libcrypto_utils \
+    libcrypto \
+    libcutils \
+    libbase \
+    libfec_rs
+endif  # local_use_fec == 1
 
 ifeq ($(strip $(PRODUCT_STATIC_BOOT_CONTROL_HAL)),)
 # No static boot_control HAL defined, so no sideload support. We use a fake
@@ -610,8 +638,10 @@ ue_libpayload_generator_exported_static_libraries := \
     libdivsufsort \
     libdivsufsort64 \
     libbrotli \
-    libpayload_consumer \
     liblzma \
+    libpayload_consumer \
+    libpuffdiff \
+    libz \
     update_metadata-protos \
     $(ue_libpayload_consumer_exported_static_libraries) \
     $(ue_update_metadata_protos_exported_static_libraries)
@@ -627,6 +657,7 @@ ue_libpayload_generator_src_files := \
     payload_generator/block_mapping.cc \
     payload_generator/bzip.cc \
     payload_generator/cycle_breaker.cc \
+    payload_generator/deflate_utils.cc \
     payload_generator/delta_diff_generator.cc \
     payload_generator/delta_diff_utils.cc \
     payload_generator/ext2_filesystem.cc \
@@ -641,6 +672,7 @@ ue_libpayload_generator_src_files := \
     payload_generator/payload_generation_config.cc \
     payload_generator/payload_signer.cc \
     payload_generator/raw_filesystem.cc \
+    payload_generator/squashfs_filesystem.cc \
     payload_generator/tarjan.cc \
     payload_generator/topological_sort.cc \
     payload_generator/xz_android.cc
@@ -659,8 +691,9 @@ LOCAL_STATIC_LIBRARIES := \
     libbsdiff \
     libdivsufsort \
     libdivsufsort64 \
-    libpayload_consumer \
     liblzma \
+    libpayload_consumer \
+    libpuffdiff \
     update_metadata-protos \
     $(ue_common_static_libraries) \
     $(ue_libpayload_consumer_exported_static_libraries) \
@@ -727,6 +760,7 @@ LOCAL_SHARED_LIBRARIES := \
     $(ue_common_shared_libraries) \
     $(ue_libpayload_consumer_exported_shared_libraries) \
     $(ue_libpayload_generator_exported_shared_libraries)
+LOCAL_SHARED_LIBRARIES := $(filter-out libfec,$(LOCAL_SHARED_LIBRARIES))
 LOCAL_SRC_FILES := $(ue_delta_generator_src_files)
 include $(BUILD_HOST_EXECUTABLE)
 endif  # HOST_OS == linux
@@ -765,7 +799,6 @@ define ue-unittest-keys
     $(eval include $(CLEAR_VARS)) \
     $(eval LOCAL_MODULE := ue_$(1).pem) \
     $(eval LOCAL_MODULE_CLASS := ETC) \
-    $(eval $(ifeq $(BRILLO), 1, LOCAL_MODULE_TAGS := eng)) \
     $(eval LOCAL_SRC_FILES := $(1).pem) \
     $(eval LOCAL_MODULE_PATH := \
         $(TARGET_OUT_DATA_NATIVE_TESTS)/update_engine_unittests) \
@@ -775,7 +808,6 @@ define ue-unittest-keys
     $(eval include $(CLEAR_VARS)) \
     $(eval LOCAL_MODULE := ue_$(1).pub.pem) \
     $(eval LOCAL_MODULE_CLASS := ETC) \
-    $(eval $(ifeq $(BRILLO), 1, LOCAL_MODULE_TAGS := eng)) \
     $(eval LOCAL_MODULE_PATH := \
         $(TARGET_OUT_DATA_NATIVE_TESTS)/update_engine_unittests) \
     $(eval LOCAL_MODULE_STEM := $(1).pub.pem) \
@@ -797,7 +829,6 @@ define ue-unittest-sample-image
     $(eval include $(CLEAR_VARS)) \
     $(eval LOCAL_MODULE := ue_unittest_$(1)) \
     $(eval LOCAL_MODULE_CLASS := EXECUTABLES) \
-    $(eval $(ifeq $(BRILLO), 1, LOCAL_MODULE_TAGS := eng)) \
     $(eval LOCAL_MODULE_PATH := \
         $(TARGET_OUT_DATA_NATIVE_TESTS)/update_engine_unittests/gen) \
     $(eval LOCAL_MODULE_STEM := $(1)) \
@@ -811,15 +842,6 @@ $(call ue-unittest-sample-image,disk_ext2_1k.img)
 $(call ue-unittest-sample-image,disk_ext2_4k.img)
 $(call ue-unittest-sample-image,disk_ext2_4k_empty.img)
 $(call ue-unittest-sample-image,disk_ext2_unittest.img)
-
-# Zlib Fingerprint
-# ========================================================
-include $(CLEAR_VARS)
-LOCAL_MODULE := zlib_fingerprint
-LOCAL_MODULE_CLASS := ETC
-LOCAL_MODULE_PATH := $(TARGET_OUT_DATA_NATIVE_TESTS)/update_engine_unittests
-LOCAL_PREBUILT_MODULE_FILE := $(TARGET_OUT_COMMON_GEN)/zlib_fingerprint
-include $(BUILD_PREBUILT)
 
 # update_engine.conf
 # ========================================================
@@ -884,8 +906,7 @@ LOCAL_REQUIRED_MODULES := \
     ue_unittest_key.pub.pem \
     ue_unittest_key2.pem \
     ue_unittest_key2.pub.pem \
-    ue_unittest_update_engine.conf \
-    zlib_fingerprint
+    ue_unittest_update_engine.conf
 LOCAL_CPP_EXTENSION := .cc
 LOCAL_CFLAGS := $(ue_common_cflags)
 LOCAL_CPPFLAGS := $(ue_common_cppflags)
@@ -921,8 +942,10 @@ LOCAL_SRC_FILES := \
     common/test_utils.cc \
     common/utils_unittest.cc \
     payload_consumer/bzip_extent_writer_unittest.cc \
+    payload_consumer/cached_file_descriptor_unittest.cc \
     payload_consumer/delta_performer_integration_test.cc \
     payload_consumer/delta_performer_unittest.cc \
+    payload_consumer/extent_reader_unittest.cc \
     payload_consumer/extent_writer_unittest.cc \
     payload_consumer/fake_file_descriptor.cc \
     payload_consumer/file_descriptor_utils_unittest.cc \
@@ -934,6 +957,7 @@ LOCAL_SRC_FILES := \
     payload_generator/blob_file_writer_unittest.cc \
     payload_generator/block_mapping_unittest.cc \
     payload_generator/cycle_breaker_unittest.cc \
+    payload_generator/deflate_utils_unittest.cc \
     payload_generator/delta_diff_utils_unittest.cc \
     payload_generator/ext2_filesystem_unittest.cc \
     payload_generator/extent_ranges_unittest.cc \
@@ -946,6 +970,7 @@ LOCAL_SRC_FILES := \
     payload_generator/payload_file_unittest.cc \
     payload_generator/payload_generation_config_unittest.cc \
     payload_generator/payload_signer_unittest.cc \
+    payload_generator/squashfs_filesystem_unittest.cc \
     payload_generator/tarjan_unittest.cc \
     payload_generator/topological_sort_unittest.cc \
     payload_generator/zip_unittest.cc \
@@ -978,9 +1003,11 @@ LOCAL_SRC_FILES += \
     update_manager/boxed_value_unittest.cc \
     update_manager/chromeos_policy.cc \
     update_manager/chromeos_policy_unittest.cc \
+    update_manager/enterprise_device_policy_impl.cc \
     update_manager/evaluation_context_unittest.cc \
     update_manager/generic_variables_unittest.cc \
     update_manager/next_update_check_policy_impl_unittest.cc \
+    update_manager/out_of_box_experience_policy_impl.cc \
     update_manager/policy_test_utils.cc \
     update_manager/prng_unittest.cc \
     update_manager/real_device_policy_provider_unittest.cc \
@@ -1000,10 +1027,6 @@ LOCAL_SHARED_LIBRARIES += \
 LOCAL_SRC_FILES += \
     update_attempter_android_unittest.cc
 endif  # local_use_omaha == 1
-ifeq ($(local_use_chrome_network_proxy),1)
-LOCAL_SRC_FILES += \
-    chrome_browser_proxy_resolver_unittest.cc
-endif  # local_use_chrome_network_proxy == 1
 include $(BUILD_NATIVE_TEST)
 
 # Update payload signing public key.

@@ -1,6 +1,18 @@
-# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
+#
+# Copyright (C) 2013 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 """Utilities for unit testing."""
 
@@ -12,9 +24,9 @@ import os
 import struct
 import subprocess
 
-import common
-import payload
-import update_metadata_pb2
+from update_payload import common
+from update_payload import payload
+from update_payload import update_metadata_pb2
 
 
 class TestError(Exception):
@@ -84,7 +96,6 @@ def SignSha256(data, privkey_file_name):
   Raises:
     TestError if something goes wrong.
   """
-  # pylint: disable=E1101
   data_sha256_hash = common.SIG_ASN1_HEADER + hashlib.sha256(data).digest()
   sign_cmd = ['openssl', 'rsautl', '-sign', '-inkey', privkey_file_name]
   try:
@@ -110,8 +121,6 @@ class SignaturesGenerator(object):
       version: signature version (None means do not assign)
       data: signature binary data (None means do not assign)
     """
-    # Pylint fails to identify a member of the Signatures message.
-    # pylint: disable=E1101
     sig = self.sigs.signatures.add()
     if version is not None:
       sig.version = version
@@ -174,11 +183,9 @@ class PayloadGenerator(object):
       part_hash: the partition hash
     """
     if is_kernel:
-      # pylint: disable=E1101
       part_info = (self.manifest.new_kernel_info if is_new
                    else self.manifest.old_kernel_info)
     else:
-      # pylint: disable=E1101
       part_info = (self.manifest.new_rootfs_info if is_new
                    else self.manifest.old_rootfs_info)
     _SetMsgField(part_info, 'size', part_size)
@@ -188,7 +195,6 @@ class PayloadGenerator(object):
                    data_length=None, src_extents=None, src_length=None,
                    dst_extents=None, dst_length=None, data_sha256_hash=None):
     """Adds an InstallOperation entry."""
-    # pylint: disable=E1101
     operations = (self.manifest.kernel_install_operations if is_kernel
                   else self.manifest.install_operations)
 
@@ -282,7 +288,7 @@ class EnhancedPayloadGenerator(PayloadGenerator):
 
     Args:
       is_kernel: whether this is a kernel (True) or rootfs (False) operation
-      op_type: one of REPLACE, REPLACE_BZ, MOVE or BSDIFF
+      op_type: one of REPLACE, REPLACE_BZ, REPLACE_XZ, MOVE or BSDIFF
       src_extents: list of (start, length) pairs indicating src block ranges
       src_length: size of the src data in bytes (needed for BSDIFF)
       dst_extents: list of (start, length) pairs indicating dst block ranges
@@ -293,7 +299,6 @@ class EnhancedPayloadGenerator(PayloadGenerator):
     data_offset = data_length = data_sha256_hash = None
     if data_blob is not None:
       if do_hash_data_blob:
-        # pylint: disable=E1101
         data_sha256_hash = hashlib.sha256(data_blob).digest()
       data_length, data_offset = self.AddData(data_blob)
 

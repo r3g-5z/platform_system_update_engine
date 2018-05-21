@@ -88,8 +88,8 @@ bool ReadAll(
 bool PReadAll(int fd, void* buf, size_t count, off_t offset,
               ssize_t* out_bytes_read);
 
-bool PReadAll(const FileDescriptorPtr& fd, void* buf, size_t count, off_t offset,
-              ssize_t* out_bytes_read);
+bool PReadAll(const FileDescriptorPtr& fd, void* buf, size_t count,
+              off_t offset, ssize_t* out_bytes_read);
 
 // Opens |path| for reading and appends its entire content to the container
 // pointed to by |out_p|. Returns true upon successfully reading all of the
@@ -110,7 +110,7 @@ bool ReadPipe(const std::string& cmd, std::string* out_p);
 // occurs, -1 is returned.
 off_t BlockDevSize(int fd);
 
-// Returns the size of the file at path, or the file desciptor fd. If the file
+// Returns the size of the file at path, or the file descriptor fd. If the file
 // is actually a block device, this function will automatically call
 // BlockDevSize. If the file doesn't exist or some error occurrs, -1 is
 // returned.
@@ -228,20 +228,6 @@ inline void HexDumpVector(const brillo::Blob& vect) {
   HexDumpArray(vect.data(), vect.size());
 }
 
-template<typename KeyType, typename ValueType>
-bool MapContainsKey(const std::map<KeyType, ValueType>& m, const KeyType& k) {
-  return m.find(k) != m.end();
-}
-template<typename KeyType>
-bool SetContainsKey(const std::set<KeyType>& s, const KeyType& k) {
-  return s.find(k) != s.end();
-}
-
-template<typename T>
-bool VectorContainsValue(const std::vector<T>& vect, const T& value) {
-  return std::find(vect.begin(), vect.end(), value) != vect.end();
-}
-
 template<typename T>
 bool VectorIndexOf(const std::vector<T>& vect, const T& value,
                    typename std::vector<T>::size_type* out_index) {
@@ -254,6 +240,16 @@ bool VectorIndexOf(const std::vector<T>& vect, const T& value,
     *out_index = it - vect.begin();
     return true;
   }
+}
+
+// Return the total number of blocks in the passed |extents| collection.
+template <class T>
+uint64_t BlocksInExtents(const T& extents) {
+  uint64_t sum = 0;
+  for (const auto& ext : extents) {
+    sum += ext.num_blocks();
+  }
+  return sum;
 }
 
 // Converts seconds into human readable notation including days, hours, minutes

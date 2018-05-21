@@ -21,6 +21,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/bind.h>
@@ -75,13 +76,14 @@ static const char* kTagPrompt = "Prompt";
 static const char* kTagDisableP2PForDownloading = "DisableP2PForDownloading";
 static const char* kTagDisableP2PForSharing = "DisableP2PForSharing";
 static const char* kTagPublicKeyRsa = "PublicKeyRsa";
+static const char* kTagPowerwash = "Powerwash";
 
 static const char* kOmahaUpdaterVersion = "0.1.0.0";
 
-// X-GoogleUpdate headers.
-static const char* kXGoogleUpdateInteractivity = "X-GoogleUpdate-Interactivity";
-static const char* kXGoogleUpdateAppId = "X-GoogleUpdate-AppId";
-static const char* kXGoogleUpdateUpdater = "X-GoogleUpdate-Updater";
+// X-Goog-Update headers.
+static const char* kXGoogleUpdateInteractivity = "X-Goog-Update-Interactivity";
+static const char* kXGoogleUpdateAppId = "X-Goog-Update-AppId";
+static const char* kXGoogleUpdateUpdater = "X-Goog-Update-Updater";
 
 // updatecheck attributes (without the underscore prefix).
 static const char* kEolAttr = "eol";
@@ -178,7 +180,7 @@ string GetCohortArgXml(PrefsInterface* prefs,
                        const string arg_name,
                        const string prefs_key) {
   // There's nothing wrong with not having a given cohort setting, so we check
-  // existance first to avoid the warning log message.
+  // existence first to avoid the warning log message.
   if (!prefs->Exists(prefs_key))
     return "";
   string cohort_value;
@@ -235,10 +237,10 @@ string GetAppXml(const OmahaEvent* event,
                                system_state->prefs());
   string app_versions;
 
-  // If we are upgrading to a more stable channel and we are allowed to do
+  // If we are downgrading to a more stable channel and we are allowed to do
   // powerwash, then pass 0.0.0.0 as the version. This is needed to get the
   // highest-versioned payload on the destination channel.
-  if (params->to_more_stable_channel() && params->is_powerwash_allowed()) {
+  if (params->ShouldPowerwash()) {
     LOG(INFO) << "Passing OS version as 0.0.0.0 as we are set to powerwash "
               << "on downgrading to the version in the more stable channel";
     app_versions = "version=\"0.0.0.0\" from_version=\"" +
@@ -276,8 +278,9 @@ string GetAppXml(const OmahaEvent* event,
 
   string fingerprint_arg;
   if (!params->os_build_fingerprint().empty()) {
-    fingerprint_arg =
-        "fingerprint=\"" + XmlEncodeWithDefault(params->os_build_fingerprint(), "") + "\" ";
+    fingerprint_arg = "fingerprint=\"" +
+                      XmlEncodeWithDefault(params->os_build_fingerprint(), "") +
+                      "\" ";
   }
 
   string buildtype_arg;
@@ -287,7 +290,7 @@ string GetAppXml(const OmahaEvent* event,
   }
 
   string product_components_args;
-  if (!app_data.product_components.empty()) {
+  if (!params->ShouldPowerwash() && !app_data.product_components.empty()) {
     brillo::KeyValueStore store;
     if (store.LoadFromString(app_data.product_components)) {
       for (const string& key : store.GetKeys()) {
@@ -668,6 +671,11 @@ bool OmahaRequestAction::ShouldPing() const {
                 << "powerwash_count is " << powerwash_count;
       return false;
     }
+    if (system_state_->hardware()->GetFirstActiveOmahaPingSent()) {
+      LOG(INFO) << "Not sending ping with a=-1 r=-1 to omaha because "
+                << "the first_active_omaha_ping_sent is true";
+      return false;
+    }
     return true;
   }
   return ping_active_days_ > 0 || ping_roll_call_days_ > 0;
@@ -755,7 +763,7 @@ void OmahaRequestAction::PerformAction() {
                                     GetInstallDate(system_state_),
                                     system_state_));
 
-  // Set X-GoogleUpdate headers.
+  // Set X-Goog-Update headers.
   http_fetcher_->SetHeader(kXGoogleUpdateInteractivity,
                            params_->interactive() ? "fg" : "bg");
   http_fetcher_->SetHeader(kXGoogleUpdateAppId, params_->GetAppId());
@@ -1078,6 +1086,7 @@ bool OmahaRequestAction::ParseParams(OmahaParserData* parser_data,
 
   output_object->disable_payload_backoff =
       ParseBool(attrs[kTagDisablePayloadBackoff]);
+  output_object->powerwash_required = ParseBool(attrs[kTagPowerwash]);
 
   return true;
 }
@@ -1144,6 +1153,16 @@ void OmahaRequestAction::TransferComplete(HttpFetcher *fetcher,
   // response, but log the error if it didn't.
   LOG_IF(ERROR, !UpdateLastPingDays(&parser_data, system_state_->prefs()))
       << "Failed to update the last ping day preferences!";
+
+  // Sets first_active_omaha_ping_sent to true (vpd in CrOS). We only do this if
+  // we have got a response from omaha and if its value has never been set to
+  // true before. Failure of this function should be ignored. There should be no
+  // need to check if a=-1 has been sent because older devices have already sent
+  // their a=-1 in the past and we have to set first_active_omaha_ping_sent for
+  // future checks.
+  if (!system_state_->hardware()->GetFirstActiveOmahaPingSent()) {
+    system_state_->hardware()->SetFirstActiveOmahaPingSent();
+  }
 
   if (!HasOutputPipe()) {
     // Just set success to whether or not the http transfer succeeded,

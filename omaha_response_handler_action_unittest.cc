@@ -384,19 +384,16 @@ TEST_F(OmahaResponseHandlerActionTest, ChangeToMoreStableChannelTest) {
 
   OmahaRequestParams params(&fake_system_state_);
   fake_system_state_.fake_hardware()->SetIsOfficialBuild(false);
-  params.set_root(tempdir.path().value());
+  params.set_root(tempdir.GetPath().value());
   params.set_current_channel("canary-channel");
   // The ImageProperties in Android uses prefs to store MutableImageProperties.
 #ifdef __ANDROID__
-  EXPECT_CALL(*fake_system_state_.mock_prefs(), SetString(_, "stable-channel"))
-      .WillOnce(Return(true));
   EXPECT_CALL(*fake_system_state_.mock_prefs(), SetBoolean(_, true))
       .WillOnce(Return(true));
 #endif  // __ANDROID__
   EXPECT_TRUE(params.SetTargetChannel("stable-channel", true, nullptr));
   params.UpdateDownloadChannel();
-  EXPECT_TRUE(params.to_more_stable_channel());
-  EXPECT_TRUE(params.is_powerwash_allowed());
+  EXPECT_TRUE(params.ShouldPowerwash());
 
   fake_system_state_.set_request_params(&params);
   InstallPlan install_plan;
@@ -419,19 +416,16 @@ TEST_F(OmahaResponseHandlerActionTest, ChangeToLessStableChannelTest) {
 
   OmahaRequestParams params(&fake_system_state_);
   fake_system_state_.fake_hardware()->SetIsOfficialBuild(false);
-  params.set_root(tempdir.path().value());
+  params.set_root(tempdir.GetPath().value());
   params.set_current_channel("stable-channel");
   // The ImageProperties in Android uses prefs to store MutableImageProperties.
 #ifdef __ANDROID__
-  EXPECT_CALL(*fake_system_state_.mock_prefs(), SetString(_, "canary-channel"))
-      .WillOnce(Return(true));
   EXPECT_CALL(*fake_system_state_.mock_prefs(), SetBoolean(_, false))
       .WillOnce(Return(true));
 #endif  // __ANDROID__
   EXPECT_TRUE(params.SetTargetChannel("canary-channel", false, nullptr));
   params.UpdateDownloadChannel();
-  EXPECT_FALSE(params.to_more_stable_channel());
-  EXPECT_FALSE(params.is_powerwash_allowed());
+  EXPECT_FALSE(params.ShouldPowerwash());
 
   fake_system_state_.set_request_params(&params);
   InstallPlan install_plan;

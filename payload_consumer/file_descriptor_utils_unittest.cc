@@ -16,13 +16,14 @@
 
 #include "update_engine/payload_consumer/file_descriptor_utils.h"
 
+#include <fcntl.h>
+
 #include <string>
 #include <utility>
 #include <vector>
 
-#include <gtest/gtest.h>
-
 #include <brillo/data_encoding.h>
+#include <gtest/gtest.h>
 
 #include "update_engine/common/hash_calculator.h"
 #include "update_engine/common/test_utils.h"
@@ -31,13 +32,15 @@
 #include "update_engine/payload_consumer/file_descriptor.h"
 #include "update_engine/payload_generator/extent_ranges.h"
 
+using google::protobuf::RepeatedPtrField;
+
 namespace chromeos_update_engine {
 
 namespace {
 
-::google::protobuf::RepeatedPtrField<Extent> CreateExtentList(
+RepeatedPtrField<Extent> CreateExtentList(
     const std::vector<std::pair<uint64_t, uint64_t>>& lst) {
-  ::google::protobuf::RepeatedPtrField<Extent> result;
+  RepeatedPtrField<Extent> result;
   for (const auto& item : lst) {
     *result.Add() = ExtentForRange(item.first, item.second);
   }
@@ -161,6 +164,34 @@ TEST_F(FileDescriptorUtilsTest, CopyAndHashExtentsManyToManyTest) {
   brillo::Blob expected_hash;
   EXPECT_TRUE(HashCalculator::RawHashOfBytes(
       kExpectedOrderedData, strlen(kExpectedOrderedData), &expected_hash));
+  EXPECT_EQ(expected_hash, hash_out);
+}
+
+// Failing to read from the source should fail the hash calculation.
+TEST_F(FileDescriptorUtilsTest, ReadAndHashExtentsReadFailureTest) {
+  auto extents = CreateExtentList({{0, 5}});
+  fake_source_->AddFailureRange(10, 5);
+  brillo::Blob hash_out;
+  EXPECT_FALSE(fd_utils::ReadAndHashExtents(source_, extents, 4, &hash_out));
+}
+
+// Test that if hash_out is null, then it should fail.
+TEST_F(FileDescriptorUtilsTest, ReadAndHashExtentsWithoutHashingTest) {
+  auto extents = CreateExtentList({{0, 5}});
+  EXPECT_FALSE(fd_utils::ReadAndHashExtents(source_, extents, 4, nullptr));
+}
+
+// Tests that it can calculate the hash properly.
+TEST_F(FileDescriptorUtilsTest, ReadAndHashExtentsTest) {
+  // Reorder the input as 1 4 2 3 0.
+  auto extents = CreateExtentList({{1, 1}, {4, 1}, {2, 2}, {0, 1}});
+  brillo::Blob hash_out;
+  EXPECT_TRUE(fd_utils::ReadAndHashExtents(source_, extents, 4, &hash_out));
+
+  const char kExpectedResult[] = "00010004000200030000";
+  brillo::Blob expected_hash;
+  EXPECT_TRUE(HashCalculator::RawHashOfBytes(
+      kExpectedResult, strlen(kExpectedResult), &expected_hash));
   EXPECT_EQ(expected_hash, hash_out);
 }
 

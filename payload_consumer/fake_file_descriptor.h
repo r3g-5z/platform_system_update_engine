@@ -22,19 +22,21 @@
 #include <utility>
 #include <vector>
 
+#include <brillo/secure_blob.h>
+
 #include "update_engine/payload_consumer/file_descriptor.h"
 
 namespace chromeos_update_engine {
 
 // A fake file descriptor with configurable errors. The file descriptor always
-// reads a fixed sequence of bytes, consisting on the concatenation of the
+// reads a fixed sequence of bytes, consisting of the concatenation of the
 // numbers 0, 1, 2... each one encoded in 4 bytes as the big-endian 16-bit
 // number encoded in hexadecimal. For example, the beginning of the stream in
 // ASCII is 0000000100020003... which corresponds to the numbers 0, 1, 2 and 3.
 class FakeFileDescriptor : public FileDescriptor {
  public:
   FakeFileDescriptor() = default;
-  ~FakeFileDescriptor() = default;
+  ~FakeFileDescriptor() override = default;
 
   // FileDescriptor override methods.
   bool Open(const char* path, int flags, mode_t mode) override {
@@ -67,6 +69,10 @@ class FakeFileDescriptor : public FileDescriptor {
     return false;
   }
 
+  bool Flush() override {
+    return open_;
+  }
+
   bool Close() override {
     if (!open_)
       return false;
@@ -86,7 +92,7 @@ class FakeFileDescriptor : public FileDescriptor {
   // Marks the range starting from |offset| bytes into the file and |length|
   // size as a failure range. Reads from this range will always fail.
   void AddFailureRange(uint64_t offset, uint64_t length) {
-    if (!length)
+    if (length == 0)
       return;
     failure_ranges_.emplace_back(offset, length);
   }
@@ -116,6 +122,9 @@ class FakeFileDescriptor : public FileDescriptor {
 
   DISALLOW_COPY_AND_ASSIGN(FakeFileDescriptor);
 };
+
+// Return a blob with the first |size| bytes of a FakeFileDescriptor stream.
+brillo::Blob FakeFileDescriptorData(size_t size);
 
 }  // namespace chromeos_update_engine
 

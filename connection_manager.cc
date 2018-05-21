@@ -16,6 +16,7 @@
 
 #include "update_engine/connection_manager.h"
 
+#include <memory>
 #include <set>
 #include <string>
 
@@ -73,7 +74,7 @@ bool ConnectionManager::IsUpdateAllowedOver(
       if (device_policy->GetAllowedConnectionTypesForUpdate(&allowed_types)) {
         // The update setting is enforced by the device policy.
 
-        if (!ContainsKey(allowed_types, shill::kTypeCellular)) {
+        if (!base::ContainsKey(allowed_types, shill::kTypeCellular)) {
           LOG(INFO) << "Disabling updates over cellular connection as it's not "
                        "allowed in the device policy.";
           return false;

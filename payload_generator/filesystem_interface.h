@@ -19,9 +19,9 @@
 
 // This class is used to abstract a filesystem and iterate the blocks
 // associated with the files and filesystem structures.
-// For the purposes of the update payload generation, a filesystem is a formated
-// partition composed by fixed-size blocks, since that's the interface used in
-// the update payload.
+// For the purposes of the update payload generation, a filesystem is a
+// formatted partition composed by fixed-size blocks, since that's the interface
+// used in the update payload.
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -33,6 +33,7 @@
 
 #include <base/macros.h>
 #include <brillo/key_value_store.h>
+#include <puffin/utils.h>
 
 #include "update_engine/update_metadata.pb.h"
 
@@ -62,6 +63,10 @@ class FilesystemInterface {
     // between 0 and GetBlockCount() - 1. The blocks are encoded in extents,
     // indicating the starting block, and the number of consecutive blocks.
     std::vector<Extent> extents;
+
+    // All the deflate locations in the file. These locations are not relative
+    // to the extents. They are relative to the file system itself.
+    std::vector<puffin::BitExtent> deflates;
   };
 
   virtual ~FilesystemInterface() = default;

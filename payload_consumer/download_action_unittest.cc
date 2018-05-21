@@ -29,7 +29,6 @@
 #include <base/files/file_util.h>
 #include <base/location.h>
 #include <base/strings/stringprintf.h>
-#include <brillo/bind_lambda.h>
 #include <brillo/message_loops/fake_message_loop.h>
 #include <brillo/message_loops/message_loop.h>
 
@@ -52,7 +51,6 @@ using base::ReadFileToString;
 using base::WriteFile;
 using std::string;
 using std::unique_ptr;
-using std::vector;
 using test_utils::ScopedTempFile;
 using testing::AtLeast;
 using testing::InSequence;
@@ -167,7 +165,8 @@ void TestWithData(const brillo::Blob& data,
                                  fake_system_state.boot_control(),
                                  fake_system_state.hardware(),
                                  &fake_system_state,
-                                 http_fetcher);
+                                 http_fetcher,
+                                 false /* interactive */);
   download_action.SetTestFileWriter(&writer);
   BondActions(&feeder_action, &download_action);
   MockDownloadActionDelegate download_delegate;
@@ -178,6 +177,8 @@ void TestWithData(const brillo::Blob& data,
       EXPECT_CALL(download_delegate,
                   BytesReceived(_, kMockHttpFetcherChunkSize, _));
     EXPECT_CALL(download_delegate, BytesReceived(_, _, _)).Times(AtLeast(1));
+    EXPECT_CALL(download_delegate, DownloadComplete())
+        .Times(fail_write == 0 ? 1 : 0);
   }
   ErrorCode expected_code = ErrorCode::kSuccess;
   if (fail_write > 0)
@@ -280,7 +281,8 @@ TEST(DownloadActionTest, MultiPayloadProgressTest) {
                                  fake_system_state.boot_control(),
                                  fake_system_state.hardware(),
                                  &fake_system_state,
-                                 http_fetcher);
+                                 http_fetcher,
+                                 false /* interactive */);
   download_action.SetTestFileWriter(&mock_file_writer);
   BondActions(&feeder_action, &download_action);
   MockDownloadActionDelegate download_delegate;
@@ -369,7 +371,8 @@ void TestTerminateEarly(bool use_download_delegate) {
         fake_system_state_.boot_control(),
         fake_system_state_.hardware(),
         &fake_system_state_,
-        new MockHttpFetcher(data.data(), data.size(), nullptr));
+        new MockHttpFetcher(data.data(), data.size(), nullptr),
+        false /* interactive */);
     download_action.SetTestFileWriter(&writer);
     MockDownloadActionDelegate download_delegate;
     if (use_download_delegate) {
@@ -470,7 +473,8 @@ TEST(DownloadActionTest, PassObjectOutTest) {
                                  fake_system_state_.boot_control(),
                                  fake_system_state_.hardware(),
                                  &fake_system_state_,
-                                 new MockHttpFetcher("x", 1, nullptr));
+                                 new MockHttpFetcher("x", 1, nullptr),
+                                 false /* interactive */);
   download_action.SetTestFileWriter(&writer);
 
   DownloadActionTestAction test_action;
@@ -559,7 +563,8 @@ class P2PDownloadActionTest : public testing::Test {
                                               fake_system_state_.boot_control(),
                                               fake_system_state_.hardware(),
                                               &fake_system_state_,
-                                              http_fetcher_));
+                                              http_fetcher_,
+                                              false /* interactive */));
     download_action_->SetTestFileWriter(&writer);
     BondActions(&feeder_action, download_action_.get());
     DownloadActionTestProcessorDelegate delegate(ErrorCode::kSuccess);
@@ -601,7 +606,7 @@ class P2PDownloadActionTest : public testing::Test {
   // Callback used in StartDownload() method.
   void StartProcessorInRunLoopForP2P() {
     processor_.StartProcessing();
-    http_fetcher_->SetOffset(start_at_offset_);
+    download_action_->http_fetcher()->SetOffset(start_at_offset_);
   }
 
   // The requested starting offset passed to SetupDownload().

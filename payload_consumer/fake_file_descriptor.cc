@@ -23,7 +23,7 @@ ssize_t FakeFileDescriptor::Read(void* buf, size_t count) {
   read_ops_.emplace_back(offset_, count);
 
   // Check for the EOF condition first to avoid reporting it as a failure.
-  if (offset_ >= static_cast<uint64_t>(size_) || !count)
+  if (offset_ >= static_cast<uint64_t>(size_) || count == 0)
     return 0;
   // Find the first offset greater or equal than the current position where a
   // failure will occur. This will mark the end of the read chunk.
@@ -71,6 +71,14 @@ off64_t FakeFileDescriptor::Seek(off64_t offset, int whence) {
       return -1;
   }
   return offset_;
+}
+
+brillo::Blob FakeFileDescriptorData(size_t size) {
+  brillo::Blob ret(size);
+  FakeFileDescriptor fd;
+  fd.SetFileSize(size);
+  fd.Read(ret.data(), size);
+  return ret;
 }
 
 }  // namespace chromeos_update_engine

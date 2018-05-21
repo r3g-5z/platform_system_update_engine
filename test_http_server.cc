@@ -98,9 +98,11 @@ bool ParseRequest(int fd, HttpRequest* request) {
   request->raw_headers = headers;
 
   // Break header into lines.
-  vector<string> lines;
-  base::SplitStringUsingSubstr(
-      headers.substr(0, headers.length() - strlen(EOL EOL)), EOL, &lines);
+  vector<string> lines = base::SplitStringUsingSubstr(
+      headers.substr(0, headers.length() - strlen(EOL EOL)),
+      EOL,
+      base::TRIM_WHITESPACE,
+      base::SPLIT_WANT_ALL);
 
   // Decode URL line.
   vector<string> terms = base::SplitString(lines[0], base::kWhitespaceASCII,
@@ -494,7 +496,7 @@ class UrlTerms {
     CHECK_EQ(terms.size(), num_terms);
   }
 
-  inline string Get(const off_t index) const {
+  inline const string& Get(const off_t index) const {
     return terms[index];
   }
   inline const char *GetCStr(const off_t index) const {

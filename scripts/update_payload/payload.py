@@ -1,6 +1,18 @@
-# Copyright (c) 2013 The Chromium OS Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
+#
+# Copyright (C) 2013 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 """Tools for reading, verifying and applying Chrome OS update payloads."""
 
@@ -10,11 +22,10 @@ import hashlib
 import struct
 
 from update_payload import applier
-from update_payload import block_tracer
 from update_payload import checker
 from update_payload import common
-from update_payload.error import PayloadError
 from update_payload import update_metadata_pb2
+from update_payload.error import PayloadError
 
 
 #
@@ -193,8 +204,6 @@ class Payload(object):
     if self.is_init:
       raise PayloadError('payload object already initialized')
 
-    # Initialize hash context.
-    # pylint: disable=E1101
     self.manifest_hasher = hashlib.sha256()
 
     # Read the file header.
@@ -237,11 +246,9 @@ class Payload(object):
         _DisplayIndentedValue('Build version', image_info.build_version)
 
     if self.manifest.HasField('old_image_info'):
-      # pylint: disable=E1101
       _DescribeImageInfo('Old Image', self.manifest.old_image_info)
 
     if self.manifest.HasField('new_image_info'):
-      # pylint: disable=E1101
       _DescribeImageInfo('New Image', self.manifest.new_image_info)
 
   def _AssertInit(self):
@@ -299,7 +306,7 @@ class Payload(object):
 
   def Apply(self, new_kernel_part, new_rootfs_part, old_kernel_part=None,
             old_rootfs_part=None, bsdiff_in_place=True, bspatch_path=None,
-            truncate_to_expected_size=True):
+            puffpatch_path=None, truncate_to_expected_size=True):
     """Applies the update payload.
 
     Args:
@@ -309,6 +316,7 @@ class Payload(object):
       old_rootfs_part: name of source rootfs partition file (optional)
       bsdiff_in_place: whether to perform BSDIFF operations in-place (optional)
       bspatch_path: path to the bspatch binary (optional)
+      puffpatch_path: path to the puffpatch binary (optional)
       truncate_to_expected_size: whether to truncate the resulting partitions
                                  to their expected sizes, as specified in the
                                  payload (optional)
@@ -321,27 +329,8 @@ class Payload(object):
     # Create a short-lived payload applier object and run it.
     helper = applier.PayloadApplier(
         self, bsdiff_in_place=bsdiff_in_place, bspatch_path=bspatch_path,
+        puffpatch_path=puffpatch_path,
         truncate_to_expected_size=truncate_to_expected_size)
     helper.Run(new_kernel_part, new_rootfs_part,
                old_kernel_part=old_kernel_part,
                old_rootfs_part=old_rootfs_part)
-
-  def TraceBlock(self, block, skip, trace_out_file, is_kernel):
-    """Traces the origin(s) of a given dest partition block.
-
-    The tracing tries to find origins transitively, when possible (it currently
-    only works for move operations, where the mapping of src/dst is
-    one-to-one). It will dump a list of operations and source blocks
-    responsible for the data in the given dest block.
-
-    Args:
-      block: the block number whose origin to trace
-      skip: the number of first origin mappings to skip
-      trace_out_file: file object to dump the trace to
-      is_kernel: trace through kernel (True) or rootfs (False) operations
-    """
-    self._AssertInit()
-
-    # Create a short-lived payload block tracer object and run it.
-    helper = block_tracer.PayloadBlockTracer(self)
-    helper.Run(block, skip, trace_out_file, is_kernel)
