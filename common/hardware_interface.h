@@ -17,6 +17,8 @@
 #ifndef UPDATE_ENGINE_COMMON_HARDWARE_INTERFACE_H_
 #define UPDATE_ENGINE_COMMON_HARDWARE_INTERFACE_H_
 
+#include <stdint.h>
+
 #include <string>
 #include <vector>
 
@@ -68,6 +70,32 @@ class HardwareInterface {
   // running a custom chrome os ec.
   virtual std::string GetECVersion() const = 0;
 
+  // Returns the minimum kernel key version that verified boot on Chrome OS
+  // will allow to boot. This is the value of crossystem tpm_kernver. Returns
+  // -1 on error, or if not running on Chrome OS.
+  virtual int GetMinKernelKeyVersion() const = 0;
+
+  // Returns the minimum firmware key version that verified boot on Chrome OS
+  // will allow to boot. This is the value of crossystem tpm_fwver. Returns
+  // -1 on error, or if not running on Chrome OS.
+  virtual int GetMinFirmwareKeyVersion() const = 0;
+
+  // Returns the maximum firmware key version that verified boot should roll
+  // forward to. This is the value of crossystem firmware_max_rollforward.
+  // Returns -1 on error, if this board does not yet support this value, or
+  // if not running on Chrome OS.
+  virtual int GetMaxFirmwareKeyRollforward() const = 0;
+
+  // Sets the maximum firmware key version that verified boot should roll
+  // forward to. This is the value of crossystem firmware_max_rollforward.
+  // This value is not available on all Chrome OS devices.
+  virtual bool SetMaxFirmwareKeyRollforward(int firmware_max_rollforward) = 0;
+
+  // Sets the maximum kernel key version that verified boot should roll
+  // forward to. This is the value of crossystem kernel_max_rollforward.
+  // Returns false if the value cannot be set, or if not running on Chrome OS.
+  virtual bool SetMaxKernelKeyRollforward(int kernel_max_rollforward) = 0;
+
   // Returns the powerwash_count from the stateful. If the file is not found
   // or is invalid, returns -1. Brand new machines out of the factory or after
   // recovery don't have this value set.
@@ -90,14 +118,17 @@ class HardwareInterface {
   // returns false.
   virtual bool GetPowerwashSafeDirectory(base::FilePath* path) const = 0;
 
+  // Returns the timestamp of the current OS build.
+  virtual int64_t GetBuildTimestamp() const = 0;
+
   // Returns whether the first active ping was sent to Omaha at some point, and
   // that the value is persisted across recovery (and powerwash) once set with
   // |SetFirstActiveOmahaPingSent()|.
   virtual bool GetFirstActiveOmahaPingSent() const = 0;
 
-  // Persist the fact that first active ping was sent to omaha. It bails out if
-  // it fails.
-  virtual void SetFirstActiveOmahaPingSent() = 0;
+  // Persist the fact that first active ping was sent to omaha and returns false
+  // if failed to persist it.
+  virtual bool SetFirstActiveOmahaPingSent() = 0;
 };
 
 }  // namespace chromeos_update_engine

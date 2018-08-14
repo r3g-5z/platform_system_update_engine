@@ -78,10 +78,12 @@ metrics::AttemptResult GetAttemptResult(ErrorCode code) {
     case ErrorCode::kDownloadPayloadVerificationError:
     case ErrorCode::kSignedDeltaPayloadExpectedError:
     case ErrorCode::kDownloadPayloadPubKeyVerificationError:
+    case ErrorCode::kPayloadTimestampError:
       return metrics::AttemptResult::kPayloadVerificationFailed;
 
     case ErrorCode::kNewRootfsVerificationError:
     case ErrorCode::kNewKernelVerificationError:
+    case ErrorCode::kRollbackNotPossible:
       return metrics::AttemptResult::kVerificationFailed;
 
     case ErrorCode::kPostinstallRunnerError:
@@ -113,7 +115,9 @@ metrics::AttemptResult GetAttemptResult(ErrorCode code) {
     case ErrorCode::kPostinstallPowerwashError:
     case ErrorCode::kUpdateCanceledByChannelChange:
     case ErrorCode::kOmahaRequestXMLHasEntityDecl:
+    case ErrorCode::kOmahaUpdateIgnoredOverCellular:
     case ErrorCode::kNoUpdate:
+    case ErrorCode::kFirstActiveOmahaPingSentPersistenceError:
       return metrics::AttemptResult::kInternalError;
 
     // Special flags. These can't happen (we mask them out above) but
@@ -214,8 +218,12 @@ metrics::DownloadErrorCode GetDownloadErrorCode(ErrorCode code) {
     case ErrorCode::kOmahaRequestXMLHasEntityDecl:
     case ErrorCode::kFilesystemVerifierError:
     case ErrorCode::kUserCanceled:
+    case ErrorCode::kOmahaUpdateIgnoredOverCellular:
+    case ErrorCode::kPayloadTimestampError:
     case ErrorCode::kUpdatedButNotActive:
     case ErrorCode::kNoUpdate:
+    case ErrorCode::kRollbackNotPossible:
+    case ErrorCode::kFirstActiveOmahaPingSentPersistenceError:
       break;
 
     // Special flags. These can't happen (we mask them out above) but
