@@ -41,6 +41,7 @@ extern const char kPrefsCurrentUrlFailureCount[];
 extern const char kPrefsCurrentUrlIndex[];
 extern const char kPrefsDailyMetricsLastReportedAt[];
 extern const char kPrefsDeltaUpdateFailures[];
+extern const char kPrefsDynamicPartitionMetadataUpdated[];
 extern const char kPrefsFullPayloadAttemptNumber[];
 extern const char kPrefsInstallDateDays[];
 extern const char kPrefsLastActivePingDay[];
@@ -91,6 +92,7 @@ extern const char kPrefsUpdateStateSignedSHA256Context[];
 extern const char kPrefsUpdateBootTimestampStart[];
 extern const char kPrefsUpdateTimestampStart[];
 extern const char kPrefsUrlSwitchCount[];
+extern const char kPrefsVerityWritten[];
 extern const char kPrefsWallClockScatteringWaitPeriod[];
 extern const char kPrefsWallClockStagingWaitPeriod[];
 

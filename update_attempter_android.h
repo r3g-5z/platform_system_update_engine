@@ -93,14 +93,6 @@ class UpdateAttempterAndroid
  private:
   friend class UpdateAttempterAndroidTest;
 
-  // Asynchronously marks the current slot as successful if needed. If already
-  // marked as good, CompleteUpdateBootFlags() is called starting the action
-  // processor.
-  void UpdateBootFlags();
-
-  // Called when the boot flags have been updated.
-  void CompleteUpdateBootFlags(bool success);
-
   // Schedules an event loop callback to start the action processor. This is
   // scheduled asynchronously to unblock the event loop.
   void ScheduleProcessingStart();
@@ -176,6 +168,9 @@ class UpdateAttempterAndroid
   // set back in the middle of an update.
   base::TimeTicks last_notify_time_;
 
+  // Only direct proxy supported.
+  DirectProxyResolver proxy_resolver_;
+
   // The processor for running Actions.
   std::unique_ptr<ActionProcessor> processor_;
 
@@ -188,9 +183,6 @@ class UpdateAttempterAndroid
 
   // The offset in the payload file where the CrAU part starts.
   int64_t base_offset_{0};
-
-  // Only direct proxy supported.
-  DirectProxyResolver proxy_resolver_;
 
   // Helper class to select the network to use during the update.
   std::unique_ptr<NetworkSelectorInterface> network_selector_;

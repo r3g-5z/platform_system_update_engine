@@ -68,6 +68,7 @@ metrics::AttemptResult GetAttemptResult(ErrorCode code) {
     case ErrorCode::kDownloadWriteError:
     case ErrorCode::kFilesystemCopierError:
     case ErrorCode::kFilesystemVerifierError:
+    case ErrorCode::kVerityCalculationError:
       return metrics::AttemptResult::kOperationExecutionError;
 
     case ErrorCode::kDownloadMetadataSignatureMismatch:
@@ -224,6 +225,7 @@ metrics::DownloadErrorCode GetDownloadErrorCode(ErrorCode code) {
     case ErrorCode::kNoUpdate:
     case ErrorCode::kRollbackNotPossible:
     case ErrorCode::kFirstActiveOmahaPingSentPersistenceError:
+    case ErrorCode::kVerityCalculationError:
       break;
 
     // Special flags. These can't happen (we mask them out above) but
@@ -248,6 +250,9 @@ metrics::ConnectionType GetConnectionType(ConnectionType type,
   switch (type) {
     case ConnectionType::kUnknown:
       return metrics::ConnectionType::kUnknown;
+
+    case ConnectionType::kDisconnected:
+      return metrics::ConnectionType::kDisconnected;
 
     case ConnectionType::kEthernet:
       if (tethering == ConnectionTethering::kConfirmed)

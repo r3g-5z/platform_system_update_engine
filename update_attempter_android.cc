@@ -25,7 +25,6 @@
 #include <base/bind.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
-#include <brillo/bind_lambda.h>
 #include <brillo/data_encoding.h>
 #include <brillo/message_loops/message_loop.h>
 #include <brillo/strings/string_utils.h>
@@ -80,7 +79,7 @@ const char* const kGenericError = "generic_error";
 
 // Log and set the error on the passed ErrorPtr.
 bool LogAndSetError(brillo::ErrorPtr* error,
-                    const tracked_objects::Location& location,
+                    const base::Location& location,
                     const string& reason) {
   brillo::Error::AddTo(error, location, kErrorDomain, kGenericError, reason);
   LOG(ERROR) << "Replying with failure: " << location.ToString() << ": "
@@ -220,10 +219,21 @@ bool UpdateAttempterAndroid::ApplyPayload(
   // c) RUN_POST_INSTALL is set to 0.
   if (install_plan_.is_resume && prefs_->Exists(kPrefsPostInstallSucceeded)) {
     bool post_install_succeeded = false;
-    prefs_->GetBoolean(kPrefsPostInstallSucceeded, &post_install_succeeded);
-    if (post_install_succeeded) {
+    if (prefs_->GetBoolean(kPrefsPostInstallSucceeded,
+                           &post_install_succeeded) &&
+        post_install_succeeded) {
       install_plan_.run_post_install =
           GetHeaderAsBool(headers[kPayloadPropertyRunPostInstall], true);
+    }
+  }
+
+  // Skip writing verity if we're resuming and verity has already been written.
+  install_plan_.write_verity = true;
+  if (install_plan_.is_resume && prefs_->Exists(kPrefsVerityWritten)) {
+    bool verity_written = false;
+    if (prefs_->GetBoolean(kPrefsVerityWritten, &verity_written) &&
+        verity_written) {
+      install_plan_.write_verity = false;
     }
   }
 
@@ -367,14 +377,17 @@ bool UpdateAttempterAndroid::VerifyPayloadApplicable(
                           "Failed to parse payload header: " +
                               utils::ErrorCodeToString(errorcode));
   }
-  metadata.resize(payload_metadata.GetMetadataSize() +
-                  payload_metadata.GetMetadataSignatureSize());
-  if (metadata.size() < kMaxPayloadHeaderSize) {
+  uint64_t metadata_size = payload_metadata.GetMetadataSize() +
+                           payload_metadata.GetMetadataSignatureSize();
+  if (metadata_size < kMaxPayloadHeaderSize ||
+      metadata_size >
+          static_cast<uint64_t>(utils::FileSize(metadata_filename))) {
     return LogAndSetError(
         error,
         FROM_HERE,
-        "Metadata size too small: " + std::to_string(metadata.size()));
+        "Invalid metadata size: " + std::to_string(metadata_size));
   }
+  metadata.resize(metadata_size);
   if (!fd->Read(metadata.data() + kMaxPayloadHeaderSize,
                 metadata.size() - kMaxPayloadHeaderSize)) {
     return LogAndSetError(
@@ -383,8 +396,13 @@ bool UpdateAttempterAndroid::VerifyPayloadApplicable(
         "Failed to read metadata and signature from " + metadata_filename);
   }
   fd->Close();
-  errorcode = payload_metadata.ValidateMetadataSignature(
-      metadata, "", base::FilePath(constants::kUpdatePayloadPublicKeyPath));
+
+  string public_key;
+  if (!utils::ReadFile(constants::kUpdatePayloadPublicKeyPath, &public_key)) {
+    return LogAndSetError(error, FROM_HERE, "Failed to read public key.");
+  }
+  errorcode =
+      payload_metadata.ValidateMetadataSignature(metadata, "", public_key);
   if (errorcode != ErrorCode::kSuccess) {
     return LogAndSetError(error,
                           FROM_HERE,
@@ -495,6 +513,8 @@ void UpdateAttempterAndroid::ActionCompleted(ActionProcessor* processor,
   }
   if (type == DownloadAction::StaticType()) {
     SetStatusAndNotify(UpdateStatus::FINALIZING);
+  } else if (type == FilesystemVerifierAction::StaticType()) {
+    prefs_->SetBoolean(kPrefsVerityWritten, true);
   }
 }
 
@@ -557,6 +577,8 @@ void UpdateAttempterAndroid::TerminateUpdateAndNotify(ErrorCode error_code) {
     LOG(ERROR) << "No ongoing update, but TerminatedUpdate() called.";
     return;
   }
+
+  boot_control_->Cleanup();
 
   download_progress_ = 0;
   UpdateStatus new_status =
@@ -780,6 +802,11 @@ void UpdateAttempterAndroid::UpdatePrefsAndReportUpdateMetricsOnReboot() {
   metrics_utils::LoadAndReportTimeToReboot(
       metrics_reporter_.get(), prefs_, clock_.get());
   ClearMetricsPrefs();
+
+  // Also reset the update progress if the build version has changed.
+  if (!DeltaPerformer::ResetUpdateProgress(prefs_, false)) {
+    LOG(WARNING) << "Unable to reset the update progress.";
+  }
 }
 
 // Save the update start time. Reset the reboot count and attempt number if the

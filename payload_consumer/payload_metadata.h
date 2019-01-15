@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-#include <base/files/file_path.h>
+#include <base/macros.h>
 #include <brillo/secure_blob.h>
 
 #include "update_engine/common/error_code.h"
@@ -55,6 +55,8 @@ class PayloadMetadata {
   // the payload.
   MetadataParseResult ParsePayloadHeader(const brillo::Blob& payload,
                                          ErrorCode* error);
+  // Simpler version of the above, returns true on success.
+  bool ParsePayloadHeader(const brillo::Blob& payload);
 
   // Given the |payload|, verifies that the signed hash of its metadata matches
   // |metadata_signature| (if present) or the metadata signature in payload
@@ -64,8 +66,8 @@ class PayloadMetadata {
   // to the payload server doesn't exploit any vulnerability in the code that
   // parses the protocol buffer.
   ErrorCode ValidateMetadataSignature(const brillo::Blob& payload,
-                                      std::string metadata_signature,
-                                      base::FilePath path_to_public_key) const;
+                                      const std::string& metadata_signature,
+                                      const std::string& pem_public_key) const;
 
   // Returns the major payload version. If the version was not yet parsed,
   // returns zero.

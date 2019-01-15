@@ -37,6 +37,8 @@ const char kPrefsCurrentUrlIndex[] = "current-url-index";
 const char kPrefsDailyMetricsLastReportedAt[] =
     "daily-metrics-last-reported-at";
 const char kPrefsDeltaUpdateFailures[] = "delta-update-failures";
+const char kPrefsDynamicPartitionMetadataUpdated[] =
+    "dynamic-partition-metadata-updated";
 const char kPrefsFullPayloadAttemptNumber[] = "full-payload-attempt-number";
 const char kPrefsInstallDateDays[] = "install-date-days";
 const char kPrefsLastActivePingDay[] = "last-active-ping-day";
@@ -93,6 +95,7 @@ const char kPrefsUpdateStateSignedSHA256Context[] =
 const char kPrefsUpdateBootTimestampStart[] = "update-boot-timestamp-start";
 const char kPrefsUpdateTimestampStart[] = "update-timestamp-start";
 const char kPrefsUrlSwitchCount[] = "url-switch-count";
+const char kPrefsVerityWritten[] = "verity-written";
 const char kPrefsWallClockScatteringWaitPeriod[] = "wall-clock-wait-period";
 const char kPrefsWallClockStagingWaitPeriod[] =
     "wall-clock-staging-wait-period";

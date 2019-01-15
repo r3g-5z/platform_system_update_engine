@@ -36,11 +36,11 @@
 #include "update_engine/client_library/include/update_engine/update_status.h"
 #include "update_engine/common/action_processor.h"
 #include "update_engine/common/cpu_limiter.h"
+#include "update_engine/common/proxy_resolver.h"
 #include "update_engine/omaha_request_params.h"
 #include "update_engine/omaha_response_handler_action.h"
 #include "update_engine/payload_consumer/download_action.h"
 #include "update_engine/payload_consumer/postinstall_runner_action.h"
-#include "update_engine/proxy_resolver.h"
 #include "update_engine/service_observer_interface.h"
 #include "update_engine/system_state.h"
 #include "update_engine/update_manager/policy.h"
@@ -52,8 +52,6 @@ class PolicyProvider;
 }
 
 namespace chromeos_update_engine {
-
-class UpdateEngineAdaptor;
 
 class UpdateAttempter : public ActionProcessorDelegate,
                         public DownloadActionDelegate,
@@ -71,7 +69,8 @@ class UpdateAttempter : public ActionProcessorDelegate,
   void Init();
 
   // Initiates scheduling of update checks.
-  virtual void ScheduleUpdates();
+  // Returns true if update check is scheduled.
+  virtual bool ScheduleUpdates();
 
   // Checks for update and, if a newer version is available, attempts to update
   // the system. Non-empty |in_app_version| or |in_update_url| prevents
@@ -109,16 +108,6 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // Returns the current status in the out param. Returns true on success.
   virtual bool GetStatus(update_engine::UpdateEngineStatus* out_status);
 
-  // Runs chromeos-setgoodkernel, whose responsibility it is to mark the
-  // currently booted partition has high priority/permanent/etc. The execution
-  // is asynchronous. On completion, the action processor may be started
-  // depending on the |start_action_processor_| field. Note that every update
-  // attempt goes through this method.
-  void UpdateBootFlags();
-
-  // Called when the boot flags have been updated.
-  void CompleteUpdateBootFlags(bool success);
-
   UpdateStatus status() const { return status_; }
 
   int http_response_code() const { return http_response_code_; }
@@ -134,7 +123,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // Returns the update attempt flags that are in place for the current update
   // attempt.  These are cached at the start of an update attempt so that they
   // remain constant throughout the process.
-  virtual UpdateAttemptFlags GetCurrentUpdateAttemptFlags() {
+  virtual UpdateAttemptFlags GetCurrentUpdateAttemptFlags() const {
     return current_update_attempt_flags_;
   }
 
@@ -146,6 +135,10 @@ class UpdateAttempter : public ActionProcessorDelegate,
   virtual bool CheckForUpdate(const std::string& app_version,
                               const std::string& omaha_url,
                               UpdateAttemptFlags flags);
+
+  // This is the version of CheckForUpdate called by AttemptInstall API.
+  virtual bool CheckForInstall(const std::vector<std::string>& dlc_module_ids,
+                               const std::string& omaha_url);
 
   // This is the internal entry point for going through a rollback. This will
   // attempt to run the postinstall on the non-active partition and set it as
@@ -181,10 +174,6 @@ class UpdateAttempter : public ActionProcessorDelegate,
 
   ErrorCode GetAttemptErrorCode() const { return attempt_error_code_; }
 
-  // Returns the special flags to be added to ErrorCode values based on the
-  // parameters used in the current update attempt.
-  uint32_t GetErrorCodeFlags();
-
   // Called at update_engine startup to do various house-keeping.
   void UpdateEngineStarted();
 
@@ -202,7 +191,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // Returns a version OS version that was being used before the last reboot,
   // and if that reboot happened to be into an update (current version).
   // This will return an empty string otherwise.
-  std::string const& GetPrevVersion() const { return prev_version_; }
+  const std::string& GetPrevVersion() const { return prev_version_; }
 
   // Returns the number of consecutive failed update checks.
   virtual unsigned int consecutive_failed_update_checks() const {
@@ -222,8 +211,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // Note that only one callback can be set, so effectively at most one client
   // can be notified.
   virtual void set_forced_update_pending_callback(
-      base::Callback<void(bool, bool)>*  // NOLINT(readability/function)
-      callback) {
+      base::Callback<void(bool, bool)>* callback) {
     forced_update_pending_callback_.reset(callback);
   }
 
@@ -231,7 +219,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // we want to restrict updates to known safe sources, but under certain
   // conditions it's useful to allow updating from anywhere (e.g. to allow
   // 'cros flash' to function properly).
-  virtual bool IsAnyUpdateSourceAllowed();
+  bool IsAnyUpdateSourceAllowed() const;
 
   // Add and remove a service observer.
   void AddObserver(ServiceObserverInterface* observer) {
@@ -249,9 +237,6 @@ class UpdateAttempter : public ActionProcessorDelegate,
   void ClearObservers() { service_observers_.clear(); }
 
  private:
-  // Update server URL for automated lab test.
-  static const char* const kTestUpdateUrl;
-
   // Friend declarations for testing purposes.
   friend class UpdateAttempterUnderTest;
   friend class UpdateAttempterTest;
@@ -261,14 +246,17 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest, BootTimeInUpdateMarkerFile);
   FRIEND_TEST(UpdateAttempterTest, BroadcastCompleteDownloadTest);
   FRIEND_TEST(UpdateAttempterTest, ChangeToDownloadingOnReceivedBytesTest);
+  FRIEND_TEST(UpdateAttempterTest, CheckForUpdateAUDlcTest);
   FRIEND_TEST(UpdateAttempterTest, CreatePendingErrorEventTest);
   FRIEND_TEST(UpdateAttempterTest, CreatePendingErrorEventResumedTest);
   FRIEND_TEST(UpdateAttempterTest, DisableDeltaUpdateIfNeededTest);
   FRIEND_TEST(UpdateAttempterTest, DownloadProgressAccumulationTest);
+  FRIEND_TEST(UpdateAttempterTest, InstallSetsStatusIdle);
   FRIEND_TEST(UpdateAttempterTest, MarkDeltaUpdateFailureTest);
   FRIEND_TEST(UpdateAttempterTest, PingOmahaTest);
   FRIEND_TEST(UpdateAttempterTest, ReportDailyMetrics);
   FRIEND_TEST(UpdateAttempterTest, RollbackNotAllowed);
+  FRIEND_TEST(UpdateAttempterTest, RollbackAfterInstall);
   FRIEND_TEST(UpdateAttempterTest, RollbackAllowed);
   FRIEND_TEST(UpdateAttempterTest, RollbackAllowedSetAndReset);
   FRIEND_TEST(UpdateAttempterTest, RollbackMetricsNotRollbackFailure);
@@ -280,10 +268,14 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest, SetRollbackHappenedNotRollback);
   FRIEND_TEST(UpdateAttempterTest, SetRollbackHappenedRollback);
   FRIEND_TEST(UpdateAttempterTest, TargetVersionPrefixSetAndReset);
+  FRIEND_TEST(UpdateAttempterTest, UpdateAfterInstall);
   FRIEND_TEST(UpdateAttempterTest, UpdateAttemptFlagsCachedAtUpdateStart);
   FRIEND_TEST(UpdateAttempterTest, UpdateDeferredByPolicyTest);
   FRIEND_TEST(UpdateAttempterTest, UpdateIsNotRunningWhenUpdateAvailable);
-  FRIEND_TEST(UpdateAttempterTest, UpdateTest);
+
+  // Returns the special flags to be added to ErrorCode values based on the
+  // parameters used in the current update attempt.
+  uint32_t GetErrorCodeFlags();
 
   // CertificateChecker::Observer method.
   // Report metrics about the certificate being checked.
@@ -326,12 +318,10 @@ class UpdateAttempter : public ActionProcessorDelegate,
 
   ProxyResolver* GetProxyResolver() {
 #if USE_CHROME_NETWORK_PROXY
-    return obeying_proxies_ ?
-        reinterpret_cast<ProxyResolver*>(&chrome_proxy_resolver_) :
-        reinterpret_cast<ProxyResolver*>(&direct_proxy_resolver_);
-#else
-    return &direct_proxy_resolver_;
+    if (obeying_proxies_)
+      return &chrome_proxy_resolver_;
 #endif  // USE_CHROME_NETWORK_PROXY
+    return &direct_proxy_resolver_;
   }
 
   // Sends a ping to Omaha.
@@ -413,10 +403,21 @@ class UpdateAttempter : public ActionProcessorDelegate,
 
   void CalculateStagingParams(bool interactive);
 
+  // Reports a metric that tracks the time from when the update was first seen
+  // to the time when the update was finally downloaded and applied. This metric
+  // will only be reported for enterprise enrolled devices.
+  void ReportTimeToUpdateAppliedMetric();
+
   // Last status notification timestamp used for throttling. Use monotonic
   // TimeTicks to ensure that notifications are sent even if the system clock is
   // set back in the middle of an update.
   base::TimeTicks last_notify_time_;
+
+  // Our two proxy resolvers
+  DirectProxyResolver direct_proxy_resolver_;
+#if USE_CHROME_NETWORK_PROXY
+  ChromeBrowserProxyResolver chrome_proxy_resolver_;
+#endif  // USE_CHROME_NETWORK_PROXY
 
   std::unique_ptr<ActionProcessor> processor_;
 
@@ -477,12 +478,6 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // If true, this update cycle we are obeying proxies
   bool obeying_proxies_ = true;
 
-  // Our two proxy resolvers
-  DirectProxyResolver direct_proxy_resolver_;
-#if USE_CHROME_NETWORK_PROXY
-  ChromeBrowserProxyResolver chrome_proxy_resolver_;
-#endif  // USE_CHROME_NETWORK_PROXY
-
   // Used for fetching information about the device policy.
   std::unique_ptr<policy::PolicyProvider> policy_provider_;
 
@@ -512,6 +507,12 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // actually scheduled.
   std::string forced_app_version_;
   std::string forced_omaha_url_;
+
+  // A list of DLC module IDs.
+  std::vector<std::string> dlc_module_ids_;
+  // Whether the operation is install (write to the current slot not the
+  // inactive slot).
+  bool is_install_;
 
   // If this is not TimeDelta(), then that means staging is turned on.
   base::TimeDelta staging_wait_time_;
