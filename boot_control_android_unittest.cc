@@ -321,12 +321,12 @@ class BootControlAndroidTest : public ::testing::Test {
   // slot with each partition in |partitions|.
   void ExpectUnmap(const std::set<string>& partitions) {
     // Error when UnmapPartitionOnDeviceMapper is called on unknown arguments.
-    ON_CALL(dynamicControl(), UnmapPartitionOnDeviceMapper(_, _))
+    ON_CALL(dynamicControl(), UnmapPartitionOnDeviceMapper(_))
         .WillByDefault(Return(false));
 
     for (const auto& partition : partitions) {
-      EXPECT_CALL(dynamicControl(), UnmapPartitionOnDeviceMapper(partition, _))
-          .WillOnce(Invoke([this](auto partition, auto) {
+      EXPECT_CALL(dynamicControl(), UnmapPartitionOnDeviceMapper(partition))
+          .WillOnce(Invoke([this](auto partition) {
             mapped_devices_.erase(partition);
             return true;
           }));
@@ -531,7 +531,7 @@ TEST_P(BootControlAndroidTestP,
                {T("system"), 2_GiB},
                {T("vendor"), 1_GiB}});
   // Should not try to unmap any target partition.
-  EXPECT_CALL(dynamicControl(), UnmapPartitionOnDeviceMapper(_, _)).Times(0);
+  EXPECT_CALL(dynamicControl(), UnmapPartitionOnDeviceMapper(_)).Times(0);
   // Should not store metadata to target slot.
   EXPECT_CALL(dynamicControl(),
               StoreMetadata(GetSuperDevice(target()), _, target()))
@@ -784,12 +784,11 @@ TEST_P(BootControlAndroidGroupTestP, GroupTooBig) {
 
 TEST_P(BootControlAndroidGroupTestP, AddPartitionToGroup) {
   ExpectStoreMetadata(PartitionMetadata{
-      .groups = {
-          {.name = T("android"),
-           .size = 3_GiB,
-           .partitions = {{.name = T("system"), .size = 2_GiB},
-                          {.name = T("product_services"), .size = 1_GiB}}}}});
-  ExpectUnmap({T("system"), T("vendor"), T("product_services")});
+      .groups = {{.name = T("android"),
+                  .size = 3_GiB,
+                  .partitions = {{.name = T("system"), .size = 2_GiB},
+                                 {.name = T("system_ext"), .size = 1_GiB}}}}});
+  ExpectUnmap({T("system"), T("vendor"), T("system_ext")});
 
   EXPECT_TRUE(bootctl_.InitPartitionMetadata(
       target(),
@@ -797,8 +796,7 @@ TEST_P(BootControlAndroidGroupTestP, AddPartitionToGroup) {
           .groups = {{.name = "android",
                       .size = 3_GiB,
                       .partitions = {{.name = "system", .size = 2_GiB},
-                                     {.name = "product_services",
-                                      .size = 1_GiB}}},
+                                     {.name = "system_ext", .size = 1_GiB}}},
                      SimpleGroup("oem", 2_GiB, "vendor", 2_GiB)}},
       true));
 }
