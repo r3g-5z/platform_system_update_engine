@@ -191,16 +191,24 @@ cc_defaults {
     name: "libupdate_engine_boot_control_exports",
     defaults: ["update_metadata-protos_exports"],
 
-    static_libs: ["update_metadata-protos"],
+    static_libs: [
+        "libsnapshot",
+        "update_metadata-protos",
+    ],
     shared_libs: [
         "libbootloader_message",
         "libfs_mgr",
-        "libhwbinder",
         "libhidlbase",
         "liblp",
         "libutils",
         "android.hardware.boot@1.0",
     ],
+    target: {
+        recovery: {
+            static_libs: ["libsnapshot_nobinder"],
+            exclude_static_libs: ["libsnapshot"],
+        },
+    },
 }
 
 cc_library_static {
@@ -362,7 +370,6 @@ cc_binary {
         recovery: {
             exclude_shared_libs: [
                 "libprotobuf-cpp-lite",
-                "libhwbinder",
                 "libbrillo-stream",
                 "libbrillo",
                 "libchrome",
@@ -638,8 +645,9 @@ cc_test {
         "libchrome_test_helpers",
         "libupdate_engine_android",
     ],
-    shared_libs: [
-        "libhidltransport",
+
+    header_libs: [
+        "libstorage_literals_headers",
     ],
 
     data: [
@@ -739,4 +747,13 @@ cc_prebuilt_binary {
             enabled: false,
         },
     },
+}
+
+// AIDL interface between libupdate_engine and the Things jar.
+filegroup {
+    name: "things_update_engine_aidl",
+    srcs: [
+        "binder_bindings/android/brillo/IUpdateEngine.aidl",
+        "binder_bindings/android/brillo/IUpdateEngineStatusCallback.aidl",
+    ],
 }
