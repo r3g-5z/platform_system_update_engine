@@ -62,15 +62,8 @@ constexpr std::chrono::milliseconds kMapTimeout{1000};
 // needs to be mapped, this timeout is longer than |kMapTimeout|.
 constexpr std::chrono::milliseconds kMapSnapshotTimeout{5000};
 
-DynamicPartitionControlAndroid::DynamicPartitionControlAndroid() {
-  if (GetVirtualAbFeatureFlag().IsEnabled()) {
-    snapshot_ = android::snapshot::SnapshotManager::New();
-    CHECK(snapshot_ != nullptr) << "Cannot initialize SnapshotManager.";
-  }
-}
-
 DynamicPartitionControlAndroid::~DynamicPartitionControlAndroid() {
-  CleanupInternal(false /* wait */);
+  CleanupInternal();
 }
 
 static FeatureFlag GetFeatureFlag(const char* enable_prop,
@@ -91,12 +84,22 @@ static FeatureFlag GetFeatureFlag(const char* enable_prop,
   return FeatureFlag(FeatureFlag::Value::NONE);
 }
 
+DynamicPartitionControlAndroid::DynamicPartitionControlAndroid()
+    : dynamic_partitions_(
+          GetFeatureFlag(kUseDynamicPartitions, kRetrfoitDynamicPartitions)),
+      virtual_ab_(GetFeatureFlag(kVirtualAbEnabled, kVirtualAbRetrofit)) {
+  if (GetVirtualAbFeatureFlag().IsEnabled()) {
+    snapshot_ = android::snapshot::SnapshotManager::New();
+    CHECK(snapshot_ != nullptr) << "Cannot initialize SnapshotManager.";
+  }
+}
+
 FeatureFlag DynamicPartitionControlAndroid::GetDynamicPartitionsFeatureFlag() {
-  return GetFeatureFlag(kUseDynamicPartitions, kRetrfoitDynamicPartitions);
+  return dynamic_partitions_;
 }
 
 FeatureFlag DynamicPartitionControlAndroid::GetVirtualAbFeatureFlag() {
-  return GetFeatureFlag(kVirtualAbEnabled, kVirtualAbRetrofit);
+  return virtual_ab_;
 }
 
 bool DynamicPartitionControlAndroid::MapPartitionInternal(
@@ -112,7 +115,8 @@ bool DynamicPartitionControlAndroid::MapPartitionInternal(
       .force_writable = force_writable,
   };
   bool success = false;
-  if (GetVirtualAbFeatureFlag().IsEnabled() && force_writable) {
+  if (GetVirtualAbFeatureFlag().IsEnabled() && target_supports_snapshot_ &&
+      force_writable) {
     // Only target partitions are mapped with force_writable. On Virtual
     // A/B devices, target partitions may overlap with source partitions, so
     // they must be mapped with snapshot.
@@ -208,7 +212,8 @@ bool DynamicPartitionControlAndroid::UnmapPartitionOnDeviceMapper(
   return true;
 }
 
-void DynamicPartitionControlAndroid::CleanupInternal(bool wait) {
+void DynamicPartitionControlAndroid::CleanupInternal() {
+  metadata_device_.reset();
   if (mapped_devices_.empty()) {
     return;
   }
@@ -222,7 +227,7 @@ void DynamicPartitionControlAndroid::CleanupInternal(bool wait) {
 }
 
 void DynamicPartitionControlAndroid::Cleanup() {
-  CleanupInternal(true /* wait */);
+  CleanupInternal();
 }
 
 bool DynamicPartitionControlAndroid::DeviceExists(const std::string& path) {
@@ -256,8 +261,12 @@ DynamicPartitionControlAndroid::LoadMetadataBuilder(
     builder =
         MetadataBuilder::New(PartitionOpener(), super_device, source_slot);
   } else {
-    builder = MetadataBuilder::NewForUpdate(
-        PartitionOpener(), super_device, source_slot, target_slot);
+    bool always_keep_source_slot = !target_supports_snapshot_;
+    builder = MetadataBuilder::NewForUpdate(PartitionOpener(),
+                                            super_device,
+                                            source_slot,
+                                            target_slot,
+                                            always_keep_source_slot);
   }
 
   if (builder == nullptr) {
@@ -343,13 +352,33 @@ bool DynamicPartitionControlAndroid::GetDeviceDir(std::string* out) {
 bool DynamicPartitionControlAndroid::PreparePartitionsForUpdate(
     uint32_t source_slot,
     uint32_t target_slot,
-    const DeltaArchiveManifest& manifest) {
-  // TODO(elsk): Also call PrepareDynamicPartitionsForUpdate when applying
-  // downgrade packages on retrofit Virtual A/B devices and when applying
-  // secondary OTA. b/138258570
+    const DeltaArchiveManifest& manifest,
+    bool update) {
+  target_supports_snapshot_ =
+      manifest.dynamic_partition_metadata().snapshot_enabled();
+
   if (GetVirtualAbFeatureFlag().IsEnabled()) {
-    return PrepareSnapshotPartitionsForUpdate(
-        source_slot, target_slot, manifest);
+    metadata_device_ = snapshot_->EnsureMetadataMounted();
+    TEST_AND_RETURN_FALSE(metadata_device_ != nullptr);
+  }
+
+  if (!update)
+    return true;
+
+  if (GetVirtualAbFeatureFlag().IsEnabled()) {
+    // On Virtual A/B device, either CancelUpdate() or BeginUpdate() must be
+    // called before calling UnmapUpdateSnapshot.
+    // - If target_supports_snapshot_, PrepareSnapshotPartitionsForUpdate()
+    //   calls BeginUpdate() which resets update state
+    // - If !target_supports_snapshot_, explicitly CancelUpdate().
+    if (target_supports_snapshot_) {
+      return PrepareSnapshotPartitionsForUpdate(
+          source_slot, target_slot, manifest);
+    }
+    if (!snapshot_->CancelUpdate()) {
+      LOG(ERROR) << "Cannot cancel previous update.";
+      return false;
+    }
   }
   return PrepareDynamicPartitionsForUpdate(source_slot, target_slot, manifest);
 }
@@ -418,6 +447,11 @@ bool DynamicPartitionControlAndroid::UpdatePartitionMetadata(
     MetadataBuilder* builder,
     uint32_t target_slot,
     const DeltaArchiveManifest& manifest) {
+  // If applying downgrade from Virtual A/B to non-Virtual A/B, the left-over
+  // COW group needs to be deleted to ensure there are enough space to create
+  // target partitions.
+  builder->RemoveGroupAndPartitions(android::snapshot::kCowGroupName);
+
   const std::string target_suffix = SlotSuffixForSlotNumber(target_slot);
   DeleteGroupsWithSuffix(builder, target_suffix);
 
@@ -491,10 +525,11 @@ bool DynamicPartitionControlAndroid::UpdatePartitionMetadata(
 }
 
 bool DynamicPartitionControlAndroid::FinishUpdate() {
-  if (!GetVirtualAbFeatureFlag().IsEnabled())
-    return true;
-  LOG(INFO) << "Snapshot writes are done.";
-  return snapshot_->FinishedSnapshotWrites();
+  if (GetVirtualAbFeatureFlag().IsEnabled() && target_supports_snapshot_) {
+    LOG(INFO) << "Snapshot writes are done.";
+    return snapshot_->FinishedSnapshotWrites();
+  }
+  return true;
 }
 
 }  // namespace chromeos_update_engine
