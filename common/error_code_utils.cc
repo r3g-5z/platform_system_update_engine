@@ -161,6 +161,14 @@ string ErrorCodeToString(ErrorCode code) {
       return "ErrorCode::kFirstActiveOmahaPingSentPersistenceError";
     case ErrorCode::kVerityCalculationError:
       return "ErrorCode::kVerityCalculationError";
+    case ErrorCode::kInternalLibCurlError:
+      return "ErrorCode::kInternalLibCurlError";
+    case ErrorCode::kUnresolvedHostError:
+      return "ErrorCode::kUnresolvedHostError";
+    case ErrorCode::kUnresolvedHostRecovered:
+      return "ErrorCode::kUnresolvedHostRecovered";
+    case ErrorCode::kNotEnoughSpace:
+      return "ErrorCode::kNotEnoughSpace";
       // Don't add a default case to let the compiler warn about newly added
       // error codes which should be added here.
   }
