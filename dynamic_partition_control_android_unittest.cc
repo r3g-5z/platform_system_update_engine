@@ -27,9 +27,11 @@
 #include "update_engine/dynamic_partition_test_utils.h"
 #include "update_engine/mock_dynamic_partition_control.h"
 
+using android::dm::DmDeviceState;
 using std::string;
 using testing::_;
 using testing::AnyNumber;
+using testing::AnyOf;
 using testing::Invoke;
 using testing::NiceMock;
 using testing::Not;
@@ -55,6 +57,12 @@ class DynamicPartitionControlAndroidTest : public ::testing::Test {
 
     ON_CALL(dynamicControl(), GetSuperPartitionName(_))
         .WillByDefault(Return(kFakeSuper));
+
+    ON_CALL(dynamicControl(), GetDmDevicePathByName(_, _))
+        .WillByDefault(Invoke([](auto partition_name_suffix, auto device) {
+          *device = GetDmDevice(partition_name_suffix);
+          return true;
+        }));
   }
 
   // Return the mocked DynamicPartitionControlInterface.
@@ -112,9 +120,17 @@ class DynamicPartitionControlAndroidTest : public ::testing::Test {
   }
   bool PreparePartitionsForUpdate(const PartitionSizes& partition_sizes) {
     return dynamicControl().PreparePartitionsForUpdate(
-        source(), target(), PartitionSizesToManifest(partition_sizes), true);
+        source(),
+        target(),
+        PartitionSizesToManifest(partition_sizes),
+        true,
+        nullptr);
   }
   void SetSlots(const TestParam& slots) { slots_ = slots; }
+
+  void SetSnapshotEnabled(bool enabled) {
+    dynamicControl().target_supports_snapshot_ = enabled;
+  }
 
   struct Listener : public ::testing::MatchResultListener {
     explicit Listener(std::ostream* os) : MatchResultListener(os) {}
@@ -281,6 +297,123 @@ TEST_P(DynamicPartitionControlAndroidTestP, NotEnoughSpaceForSlot) {
   PartitionSizes update_metadata{{"system", 3_GiB}, {"vendor", 3_GiB}};
   EXPECT_FALSE(UpdatePartitionMetadata(source_metadata, update_metadata, {}))
       << "Should not be able to grow over size of super / 2";
+}
+
+TEST_P(DynamicPartitionControlAndroidTestP,
+       ApplyRetrofitUpdateOnDynamicPartitionsEnabledBuild) {
+  ON_CALL(dynamicControl(), GetDynamicPartitionsFeatureFlag())
+      .WillByDefault(Return(FeatureFlag(FeatureFlag::Value::RETROFIT)));
+  // Static partition {system,bar}_{a,b} exists.
+  EXPECT_CALL(dynamicControl(),
+              DeviceExists(AnyOf(GetDevice(S("bar")),
+                                 GetDevice(T("bar")),
+                                 GetDevice(S("system")),
+                                 GetDevice(T("system")))))
+      .WillRepeatedly(Return(true));
+
+  SetMetadata(source(),
+              {{S("system"), 2_GiB},
+               {S("vendor"), 1_GiB},
+               {T("system"), 2_GiB},
+               {T("vendor"), 1_GiB}});
+
+  // Not calling through
+  // DynamicPartitionControlAndroidTest::PreparePartitionsForUpdate(), since we
+  // don't want any default group in the PartitionMetadata.
+  EXPECT_TRUE(dynamicControl().PreparePartitionsForUpdate(
+      source(), target(), {}, true, nullptr));
+
+  // Should use dynamic source partitions.
+  EXPECT_CALL(dynamicControl(), GetState(S("system")))
+      .Times(1)
+      .WillOnce(Return(DmDeviceState::ACTIVE));
+  string system_device;
+  EXPECT_TRUE(dynamicControl().GetPartitionDevice(
+      "system", source(), source(), &system_device));
+  EXPECT_EQ(GetDmDevice(S("system")), system_device);
+
+  // Should use static target partitions without querying dynamic control.
+  EXPECT_CALL(dynamicControl(), GetState(T("system"))).Times(0);
+  EXPECT_TRUE(dynamicControl().GetPartitionDevice(
+      "system", target(), source(), &system_device));
+  EXPECT_EQ(GetDevice(T("system")), system_device);
+
+  // Static partition "bar".
+  EXPECT_CALL(dynamicControl(), GetState(S("bar"))).Times(0);
+  std::string bar_device;
+  EXPECT_TRUE(dynamicControl().GetPartitionDevice(
+      "bar", source(), source(), &bar_device));
+  EXPECT_EQ(GetDevice(S("bar")), bar_device);
+
+  EXPECT_CALL(dynamicControl(), GetState(T("bar"))).Times(0);
+  EXPECT_TRUE(dynamicControl().GetPartitionDevice(
+      "bar", target(), source(), &bar_device));
+  EXPECT_EQ(GetDevice(T("bar")), bar_device);
+}
+
+TEST_P(DynamicPartitionControlAndroidTestP,
+       GetPartitionDeviceWhenResumingUpdate) {
+  // Static partition bar_{a,b} exists.
+  EXPECT_CALL(dynamicControl(),
+              DeviceExists(AnyOf(GetDevice(S("bar")), GetDevice(T("bar")))))
+      .WillRepeatedly(Return(true));
+
+  // Both of the two slots contain valid partition metadata, since this is
+  // resuming an update.
+  SetMetadata(source(),
+              {{S("system"), 2_GiB},
+               {S("vendor"), 1_GiB},
+               {T("system"), 2_GiB},
+               {T("vendor"), 1_GiB}});
+  SetMetadata(target(),
+              {{S("system"), 2_GiB},
+               {S("vendor"), 1_GiB},
+               {T("system"), 2_GiB},
+               {T("vendor"), 1_GiB}});
+
+  EXPECT_TRUE(dynamicControl().PreparePartitionsForUpdate(
+      source(),
+      target(),
+      PartitionSizesToManifest({{"system", 2_GiB}, {"vendor", 1_GiB}}),
+      false,
+      nullptr));
+
+  // Dynamic partition "system".
+  EXPECT_CALL(dynamicControl(), GetState(S("system")))
+      .Times(1)
+      .WillOnce(Return(DmDeviceState::ACTIVE));
+  string system_device;
+  EXPECT_TRUE(dynamicControl().GetPartitionDevice(
+      "system", source(), source(), &system_device));
+  EXPECT_EQ(GetDmDevice(S("system")), system_device);
+
+  EXPECT_CALL(dynamicControl(), GetState(T("system")))
+      .Times(AnyNumber())
+      .WillOnce(Return(DmDeviceState::ACTIVE));
+  EXPECT_CALL(dynamicControl(),
+              MapPartitionOnDeviceMapper(
+                  GetSuperDevice(target()), T("system"), target(), _, _))
+      .Times(AnyNumber())
+      .WillRepeatedly(
+          Invoke([](const auto&, const auto& name, auto, auto, auto* device) {
+            *device = "/fake/remapped/" + name;
+            return true;
+          }));
+  EXPECT_TRUE(dynamicControl().GetPartitionDevice(
+      "system", target(), source(), &system_device));
+  EXPECT_EQ("/fake/remapped/" + T("system"), system_device);
+
+  // Static partition "bar".
+  EXPECT_CALL(dynamicControl(), GetState(S("bar"))).Times(0);
+  std::string bar_device;
+  EXPECT_TRUE(dynamicControl().GetPartitionDevice(
+      "bar", source(), source(), &bar_device));
+  EXPECT_EQ(GetDevice(S("bar")), bar_device);
+
+  EXPECT_CALL(dynamicControl(), GetState(T("bar"))).Times(0);
+  EXPECT_TRUE(dynamicControl().GetPartitionDevice(
+      "bar", target(), source(), &bar_device));
+  EXPECT_EQ(GetDevice(T("bar")), bar_device);
 }
 
 INSTANTIATE_TEST_CASE_P(DynamicPartitionControlAndroidTest,
@@ -484,6 +617,101 @@ TEST_F(DynamicPartitionControlAndroidTest, SimulatedSecondUpdate) {
                                           {"shrunk", 100_MiB},
                                           {"same", 100_MiB},
                                           {"deleted", 64_MiB}}));
+}
+
+TEST_F(DynamicPartitionControlAndroidTest, ApplyingToCurrentSlot) {
+  SetSlots({1, 1});
+  EXPECT_FALSE(PreparePartitionsForUpdate({}))
+      << "Should not be able to apply to current slot.";
+}
+
+TEST_P(DynamicPartitionControlAndroidTestP, ShouldSkipOperationTest) {
+  ASSERT_TRUE(dynamicControl().PreparePartitionsForUpdate(
+      source(),
+      target(),
+      PartitionSizesToManifest({{"foo", 4_MiB}}),
+      false,
+      nullptr));
+  dynamicControl().set_fake_mapped_devices({T("foo")});
+
+  InstallOperation iop;
+  Extent *se, *de;
+
+  // Not a SOURCE_COPY operation, cannot skip.
+  iop.set_type(InstallOperation::REPLACE);
+  EXPECT_FALSE(dynamicControl().ShouldSkipOperation("foo", iop));
+
+  iop.set_type(InstallOperation::SOURCE_COPY);
+
+  // By default GetVirtualAbFeatureFlag is disabled. Cannot skip operation.
+  EXPECT_FALSE(dynamicControl().ShouldSkipOperation("foo", iop));
+
+  // Enable GetVirtualAbFeatureFlag in the mock interface.
+  ON_CALL(dynamicControl(), GetVirtualAbFeatureFlag())
+      .WillByDefault(Return(FeatureFlag(FeatureFlag::Value::LAUNCH)));
+
+  // By default target_supports_snapshot_ is set to false. Cannot skip
+  // operation.
+  EXPECT_FALSE(dynamicControl().ShouldSkipOperation("foo", iop));
+
+  SetSnapshotEnabled(true);
+
+  // Empty source and destination. Skip.
+  EXPECT_TRUE(dynamicControl().ShouldSkipOperation("foo", iop));
+
+  se = iop.add_src_extents();
+  se->set_start_block(0);
+  se->set_num_blocks(1);
+
+  // There is something in sources, but destinations are empty. Cannot skip.
+  EXPECT_FALSE(dynamicControl().ShouldSkipOperation("foo", iop));
+
+  InstallOperation iop2;
+
+  de = iop2.add_dst_extents();
+  de->set_start_block(0);
+  de->set_num_blocks(1);
+
+  // There is something in destinations, but sources are empty. Cannot skip.
+  EXPECT_FALSE(dynamicControl().ShouldSkipOperation("foo", iop2));
+
+  de = iop.add_dst_extents();
+  de->set_start_block(0);
+  de->set_num_blocks(1);
+
+  // Sources and destinations are identical. Skip.
+  EXPECT_TRUE(dynamicControl().ShouldSkipOperation("foo", iop));
+
+  se = iop.add_src_extents();
+  se->set_start_block(1);
+  se->set_num_blocks(5);
+
+  // There is something in source, but not in destination. Cannot skip.
+  EXPECT_FALSE(dynamicControl().ShouldSkipOperation("foo", iop));
+
+  de = iop.add_dst_extents();
+  de->set_start_block(1);
+  de->set_num_blocks(5);
+
+  // There is source and destination are equal. Skip.
+  EXPECT_TRUE(dynamicControl().ShouldSkipOperation("foo", iop));
+
+  de = iop.add_dst_extents();
+  de->set_start_block(6);
+  de->set_num_blocks(5);
+
+  // There is something extra in dest. Cannot skip.
+  EXPECT_FALSE(dynamicControl().ShouldSkipOperation("foo", iop));
+
+  se = iop.add_src_extents();
+  se->set_start_block(6);
+  se->set_num_blocks(5);
+
+  // Source and dest are identical again. Skip.
+  EXPECT_TRUE(dynamicControl().ShouldSkipOperation("foo", iop));
+
+  // Don't skip for static partitions.
+  EXPECT_FALSE(dynamicControl().ShouldSkipOperation("bar", iop));
 }
 
 }  // namespace chromeos_update_engine

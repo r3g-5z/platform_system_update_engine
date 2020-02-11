@@ -31,6 +31,8 @@
 #include <bootloader_message/bootloader_message.h>
 #include <fs_mgr.h>
 #include <fs_mgr_dm_linear.h>
+#include <fs_mgr_overlayfs.h>
+#include <libdm/dm.h>
 #include <libsnapshot/snapshot.h>
 
 #include "update_engine/common/boot_control_interface.h"
@@ -48,6 +50,10 @@ using android::fs_mgr::MetadataBuilder;
 using android::fs_mgr::Partition;
 using android::fs_mgr::PartitionOpener;
 using android::fs_mgr::SlotSuffixForSlotNumber;
+using android::snapshot::Return;
+using android::snapshot::SnapshotManager;
+using android::snapshot::SourceCopyOperationIsClone;
+using android::snapshot::UpdateState;
 
 namespace chromeos_update_engine {
 
@@ -62,15 +68,14 @@ constexpr std::chrono::milliseconds kMapTimeout{1000};
 // needs to be mapped, this timeout is longer than |kMapTimeout|.
 constexpr std::chrono::milliseconds kMapSnapshotTimeout{5000};
 
-DynamicPartitionControlAndroid::DynamicPartitionControlAndroid() {
-  if (GetVirtualAbFeatureFlag().IsEnabled()) {
-    snapshot_ = android::snapshot::SnapshotManager::New();
-    CHECK(snapshot_ != nullptr) << "Cannot initialize SnapshotManager.";
-  }
-}
+#ifdef __ANDROID_RECOVERY__
+constexpr bool kIsRecovery = true;
+#else
+constexpr bool kIsRecovery = false;
+#endif
 
 DynamicPartitionControlAndroid::~DynamicPartitionControlAndroid() {
-  CleanupInternal(false /* wait */);
+  Cleanup();
 }
 
 static FeatureFlag GetFeatureFlag(const char* enable_prop,
@@ -91,12 +96,38 @@ static FeatureFlag GetFeatureFlag(const char* enable_prop,
   return FeatureFlag(FeatureFlag::Value::NONE);
 }
 
+DynamicPartitionControlAndroid::DynamicPartitionControlAndroid()
+    : dynamic_partitions_(
+          GetFeatureFlag(kUseDynamicPartitions, kRetrfoitDynamicPartitions)),
+      virtual_ab_(GetFeatureFlag(kVirtualAbEnabled, kVirtualAbRetrofit)) {
+  if (GetVirtualAbFeatureFlag().IsEnabled()) {
+    snapshot_ = SnapshotManager::New();
+    CHECK(snapshot_ != nullptr) << "Cannot initialize SnapshotManager.";
+  }
+}
+
 FeatureFlag DynamicPartitionControlAndroid::GetDynamicPartitionsFeatureFlag() {
-  return GetFeatureFlag(kUseDynamicPartitions, kRetrfoitDynamicPartitions);
+  return dynamic_partitions_;
 }
 
 FeatureFlag DynamicPartitionControlAndroid::GetVirtualAbFeatureFlag() {
-  return GetFeatureFlag(kVirtualAbEnabled, kVirtualAbRetrofit);
+  return virtual_ab_;
+}
+
+bool DynamicPartitionControlAndroid::ShouldSkipOperation(
+    const std::string& partition_name, const InstallOperation& operation) {
+  switch (operation.type()) {
+    case InstallOperation::SOURCE_COPY:
+      return target_supports_snapshot_ &&
+             GetVirtualAbFeatureFlag().IsEnabled() &&
+             mapped_devices_.count(partition_name +
+                                   SlotSuffixForSlotNumber(target_slot_)) > 0 &&
+             SourceCopyOperationIsClone(operation);
+      break;
+    default:
+      break;
+  }
+  return false;
 }
 
 bool DynamicPartitionControlAndroid::MapPartitionInternal(
@@ -209,7 +240,7 @@ bool DynamicPartitionControlAndroid::UnmapPartitionOnDeviceMapper(
   return true;
 }
 
-void DynamicPartitionControlAndroid::CleanupInternal(bool wait) {
+void DynamicPartitionControlAndroid::UnmapAllPartitions() {
   if (mapped_devices_.empty()) {
     return;
   }
@@ -223,7 +254,8 @@ void DynamicPartitionControlAndroid::CleanupInternal(bool wait) {
 }
 
 void DynamicPartitionControlAndroid::Cleanup() {
-  CleanupInternal(true /* wait */);
+  UnmapAllPartitions();
+  metadata_device_.reset();
 }
 
 bool DynamicPartitionControlAndroid::DeviceExists(const std::string& path) {
@@ -349,35 +381,97 @@ bool DynamicPartitionControlAndroid::PreparePartitionsForUpdate(
     uint32_t source_slot,
     uint32_t target_slot,
     const DeltaArchiveManifest& manifest,
-    bool update) {
+    bool update,
+    uint64_t* required_size) {
+  source_slot_ = source_slot;
+  target_slot_ = target_slot;
+  if (required_size != nullptr) {
+    *required_size = 0;
+  }
+
+  if (fs_mgr_overlayfs_is_setup()) {
+    // Non DAP devices can use overlayfs as well.
+    LOG(WARNING)
+        << "overlayfs overrides are active and can interfere with our "
+           "resources.\n"
+        << "run adb enable-verity to deactivate if required and try again.";
+  }
+
+  if (!GetDynamicPartitionsFeatureFlag().IsEnabled()) {
+    return true;
+  }
+
+  if (target_slot == source_slot) {
+    LOG(ERROR) << "Cannot call PreparePartitionsForUpdate on current slot.";
+    return false;
+  }
+
+  // Although the current build supports dynamic partitions, the given payload
+  // doesn't use it for target partitions. This could happen when applying a
+  // retrofit update. Skip updating the partition metadata for the target slot.
+  is_target_dynamic_ = !manifest.dynamic_partition_metadata().groups().empty();
+  if (!is_target_dynamic_) {
+    return true;
+  }
+
   target_supports_snapshot_ =
       manifest.dynamic_partition_metadata().snapshot_enabled();
 
+  if (GetVirtualAbFeatureFlag().IsEnabled()) {
+    metadata_device_ = snapshot_->EnsureMetadataMounted();
+    TEST_AND_RETURN_FALSE(metadata_device_ != nullptr);
+  }
+
   if (!update)
     return true;
+
+  bool delete_source = false;
 
   if (GetVirtualAbFeatureFlag().IsEnabled()) {
     // On Virtual A/B device, either CancelUpdate() or BeginUpdate() must be
     // called before calling UnmapUpdateSnapshot.
     // - If target_supports_snapshot_, PrepareSnapshotPartitionsForUpdate()
     //   calls BeginUpdate() which resets update state
-    // - If !target_supports_snapshot_, explicitly CancelUpdate().
+    // - If !target_supports_snapshot_ or PrepareSnapshotPartitionsForUpdate
+    //   failed in recovery, explicitly CancelUpdate().
     if (target_supports_snapshot_) {
-      return PrepareSnapshotPartitionsForUpdate(
-          source_slot, target_slot, manifest);
+      if (PrepareSnapshotPartitionsForUpdate(
+              source_slot, target_slot, manifest, required_size)) {
+        return true;
+      }
+
+      // Virtual A/B device doing Virtual A/B update in Android mode must use
+      // snapshots.
+      if (!IsRecovery()) {
+        LOG(ERROR) << "PrepareSnapshotPartitionsForUpdate failed in Android "
+                   << "mode";
+        return false;
+      }
+
+      delete_source = true;
+      LOG(INFO) << "PrepareSnapshotPartitionsForUpdate failed in recovery. "
+                << "Attempt to overwrite existing partitions if possible";
+    } else {
+      // Downgrading to an non-Virtual A/B build or is secondary OTA.
+      LOG(INFO) << "Using regular A/B on Virtual A/B because package disabled "
+                << "snapshots.";
     }
+
     if (!snapshot_->CancelUpdate()) {
       LOG(ERROR) << "Cannot cancel previous update.";
       return false;
     }
   }
-  return PrepareDynamicPartitionsForUpdate(source_slot, target_slot, manifest);
+
+  return PrepareDynamicPartitionsForUpdate(
+      source_slot, target_slot, manifest, delete_source);
 }
 
 bool DynamicPartitionControlAndroid::PrepareDynamicPartitionsForUpdate(
     uint32_t source_slot,
     uint32_t target_slot,
-    const DeltaArchiveManifest& manifest) {
+    const DeltaArchiveManifest& manifest,
+    bool delete_source) {
   const std::string target_suffix = SlotSuffixForSlotNumber(target_slot);
 
   // Unmap all the target dynamic partitions because they would become
@@ -405,6 +499,11 @@ bool DynamicPartitionControlAndroid::PrepareDynamicPartitionsForUpdate(
     return false;
   }
 
+  if (delete_source) {
+    TEST_AND_RETURN_FALSE(
+        DeleteSourcePartitions(builder.get(), source_slot, manifest));
+  }
+
   if (!UpdatePartitionMetadata(builder.get(), target_slot, manifest)) {
     return false;
   }
@@ -417,13 +516,19 @@ bool DynamicPartitionControlAndroid::PrepareDynamicPartitionsForUpdate(
 bool DynamicPartitionControlAndroid::PrepareSnapshotPartitionsForUpdate(
     uint32_t source_slot,
     uint32_t target_slot,
-    const DeltaArchiveManifest& manifest) {
+    const DeltaArchiveManifest& manifest,
+    uint64_t* required_size) {
   if (!snapshot_->BeginUpdate()) {
     LOG(ERROR) << "Cannot begin new update.";
     return false;
   }
-  if (!snapshot_->CreateUpdateSnapshots(manifest)) {
-    LOG(ERROR) << "Cannot create update snapshots.";
+  auto ret = snapshot_->CreateUpdateSnapshots(manifest);
+  if (!ret) {
+    LOG(ERROR) << "Cannot create update snapshots: " << ret.string();
+    if (required_size != nullptr &&
+        ret.error_code() == Return::ErrorCode::NO_SPACE) {
+      *required_size = ret.required_size();
+    }
     return false;
   }
   return true;
@@ -516,10 +621,168 @@ bool DynamicPartitionControlAndroid::UpdatePartitionMetadata(
 }
 
 bool DynamicPartitionControlAndroid::FinishUpdate() {
-  if (GetVirtualAbFeatureFlag().IsEnabled() && target_supports_snapshot_) {
+  if (GetVirtualAbFeatureFlag().IsEnabled() &&
+      snapshot_->GetUpdateState() == UpdateState::Initiated) {
     LOG(INFO) << "Snapshot writes are done.";
     return snapshot_->FinishedSnapshotWrites();
   }
+  return true;
+}
+
+bool DynamicPartitionControlAndroid::GetPartitionDevice(
+    const std::string& partition_name,
+    uint32_t slot,
+    uint32_t current_slot,
+    std::string* device) {
+  const auto& partition_name_suffix =
+      partition_name + SlotSuffixForSlotNumber(slot);
+  std::string device_dir_str;
+  TEST_AND_RETURN_FALSE(GetDeviceDir(&device_dir_str));
+  base::FilePath device_dir(device_dir_str);
+
+  // When looking up target partition devices, treat them as static if the
+  // current payload doesn't encode them as dynamic partitions. This may happen
+  // when applying a retrofit update on top of a dynamic-partitions-enabled
+  // build.
+  if (GetDynamicPartitionsFeatureFlag().IsEnabled() &&
+      (slot == current_slot || is_target_dynamic_)) {
+    switch (GetDynamicPartitionDevice(
+        device_dir, partition_name_suffix, slot, current_slot, device)) {
+      case DynamicPartitionDeviceStatus::SUCCESS:
+        return true;
+      case DynamicPartitionDeviceStatus::TRY_STATIC:
+        break;
+      case DynamicPartitionDeviceStatus::ERROR:  // fallthrough
+      default:
+        return false;
+    }
+  }
+  base::FilePath path = device_dir.Append(partition_name_suffix);
+  if (!DeviceExists(path.value())) {
+    LOG(ERROR) << "Device file " << path.value() << " does not exist.";
+    return false;
+  }
+
+  *device = path.value();
+  return true;
+}
+
+bool DynamicPartitionControlAndroid::IsSuperBlockDevice(
+    const base::FilePath& device_dir,
+    uint32_t current_slot,
+    const std::string& partition_name_suffix) {
+  std::string source_device =
+      device_dir.Append(GetSuperPartitionName(current_slot)).value();
+  auto source_metadata = LoadMetadataBuilder(source_device, current_slot);
+  return source_metadata->HasBlockDevice(partition_name_suffix);
+}
+
+DynamicPartitionControlAndroid::DynamicPartitionDeviceStatus
+DynamicPartitionControlAndroid::GetDynamicPartitionDevice(
+    const base::FilePath& device_dir,
+    const std::string& partition_name_suffix,
+    uint32_t slot,
+    uint32_t current_slot,
+    std::string* device) {
+  std::string super_device =
+      device_dir.Append(GetSuperPartitionName(slot)).value();
+
+  auto builder = LoadMetadataBuilder(super_device, slot);
+  if (builder == nullptr) {
+    LOG(ERROR) << "No metadata in slot "
+               << BootControlInterface::SlotName(slot);
+    return DynamicPartitionDeviceStatus::ERROR;
+  }
+  if (builder->FindPartition(partition_name_suffix) == nullptr) {
+    LOG(INFO) << partition_name_suffix
+              << " is not in super partition metadata.";
+
+    if (IsSuperBlockDevice(device_dir, current_slot, partition_name_suffix)) {
+      LOG(ERROR) << "The static partition " << partition_name_suffix
+                 << " is a block device for current metadata."
+                 << "It cannot be used as a logical partition.";
+      return DynamicPartitionDeviceStatus::ERROR;
+    }
+
+    return DynamicPartitionDeviceStatus::TRY_STATIC;
+  }
+
+  if (slot == current_slot) {
+    if (GetState(partition_name_suffix) != DmDeviceState::ACTIVE) {
+      LOG(WARNING) << partition_name_suffix << " is at current slot but it is "
+                   << "not mapped. Now try to map it.";
+    } else {
+      if (GetDmDevicePathByName(partition_name_suffix, device)) {
+        LOG(INFO) << partition_name_suffix
+                  << " is mapped on device mapper: " << *device;
+        return DynamicPartitionDeviceStatus::SUCCESS;
+      }
+      LOG(ERROR) << partition_name_suffix << "is mapped but path is unknown.";
+      return DynamicPartitionDeviceStatus::ERROR;
+    }
+  }
+
+  bool force_writable = slot != current_slot;
+  if (MapPartitionOnDeviceMapper(
+          super_device, partition_name_suffix, slot, force_writable, device)) {
+    return DynamicPartitionDeviceStatus::SUCCESS;
+  }
+  return DynamicPartitionDeviceStatus::ERROR;
+}
+
+void DynamicPartitionControlAndroid::set_fake_mapped_devices(
+    const std::set<std::string>& fake) {
+  mapped_devices_ = fake;
+}
+
+ErrorCode DynamicPartitionControlAndroid::CleanupSuccessfulUpdate() {
+  // Already reboot into new boot. Clean up.
+  if (!GetVirtualAbFeatureFlag().IsEnabled()) {
+    return ErrorCode::kSuccess;
+  }
+  auto ret = snapshot_->WaitForMerge();
+  if (ret.is_ok()) {
+    return ErrorCode::kSuccess;
+  }
+  if (ret.error_code() == Return::ErrorCode::NEEDS_REBOOT) {
+    return ErrorCode::kError;
+  }
+  return ErrorCode::kDeviceCorrupted;
+}
+
+bool DynamicPartitionControlAndroid::IsRecovery() {
+  return kIsRecovery;
+}
+
+static bool IsIncrementalUpdate(const DeltaArchiveManifest& manifest) {
+  const auto& partitions = manifest.partitions();
+  return std::any_of(partitions.begin(), partitions.end(), [](const auto& p) {
+    return p.has_old_partition_info();
+  });
+}
+
+bool DynamicPartitionControlAndroid::DeleteSourcePartitions(
+    MetadataBuilder* builder,
+    uint32_t source_slot,
+    const DeltaArchiveManifest& manifest) {
+  TEST_AND_RETURN_FALSE(IsRecovery());
+
+  if (IsIncrementalUpdate(manifest)) {
+    LOG(ERROR) << "Cannot sideload incremental OTA because snapshots cannot "
+               << "be created.";
+    if (GetVirtualAbFeatureFlag().IsLaunch()) {
+      LOG(ERROR) << "Sideloading incremental updates on devices launches "
+                 << " Virtual A/B is not supported.";
+    }
+    return false;
+  }
+
+  LOG(INFO) << "Will overwrite existing partitions. Slot "
+            << BootControlInterface::SlotName(source_slot)
+            << "may be unbootable until update finishes!";
+  const std::string source_suffix = SlotSuffixForSlotNumber(source_slot);
+  DeleteGroupsWithSuffix(builder, source_suffix);
+
   return true;
 }
 
