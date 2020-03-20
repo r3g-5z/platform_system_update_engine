@@ -16,6 +16,8 @@
 
 #include "update_engine/binder_service_android.h"
 
+#include <memory>
+
 #include <base/bind.h>
 #include <base/logging.h>
 #include <binderwrapper/binder_wrapper.h>
@@ -197,6 +199,60 @@ bool BinderUpdateEngineAndroidService::UnbindCallback(const IBinder* callback) {
   }
   callbacks_.erase(it);
   return true;
+}
+
+Status BinderUpdateEngineAndroidService::allocateSpaceForPayload(
+    const android::String16& metadata_filename,
+    const vector<android::String16>& header_kv_pairs,
+    int64_t* return_value) {
+  const std::string payload_metadata{
+      android::String8{metadata_filename}.string()};
+  vector<string> str_headers = ToVecString(header_kv_pairs);
+  LOG(INFO) << "Received a request of allocating space for " << payload_metadata
+            << ".";
+  brillo::ErrorPtr error;
+  *return_value =
+      static_cast<int64_t>(service_delegate_->AllocateSpaceForPayload(
+          payload_metadata, str_headers, &error));
+  if (error != nullptr)
+    return ErrorPtrToStatus(error);
+  return Status::ok();
+}
+
+class CleanupSuccessfulUpdateCallback
+    : public CleanupSuccessfulUpdateCallbackInterface {
+ public:
+  CleanupSuccessfulUpdateCallback(
+      const android::sp<IUpdateEngineCallback>& callback)
+      : callback_(callback) {}
+  void OnCleanupComplete(int32_t error_code) {
+    ignore_result(callback_->onPayloadApplicationComplete(error_code));
+  }
+  void OnCleanupProgressUpdate(double progress) {
+    ignore_result(callback_->onStatusUpdate(
+        static_cast<int32_t>(
+            update_engine::UpdateStatus::CLEANUP_PREVIOUS_UPDATE),
+        progress));
+  }
+  void RegisterForDeathNotifications(base::Closure unbind) {
+    const android::sp<android::IBinder>& callback_binder =
+        IUpdateEngineCallback::asBinder(callback_);
+    auto binder_wrapper = android::BinderWrapper::Get();
+    binder_wrapper->RegisterForDeathNotifications(callback_binder, unbind);
+  }
+
+ private:
+  android::sp<IUpdateEngineCallback> callback_;
+};
+
+Status BinderUpdateEngineAndroidService::cleanupSuccessfulUpdate(
+    const android::sp<IUpdateEngineCallback>& callback) {
+  brillo::ErrorPtr error;
+  service_delegate_->CleanupSuccessfulUpdate(
+      std::make_unique<CleanupSuccessfulUpdateCallback>(callback), &error);
+  if (error != nullptr)
+    return ErrorPtrToStatus(error);
+  return Status::ok();
 }
 
 }  // namespace chromeos_update_engine

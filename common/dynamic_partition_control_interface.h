@@ -22,6 +22,9 @@
 #include <memory>
 #include <string>
 
+#include "update_engine/common/action.h"
+#include "update_engine/common/cleanup_previous_update_action_delegate.h"
+#include "update_engine/common/error_code.h"
 #include "update_engine/update_metadata.pb.h"
 
 namespace chromeos_update_engine {
@@ -37,6 +40,9 @@ struct FeatureFlag {
   Value value_;
 };
 
+class BootControlInterface;
+class PrefsInterface;
+
 class DynamicPartitionControlInterface {
  public:
   virtual ~DynamicPartitionControlInterface() = default;
@@ -50,12 +56,17 @@ class DynamicPartitionControlInterface {
   // Return the feature flags of Virtual A/B on this device.
   virtual FeatureFlag GetVirtualAbFeatureFlag() = 0;
 
-  // Checks if |operation| can be skipped on the given partition.
+  // Attempt to optimize |operation|.
+  // If successful, |optimized| contains an operation with extents that
+  // needs to be written.
+  // If failed, no optimization is available, and caller should perform
+  // |operation| directly.
   // |partition_name| should not have the slot suffix; implementation of
   // DynamicPartitionControlInterface checks partition at the target slot
   // previously set with PreparePartitionsForUpdate().
-  virtual bool ShouldSkipOperation(const std::string& partition_name,
-                                   const InstallOperation& operation) = 0;
+  virtual bool OptimizeOperation(const std::string& partition_name,
+                                 const InstallOperation& operation,
+                                 InstallOperation* optimized) = 0;
 
   // Do necessary cleanups before destroying the object.
   virtual void Cleanup() = 0;
@@ -64,12 +75,49 @@ class DynamicPartitionControlInterface {
   // This is needed before calling MapPartitionOnDeviceMapper(), otherwise the
   // device would be mapped in an inconsistent way.
   // If |update| is set, create snapshots and writes super partition metadata.
+  // If |required_size| is not null and call fails due to insufficient space,
+  // |required_size| will be set to total free space required on userdata
+  // partition to apply the update. Otherwise (call succeeds, or fails
+  // due to other errors), |required_size| is set to zero.
   virtual bool PreparePartitionsForUpdate(uint32_t source_slot,
                                           uint32_t target_slot,
                                           const DeltaArchiveManifest& manifest,
-                                          bool update) = 0;
+                                          bool update,
+                                          uint64_t* required_size) = 0;
 
+  // After writing to new partitions, before rebooting into the new slot, call
+  // this function to indicate writes to new partitions are done.
   virtual bool FinishUpdate() = 0;
+
+  // Get an action to clean up previous update.
+  // Return NoOpAction on non-Virtual A/B devices.
+  // Before applying the next update, run this action to clean up previous
+  // update files. This function blocks until delta files are merged into
+  // current OS partitions and finished cleaning up.
+  // - If successful, action completes with kSuccess.
+  // - If any error, but caller should retry after reboot, action completes with
+  //   kError.
+  // - If any irrecoverable failures, action completes with kDeviceCorrupted.
+  //
+  // See ResetUpdate for differences between CleanuPreviousUpdateAction and
+  // ResetUpdate.
+  virtual std::unique_ptr<AbstractAction> GetCleanupPreviousUpdateAction(
+      BootControlInterface* boot_control,
+      PrefsInterface* prefs,
+      CleanupPreviousUpdateActionDelegateInterface* delegate) = 0;
+
+  // Called after an unwanted payload has been successfully applied and the
+  // device has not yet been rebooted.
+  //
+  // For snapshot updates (Virtual A/B), it calls
+  // DeltaPerformer::ResetUpdateProgress(false /* quick */) and
+  // frees previously allocated space; the next update will need to be
+  // started over.
+  //
+  // Note: CleanupPreviousUpdateAction does not do anything if an update is in
+  // progress, while ResetUpdate() forcefully free previously
+  // allocated space for snapshot updates.
+  virtual bool ResetUpdate(PrefsInterface* prefs) = 0;
 };
 
 }  // namespace chromeos_update_engine

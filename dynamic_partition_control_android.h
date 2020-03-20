@@ -35,15 +35,23 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
   ~DynamicPartitionControlAndroid();
   FeatureFlag GetDynamicPartitionsFeatureFlag() override;
   FeatureFlag GetVirtualAbFeatureFlag() override;
-  bool ShouldSkipOperation(const std::string& partition_name,
-                           const InstallOperation& operation) override;
+  bool OptimizeOperation(const std::string& partition_name,
+                         const InstallOperation& operation,
+                         InstallOperation* optimized) override;
   void Cleanup() override;
 
   bool PreparePartitionsForUpdate(uint32_t source_slot,
                                   uint32_t target_slot,
                                   const DeltaArchiveManifest& manifest,
-                                  bool update) override;
+                                  bool update,
+                                  uint64_t* required_size) override;
   bool FinishUpdate() override;
+  std::unique_ptr<AbstractAction> GetCleanupPreviousUpdateAction(
+      BootControlInterface* boot_control,
+      PrefsInterface* prefs,
+      CleanupPreviousUpdateActionDelegateInterface* delegate) override;
+
+  bool ResetUpdate(PrefsInterface* prefs) override;
 
   // Return the device for partition |partition_name| at slot |slot|.
   // |current_slot| should be set to the current active slot.
@@ -125,10 +133,13 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
 
   virtual void set_fake_mapped_devices(const std::set<std::string>& fake);
 
+  // Allow mock objects to override this to test recovery mode.
+  virtual bool IsRecovery();
+
  private:
   friend class DynamicPartitionControlAndroidTest;
 
-  void CleanupInternal();
+  void UnmapAllPartitions();
   bool MapPartitionInternal(const std::string& super_device,
                             const std::string& target_partition_name,
                             uint32_t slot,
@@ -141,17 +152,21 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
                                uint32_t target_slot,
                                const DeltaArchiveManifest& manifest);
 
-  // Helper for PreparePartitionsForUpdate. Used for dynamic partitions without
-  // Virtual A/B update.
+  // Helper for PreparePartitionsForUpdate. Used for devices with dynamic
+  // partitions updating without snapshots.
+  // If |delete_source| is set, source partitions are deleted before resizing
+  // target partitions (using DeleteSourcePartitions).
   bool PrepareDynamicPartitionsForUpdate(uint32_t source_slot,
                                          uint32_t target_slot,
-                                         const DeltaArchiveManifest& manifest);
+                                         const DeltaArchiveManifest& manifest,
+                                         bool delete_source);
 
   // Helper for PreparePartitionsForUpdate. Used for snapshotted partitions for
   // Virtual A/B update.
   bool PrepareSnapshotPartitionsForUpdate(uint32_t source_slot,
                                           uint32_t target_slot,
-                                          const DeltaArchiveManifest& manifest);
+                                          const DeltaArchiveManifest& manifest,
+                                          uint64_t* required_size);
 
   enum class DynamicPartitionDeviceStatus {
     SUCCESS,
@@ -175,6 +190,11 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
   bool IsSuperBlockDevice(const base::FilePath& device_dir,
                           uint32_t current_slot,
                           const std::string& partition_name_suffix);
+
+  // If sideloading a full OTA, delete source partitions from |builder|.
+  bool DeleteSourcePartitions(android::fs_mgr::MetadataBuilder* builder,
+                              uint32_t source_slot,
+                              const DeltaArchiveManifest& manifest);
 
   std::set<std::string> mapped_devices_;
   const FeatureFlag dynamic_partitions_;
