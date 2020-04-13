@@ -136,6 +136,43 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
   // Allow mock objects to override this to test recovery mode.
   virtual bool IsRecovery();
 
+  // Determine path for system_other partition.
+  // |source_slot| should be current slot.
+  // |target_slot| should be "other" slot.
+  // |partition_name_suffix| should be "system" + suffix(|target_slot|).
+  // Return true and set |path| if successful.
+  // Set |path| to empty if no need to erase system_other.
+  // Set |should_unmap| to true if path needs to be unmapped later.
+  //
+  // Note: system_other cannot use GetPartitionDevice or
+  // GetDynamicPartitionDevice because:
+  // - super partition metadata may be loaded from the source slot
+  // - UPDATED flag needs to be check to skip erasing if partition is not
+  //   created by flashing tools
+  // - Snapshots from previous update attempts should not be used.
+  virtual bool GetSystemOtherPath(uint32_t source_slot,
+                                  uint32_t target_slot,
+                                  const std::string& partition_name_suffix,
+                                  std::string* path,
+                                  bool* should_unmap);
+
+  // Returns true if any entry in the fstab file in |path| has AVB enabled,
+  // false if not enabled, and nullopt for any error.
+  virtual std::optional<bool> IsAvbEnabledInFstab(const std::string& path);
+
+  // Returns true if system_other has AVB enabled, false if not enabled, and
+  // nullopt for any error.
+  virtual std::optional<bool> IsAvbEnabledOnSystemOther();
+
+  // Erase system_other partition that may contain system_other.img.
+  // After the update, the content of system_other may be corrupted but with
+  // valid AVB footer. If the update is rolled back and factory data reset is
+  // triggered, system_b fails to be mapped with verity errors (see
+  // b/152444348). Erase the system_other so that mapping system_other is
+  // skipped.
+  virtual bool EraseSystemOtherAvbFooter(uint32_t source_slot,
+                                         uint32_t target_slot);
+
  private:
   friend class DynamicPartitionControlAndroidTest;
 
@@ -195,6 +232,28 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
   bool DeleteSourcePartitions(android::fs_mgr::MetadataBuilder* builder,
                               uint32_t source_slot,
                               const DeltaArchiveManifest& manifest);
+
+  // Returns true if metadata is expected to be mounted, false otherwise.
+  // Note that it returns false on non-Virtual A/B devices.
+  //
+  // Almost all functions of SnapshotManager depends on metadata being mounted.
+  // - In Android mode for Virtual A/B devices, assume it is mounted. If not,
+  //   let caller fails when calling into SnapshotManager.
+  // - In recovery for Virtual A/B devices, it is possible that metadata is not
+  //   formatted, hence it cannot be mounted. Caller should not call into
+  //   SnapshotManager.
+  // - On non-Virtual A/B devices, updates do not depend on metadata partition.
+  //   Caller should not call into SnapshotManager.
+  //
+  // This function does NOT mount metadata partition. Use EnsureMetadataMounted
+  // to mount metadata partition.
+  bool ExpectMetadataMounted();
+
+  // Ensure /metadata is mounted. Returns true if successful, false otherwise.
+  //
+  // Note that this function returns true on non-Virtual A/B devices without
+  // doing anything.
+  bool EnsureMetadataMounted();
 
   std::set<std::string> mapped_devices_;
   const FeatureFlag dynamic_partitions_;
