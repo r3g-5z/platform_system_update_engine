@@ -34,6 +34,5 @@ BinPackArguments: false
 BinPackParameters: false
 CommentPragmas: NOLINT:.*
 DerivePointerAlignment: false
-IncludeBlocks: Preserve
 PointerAlignment: Left
 TabWidth: 2

@@ -22,7 +22,6 @@
 #include <utility>
 
 #include <android-base/properties.h>
-#include <android-base/unique_fd.h>
 #include <base/bind.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
@@ -39,7 +38,6 @@
 #include "update_engine/metrics_reporter_interface.h"
 #include "update_engine/metrics_utils.h"
 #include "update_engine/network_selector.h"
-#include "update_engine/payload_consumer/certificate_parser_interface.h"
 #include "update_engine/payload_consumer/delta_performer.h"
 #include "update_engine/payload_consumer/download_action.h"
 #include "update_engine/payload_consumer/file_descriptor.h"
@@ -47,7 +45,6 @@
 #include "update_engine/payload_consumer/filesystem_verifier_action.h"
 #include "update_engine/payload_consumer/payload_constants.h"
 #include "update_engine/payload_consumer/payload_metadata.h"
-#include "update_engine/payload_consumer/payload_verifier.h"
 #include "update_engine/payload_consumer/postinstall_runner_action.h"
 #include "update_engine/update_boot_flags_action.h"
 #include "update_engine/update_status_utils.h"
@@ -58,7 +55,6 @@
 #include "update_engine/libcurl_http_fetcher.h"
 #endif
 
-using android::base::unique_fd;
 using base::Bind;
 using base::Time;
 using base::TimeDelta;
@@ -292,19 +288,6 @@ bool UpdateAttempterAndroid::ApplyPayload(
   return true;
 }
 
-bool UpdateAttempterAndroid::ApplyPayload(
-    int fd,
-    int64_t payload_offset,
-    int64_t payload_size,
-    const vector<string>& key_value_pair_headers,
-    brillo::ErrorPtr* error) {
-  payload_fd_.reset(dup(fd));
-  const string payload_url = "fd://" + std::to_string(payload_fd_.get());
-
-  return ApplyPayload(
-      payload_url, payload_offset, payload_size, key_value_pair_headers, error);
-}
-
 bool UpdateAttempterAndroid::SuspendUpdate(brillo::ErrorPtr* error) {
   if (!processor_->IsRunning())
     return LogAndSetError(error, FROM_HERE, "No ongoing update to suspend.");
@@ -412,16 +395,12 @@ bool UpdateAttempterAndroid::VerifyPayloadApplicable(
   }
   fd->Close();
 
-  auto payload_verifier = PayloadVerifier::CreateInstanceFromZipPath(
-      constants::kUpdateCertificatesPath);
-  if (!payload_verifier) {
-    return LogAndSetError(error,
-                          FROM_HERE,
-                          "Failed to create the payload verifier from " +
-                              std::string(constants::kUpdateCertificatesPath));
+  string public_key;
+  if (!utils::ReadFile(constants::kUpdatePayloadPublicKeyPath, &public_key)) {
+    return LogAndSetError(error, FROM_HERE, "Failed to read public key.");
   }
-  errorcode = payload_metadata.ValidateMetadataSignature(
-      metadata, "", *payload_verifier);
+  errorcode =
+      payload_metadata.ValidateMetadataSignature(metadata, "", public_key);
   if (errorcode != ErrorCode::kSuccess) {
     return LogAndSetError(error,
                           FROM_HERE,
@@ -604,7 +583,6 @@ void UpdateAttempterAndroid::TerminateUpdateAndNotify(ErrorCode error_code) {
       (error_code == ErrorCode::kSuccess ? UpdateStatus::UPDATED_NEED_REBOOT
                                          : UpdateStatus::IDLE);
   SetStatusAndNotify(new_status);
-  payload_fd_.reset();
 
   // The network id is only applicable to one download attempt and once it's
   // done the network id should not be re-used anymore.
@@ -756,15 +734,11 @@ void UpdateAttempterAndroid::CollectAndReportUpdateMetricsOnUpdateFinished(
         total_bytes_downloaded;
 
     int download_overhead_percentage = 0;
-    if (total_bytes_downloaded >= payload_size) {
-      CHECK_GT(payload_size, 0);
+    if (current_bytes_downloaded > 0) {
       download_overhead_percentage =
-          (total_bytes_downloaded - payload_size) * 100ull / payload_size;
-    } else {
-      LOG(WARNING) << "Downloaded bytes " << total_bytes_downloaded
-                   << " is smaller than the payload size " << payload_size;
+          (total_bytes_downloaded - current_bytes_downloaded) * 100ull /
+          current_bytes_downloaded;
     }
-
     metrics_reporter_->ReportSuccessfulUpdateMetrics(
         static_cast<int>(attempt_number),
         0,  // update abandoned count

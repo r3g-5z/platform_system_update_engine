@@ -83,24 +83,17 @@ class AndroidOTAPackage(object):
   # Android OTA package file paths.
   OTA_PAYLOAD_BIN = 'payload.bin'
   OTA_PAYLOAD_PROPERTIES_TXT = 'payload_properties.txt'
-  SECONDARY_OTA_PAYLOAD_BIN = 'secondary/payload.bin'
-  SECONDARY_OTA_PAYLOAD_PROPERTIES_TXT = 'secondary/payload_properties.txt'
 
-  def __init__(self, otafilename, secondary_payload=False):
+  def __init__(self, otafilename):
     self.otafilename = otafilename
 
     otazip = zipfile.ZipFile(otafilename, 'r')
-    payload_entry = (self.SECONDARY_OTA_PAYLOAD_BIN if secondary_payload else
-                     self.OTA_PAYLOAD_BIN)
-    payload_info = otazip.getinfo(payload_entry)
+    payload_info = otazip.getinfo(self.OTA_PAYLOAD_BIN)
     self.offset = payload_info.header_offset
     self.offset += zipfile.sizeFileHeader
     self.offset += len(payload_info.extra) + len(payload_info.filename)
     self.size = payload_info.file_size
-
-    property_entry = (self.SECONDARY_OTA_PAYLOAD_PROPERTIES_TXT if
-                      secondary_payload else self.OTA_PAYLOAD_PROPERTIES_TXT)
-    self.properties = otazip.read(property_entry)
+    self.properties = otazip.read(self.OTA_PAYLOAD_PROPERTIES_TXT)
 
 
 class UpdateHandler(BaseHTTPServer.BaseHTTPRequestHandler):
@@ -285,9 +278,9 @@ def StartServer(ota_filename, serving_range):
   return t
 
 
-def AndroidUpdateCommand(ota_filename, secondary, payload_url, extra_headers):
+def AndroidUpdateCommand(ota_filename, payload_url, extra_headers):
   """Return the command to run to start the update in the Android device."""
-  ota = AndroidOTAPackage(ota_filename, secondary)
+  ota = AndroidOTAPackage(ota_filename)
   headers = ota.properties
   headers += 'USER_AGENT=Dalvik (something, something)\n'
   headers += 'NETWORK_ID=0\n'
@@ -370,8 +363,6 @@ def main():
                       help='Override the public key used to verify payload.')
   parser.add_argument('--extra-headers', type=str, default='',
                       help='Extra headers to pass to the device.')
-  parser.add_argument('--secondary', action='store_true',
-                      help='Update with the secondary payload in the package.')
   args = parser.parse_args()
   logging.basicConfig(
       level=logging.WARNING if args.no_verbose else logging.INFO)
@@ -407,7 +398,7 @@ def main():
     # command.
     payload_url = 'http://127.0.0.1:%d/payload' % DEVICE_PORT
     if use_omaha and zipfile.is_zipfile(args.otafile):
-      ota = AndroidOTAPackage(args.otafile, args.secondary)
+      ota = AndroidOTAPackage(args.otafile)
       serving_range = (ota.offset, ota.size)
     else:
       serving_range = (0, os.stat(args.otafile).st_size)
@@ -435,8 +426,8 @@ def main():
       update_cmd = \
           OmahaUpdateCommand('http://127.0.0.1:%d/update' % DEVICE_PORT)
     else:
-      update_cmd = AndroidUpdateCommand(args.otafile, args.secondary,
-                                        payload_url, args.extra_headers)
+      update_cmd = \
+          AndroidUpdateCommand(args.otafile, payload_url, args.extra_headers)
     cmds.append(['shell', 'su', '0'] + update_cmd)
 
     for cmd in cmds:

@@ -54,14 +54,17 @@ namespace chromeos_update_engine {
 namespace {
 
 void ParseSignatureSizes(const string& signature_sizes_flag,
-                         vector<size_t>* signature_sizes) {
+                         vector<int>* signature_sizes) {
   signature_sizes->clear();
   vector<string> split_strings = base::SplitString(
       signature_sizes_flag, ":", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
   for (const string& str : split_strings) {
-    size_t size = 0;
-    bool parsing_successful = base::StringToSizeT(str, &size);
+    int size = 0;
+    bool parsing_successful = base::StringToInt(str, &size);
     LOG_IF(FATAL, !parsing_successful) << "Invalid signature size: " << str;
+
+    LOG_IF(FATAL, size != 256 && size != 512)
+        << "Only signature sizes of 256 or 512 bytes are supported.";
 
     signature_sizes->push_back(size);
   }
@@ -99,7 +102,7 @@ bool ParseImageInfo(const string& channel,
   return true;
 }
 
-void CalculateHashForSigning(const vector<size_t>& sizes,
+void CalculateHashForSigning(const vector<int>& sizes,
                              const string& out_hash_file,
                              const string& out_metadata_hash_file,
                              const string& in_file) {
@@ -135,7 +138,6 @@ void SignatureFileFlagToBlobs(const string& signature_file_flag,
 
 void SignPayload(const string& in_file,
                  const string& out_file,
-                 const vector<size_t>& signature_sizes,
                  const string& payload_signature_file,
                  const string& metadata_signature_file,
                  const string& out_metadata_size_file) {
@@ -149,7 +151,6 @@ void SignPayload(const string& in_file,
   SignatureFileFlagToBlobs(metadata_signature_file, &metadata_signatures);
   uint64_t final_metadata_size;
   CHECK(PayloadSigner::AddSignatureToPayload(in_file,
-                                             signature_sizes,
                                              payload_signatures,
                                              metadata_signatures,
                                              out_file,
@@ -420,13 +421,6 @@ int Main(int argc, char** argv) {
                 "",
                 "An info file specifying dynamic partition metadata. "
                 "Only allowed in major version 2 or newer.");
-  DEFINE_bool(disable_fec_computation,
-              false,
-              "Disables the fec data computation on device.");
-  DEFINE_string(
-      out_maximum_signature_size_file,
-      "",
-      "Path to the output maximum signature size given a private key.");
 
   brillo::FlagHelper::Init(
       argc,
@@ -448,34 +442,8 @@ int Main(int argc, char** argv) {
   // Initialize the Xz compressor.
   XzCompressInit();
 
-  if (!FLAGS_out_maximum_signature_size_file.empty()) {
-    LOG_IF(FATAL, FLAGS_private_key.empty())
-        << "Private key is not provided when calculating the maximum signature "
-           "size.";
-
-    size_t maximum_signature_size;
-    if (!PayloadSigner::GetMaximumSignatureSize(FLAGS_private_key,
-                                                &maximum_signature_size)) {
-      LOG(ERROR) << "Failed to get the maximum signature size of private key: "
-                 << FLAGS_private_key;
-      return 1;
-    }
-    // Write the size string to output file.
-    string signature_size_string = std::to_string(maximum_signature_size);
-    if (!utils::WriteFile(FLAGS_out_maximum_signature_size_file.c_str(),
-                          signature_size_string.c_str(),
-                          signature_size_string.size())) {
-      PLOG(ERROR) << "Failed to write the maximum signature size to "
-                  << FLAGS_out_maximum_signature_size_file << ".";
-      return 1;
-    }
-    return 0;
-  }
-
-  vector<size_t> signature_sizes;
-  if (!FLAGS_signature_size.empty()) {
-    ParseSignatureSizes(FLAGS_signature_size, &signature_sizes);
-  }
+  vector<int> signature_sizes;
+  ParseSignatureSizes(FLAGS_signature_size, &signature_sizes);
 
   if (!FLAGS_out_hash_file.empty() || !FLAGS_out_metadata_hash_file.empty()) {
     CHECK(FLAGS_out_metadata_size_file.empty());
@@ -488,7 +456,6 @@ int Main(int argc, char** argv) {
   if (!FLAGS_payload_signature_file.empty()) {
     SignPayload(FLAGS_in_file,
                 FLAGS_out_file,
-                signature_sizes,
                 FLAGS_payload_signature_file,
                 FLAGS_metadata_signature_file,
                 FLAGS_out_metadata_size_file);
@@ -560,8 +527,6 @@ int Main(int argc, char** argv) {
         << "Partition name can't be empty, see --partition_names.";
     payload_config.target.partitions.emplace_back(partition_names[i]);
     payload_config.target.partitions.back().path = new_partitions[i];
-    payload_config.target.partitions.back().disable_fec_computation =
-        FLAGS_disable_fec_computation;
     if (i < new_mapfiles.size())
       payload_config.target.partitions.back().mapfile_path = new_mapfiles[i];
   }

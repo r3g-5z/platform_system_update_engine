@@ -326,8 +326,10 @@ int BootControlChromeOS::GetPartitionNumber(
   return -1;
 }
 
-bool BootControlChromeOS::PreparePartitionsForUpdate(
-    Slot slot, const DeltaArchiveManifest& manifest, bool update_metadata) {
+bool BootControlChromeOS::InitPartitionMetadata(
+    Slot slot,
+    const PartitionMetadata& partition_metadata,
+    bool update_metadata) {
   return true;
 }
 

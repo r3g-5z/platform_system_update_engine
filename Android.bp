@@ -128,7 +128,6 @@ cc_defaults {
         "libverity_tree",
     ],
     shared_libs: [
-        "libziparchive",
         "libbase",
         "libcrypto",
         "libfec",
@@ -165,7 +164,6 @@ cc_library_static {
         "common/utils.cc",
         "payload_consumer/bzip_extent_writer.cc",
         "payload_consumer/cached_file_descriptor.cc",
-        "payload_consumer/certificate_parser_android.cc",
         "payload_consumer/delta_performer.cc",
         "payload_consumer/download_action.cc",
         "payload_consumer/extent_reader.cc",
@@ -193,25 +191,16 @@ cc_defaults {
     name: "libupdate_engine_boot_control_exports",
     defaults: ["update_metadata-protos_exports"],
 
-    static_libs: [
-        "libsnapshot",
-        "update_metadata-protos",
-    ],
+    static_libs: ["update_metadata-protos"],
     shared_libs: [
         "libbootloader_message",
         "libfs_mgr",
+        "libhwbinder",
         "libhidlbase",
         "liblp",
         "libutils",
         "android.hardware.boot@1.0",
-        "android.hardware.boot@1.1",
     ],
-    target: {
-        recovery: {
-            static_libs: ["libsnapshot_nobinder"],
-            exclude_static_libs: ["libsnapshot"],
-        },
-    },
 }
 
 cc_library_static {
@@ -225,7 +214,6 @@ cc_library_static {
     srcs: [
         "boot_control_android.cc",
         "dynamic_partition_control_android.cc",
-        "dynamic_partition_utils.cc",
     ],
 }
 
@@ -305,10 +293,7 @@ cc_binary {
     ],
 
     static_libs: ["libupdate_engine_android"],
-    required: [
-        "cacerts_google",
-        "otacerts",
-    ],
+    required: ["cacerts_google"],
 
     srcs: ["main.cc"],
     init_rc: ["update_engine.rc"],
@@ -339,7 +324,6 @@ cc_binary {
         "metrics_reporter_stub.cc",
         "metrics_utils.cc",
         "network_selector_stub.cc",
-        "sideload_logging_android.cc",
         "sideload_main.cc",
         "update_attempter_android.cc",
         "update_boot_flags_action.cc",
@@ -374,6 +358,7 @@ cc_binary {
         recovery: {
             exclude_shared_libs: [
                 "libprotobuf-cpp-lite",
+                "libhwbinder",
                 "libbrillo-stream",
                 "libbrillo",
                 "libchrome",
@@ -381,9 +366,7 @@ cc_binary {
         },
     },
 
-    required: [
-        "otacerts.recovery",
-    ],
+    required: ["android.hardware.boot@1.0-impl-wrapper.recovery"],
 }
 
 // libupdate_engine_client (type: shared_library)
@@ -417,21 +400,13 @@ cc_library_shared {
     ],
 
     srcs: [
-        ":libupdate_engine_client_aidl",
+        "binder_bindings/android/brillo/IUpdateEngine.aidl",
+        "binder_bindings/android/brillo/IUpdateEngineStatusCallback.aidl",
         "client_library/client.cc",
         "client_library/client_binder.cc",
         "parcelable_update_engine_status.cc",
         "update_status_utils.cc",
     ],
-}
-
-filegroup {
-    name: "libupdate_engine_client_aidl",
-    srcs: [
-        "binder_bindings/android/brillo/IUpdateEngine.aidl",
-        "binder_bindings/android/brillo/IUpdateEngineStatusCallback.aidl",
-    ],
-    path: "binder_bindings",
 }
 
 // update_engine_client (type: executable)
@@ -569,6 +544,8 @@ cc_test {
 
     gtest: false,
     stem: "delta_generator",
+    relative_install_path: "update_engine_unittests",
+    no_named_install_directory: true,
 }
 
 // test_http_server (type: executable)
@@ -583,6 +560,8 @@ cc_test {
     ],
 
     gtest: false,
+    relative_install_path: "update_engine_unittests",
+    no_named_install_directory: true,
 }
 
 // test_subprocess (type: executable)
@@ -594,6 +573,8 @@ cc_test {
     srcs: ["test_subprocess.cc"],
 
     gtest: false,
+    relative_install_path: "update_engine_unittests",
+    no_named_install_directory: true,
 }
 
 // Public keys for unittests.
@@ -602,19 +583,16 @@ genrule {
     name: "ue_unittest_keys",
     cmd: "openssl rsa -in $(location unittest_key.pem) -pubout -out $(location unittest_key.pub.pem) &&" +
         "openssl rsa -in $(location unittest_key2.pem) -pubout -out $(location unittest_key2.pub.pem) &&" +
-        "openssl rsa -in $(location unittest_key_RSA4096.pem) -pubout -out $(location unittest_key_RSA4096.pub.pem) &&" +
-        "openssl pkey -in $(location unittest_key_EC.pem) -pubout -out $(location unittest_key_EC.pub.pem)",
+        "openssl rsa -in $(location unittest_key_RSA4096.pem) -pubout -out $(location unittest_key_RSA4096.pub.pem)",
     srcs: [
         "unittest_key.pem",
         "unittest_key2.pem",
         "unittest_key_RSA4096.pem",
-        "unittest_key_EC.pem",
     ],
     out: [
         "unittest_key.pub.pem",
         "unittest_key2.pub.pem",
         "unittest_key_RSA4096.pub.pem",
-        "unittest_key_EC.pub.pem",
     ],
 }
 
@@ -644,6 +622,11 @@ cc_test {
         "libpayload_generator_exports",
         "libupdate_engine_android_exports",
     ],
+    required: [
+        "test_http_server",
+        "test_subprocess",
+        "ue_unittest_delta_generator",
+    ],
 
     static_libs: [
         "libpayload_generator",
@@ -652,29 +635,18 @@ cc_test {
         "libchrome_test_helpers",
         "libupdate_engine_android",
     ],
-
-    header_libs: [
-        "libstorage_literals_headers",
+    shared_libs: [
+        "libhidltransport",
     ],
 
     data: [
-        ":test_http_server",
-        ":test_subprocess",
-        ":ue_unittest_delta_generator",
         ":ue_unittest_disk_imgs",
         ":ue_unittest_keys",
-        "otacerts.zip",
         "unittest_key.pem",
         "unittest_key2.pem",
         "unittest_key_RSA4096.pem",
-        "unittest_key_EC.pem",
         "update_engine.conf",
     ],
-
-    // We cannot use the default generated AndroidTest.xml because of the use of helper modules
-    // (i.e. test_http_server, test_subprocess, ue_unittest_delta_generator).
-    test_config: "test_config.xml",
-    test_suites: ["device-tests"],
 
     srcs: [
         "boot_control_android_unittest.cc",
@@ -695,10 +667,8 @@ cc_test {
         "common/terminator_unittest.cc",
         "common/test_utils.cc",
         "common/utils_unittest.cc",
-        "dynamic_partition_control_android_unittest.cc",
         "payload_consumer/bzip_extent_writer_unittest.cc",
         "payload_consumer/cached_file_descriptor_unittest.cc",
-        "payload_consumer/certificate_parser_android_unittest.cc",
         "payload_consumer/delta_performer_integration_test.cc",
         "payload_consumer/delta_performer_unittest.cc",
         "payload_consumer/extent_reader_unittest.cc",

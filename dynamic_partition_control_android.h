@@ -23,101 +23,44 @@
 #include <set>
 #include <string>
 
-#include <libsnapshot/auto_device.h>
-#include <libsnapshot/snapshot.h>
-
 namespace chromeos_update_engine {
 
 class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
  public:
-  DynamicPartitionControlAndroid();
+  DynamicPartitionControlAndroid() = default;
   ~DynamicPartitionControlAndroid();
-  FeatureFlag GetDynamicPartitionsFeatureFlag() override;
-  FeatureFlag GetVirtualAbFeatureFlag() override;
+  bool IsDynamicPartitionsEnabled() override;
+  bool IsDynamicPartitionsRetrofit() override;
   bool MapPartitionOnDeviceMapper(const std::string& super_device,
                                   const std::string& target_partition_name,
                                   uint32_t slot,
                                   bool force_writable,
                                   std::string* path) override;
+  bool UnmapPartitionOnDeviceMapper(const std::string& target_partition_name,
+                                    bool wait) override;
   void Cleanup() override;
   bool DeviceExists(const std::string& path) override;
   android::dm::DmDeviceState GetState(const std::string& name) override;
   bool GetDmDevicePathByName(const std::string& name,
                              std::string* path) override;
   std::unique_ptr<android::fs_mgr::MetadataBuilder> LoadMetadataBuilder(
-      const std::string& super_device, uint32_t source_slot) override;
-
-  bool PreparePartitionsForUpdate(uint32_t source_slot,
-                                  uint32_t target_slot,
-                                  const DeltaArchiveManifest& manifest,
-                                  bool update) override;
-  bool GetDeviceDir(std::string* path) override;
-  std::string GetSuperPartitionName(uint32_t slot) override;
-  bool FinishUpdate() override;
-
- protected:
-  // These functions are exposed for testing.
-
-  // Unmap logical partition on device mapper. This is the reverse operation
-  // of MapPartitionOnDeviceMapper.
-  // Returns true if unmapped successfully.
-  virtual bool UnmapPartitionOnDeviceMapper(
-      const std::string& target_partition_name);
-
-  // Retrieve metadata from |super_device| at slot |source_slot|.
-  //
-  // If |target_slot| != kInvalidSlot, before returning the metadata, this
-  // function modifies the metadata so that during updates, the metadata can be
-  // written to |target_slot|. In particular, on retrofit devices, the returned
-  // metadata automatically includes block devices at |target_slot|.
-  //
-  // If |target_slot| == kInvalidSlot, this function returns metadata at
-  // |source_slot| without modifying it. This is the same as
-  // LoadMetadataBuilder(const std::string&, uint32_t).
-  virtual std::unique_ptr<android::fs_mgr::MetadataBuilder> LoadMetadataBuilder(
       const std::string& super_device,
       uint32_t source_slot,
-      uint32_t target_slot);
-
-  // Write metadata |builder| to |super_device| at slot |target_slot|.
-  virtual bool StoreMetadata(const std::string& super_device,
-                             android::fs_mgr::MetadataBuilder* builder,
-                             uint32_t target_slot);
+      uint32_t target_slot) override;
+  bool StoreMetadata(const std::string& super_device,
+                     android::fs_mgr::MetadataBuilder* builder,
+                     uint32_t target_slot) override;
+  bool GetDeviceDir(std::string* path) override;
 
  private:
-  friend class DynamicPartitionControlAndroidTest;
+  std::set<std::string> mapped_devices_;
 
-  void CleanupInternal();
+  void CleanupInternal(bool wait);
   bool MapPartitionInternal(const std::string& super_device,
                             const std::string& target_partition_name,
                             uint32_t slot,
                             bool force_writable,
                             std::string* path);
-
-  // Update |builder| according to |partition_metadata|, assuming the device
-  // does not have Virtual A/B.
-  bool UpdatePartitionMetadata(android::fs_mgr::MetadataBuilder* builder,
-                               uint32_t target_slot,
-                               const DeltaArchiveManifest& manifest);
-
-  // Helper for PreparePartitionsForUpdate. Used for dynamic partitions without
-  // Virtual A/B update.
-  bool PrepareDynamicPartitionsForUpdate(uint32_t source_slot,
-                                         uint32_t target_slot,
-                                         const DeltaArchiveManifest& manifest);
-
-  // Helper for PreparePartitionsForUpdate. Used for snapshotted partitions for
-  // Virtual A/B update.
-  bool PrepareSnapshotPartitionsForUpdate(uint32_t source_slot,
-                                          uint32_t target_slot,
-                                          const DeltaArchiveManifest& manifest);
-
-  std::set<std::string> mapped_devices_;
-  const FeatureFlag dynamic_partitions_;
-  const FeatureFlag virtual_ab_;
-  std::unique_ptr<android::snapshot::SnapshotManager> snapshot_;
-  std::unique_ptr<android::snapshot::AutoDevice> metadata_device_;
-  bool target_supports_snapshot_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(DynamicPartitionControlAndroid);
 };
