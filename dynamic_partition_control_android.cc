@@ -556,7 +556,10 @@ std::optional<bool> DynamicPartitionControlAndroid::IsAvbEnabledInFstab(
     const std::string& path) {
   Fstab fstab;
   if (!ReadFstabFromFile(path, &fstab)) {
-    LOG(WARNING) << "Cannot read fstab from " << path;
+    PLOG(WARNING) << "Cannot read fstab from " << path;
+    if (errno == ENOENT) {
+      return false;
+    }
     return std::nullopt;
   }
   for (const auto& entry : fstab) {
@@ -650,6 +653,13 @@ bool DynamicPartitionControlAndroid::GetSystemOtherPath(
   if (p->attributes() & LP_PARTITION_ATTR_UPDATED) {
     LOG(INFO) << partition_name_suffix
               << " does not contain system_other, skip erasing.";
+    return true;
+  }
+
+  if (p->size() < AVB_FOOTER_SIZE) {
+    LOG(INFO) << partition_name_suffix << " has length " << p->size()
+              << "( < AVB_FOOTER_SIZE " << AVB_FOOTER_SIZE
+              << "), skip erasing.";
     return true;
   }
 
