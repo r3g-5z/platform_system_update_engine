@@ -35,6 +35,7 @@
 #include <libavb/libavb.h>
 #include <libdm/dm.h>
 #include <libsnapshot/snapshot.h>
+#include <libsnapshot/snapshot_stub.h>
 
 #include "update_engine/cleanup_previous_update_action.h"
 #include "update_engine/common/boot_control_interface.h"
@@ -58,6 +59,7 @@ using android::fs_mgr::SlotSuffixForSlotNumber;
 using android::snapshot::OptimizeSourceCopyOperation;
 using android::snapshot::Return;
 using android::snapshot::SnapshotManager;
+using android::snapshot::SnapshotManagerStub;
 using android::snapshot::UpdateState;
 
 namespace chromeos_update_engine {
@@ -108,8 +110,10 @@ DynamicPartitionControlAndroid::DynamicPartitionControlAndroid()
       virtual_ab_(GetFeatureFlag(kVirtualAbEnabled, kVirtualAbRetrofit)) {
   if (GetVirtualAbFeatureFlag().IsEnabled()) {
     snapshot_ = SnapshotManager::New();
-    CHECK(snapshot_ != nullptr) << "Cannot initialize SnapshotManager.";
+  } else {
+    snapshot_ = SnapshotManagerStub::New();
   }
+  CHECK(snapshot_ != nullptr) << "Cannot initialize SnapshotManager.";
 }
 
 FeatureFlag DynamicPartitionControlAndroid::GetDynamicPartitionsFeatureFlag() {
@@ -489,8 +493,13 @@ bool DynamicPartitionControlAndroid::PreparePartitionsForUpdate(
     }
   }
 
-  return PrepareDynamicPartitionsForUpdate(
-      source_slot, target_slot, manifest, delete_source);
+  TEST_AND_RETURN_FALSE(PrepareDynamicPartitionsForUpdate(
+      source_slot, target_slot, manifest, delete_source));
+
+  if (required_size != nullptr) {
+    *required_size = 0;
+  }
+  return true;
 }
 
 namespace {
@@ -547,7 +556,10 @@ std::optional<bool> DynamicPartitionControlAndroid::IsAvbEnabledInFstab(
     const std::string& path) {
   Fstab fstab;
   if (!ReadFstabFromFile(path, &fstab)) {
-    LOG(WARNING) << "Cannot read fstab from " << path;
+    PLOG(WARNING) << "Cannot read fstab from " << path;
+    if (errno == ENOENT) {
+      return false;
+    }
     return std::nullopt;
   }
   for (const auto& entry : fstab) {
@@ -567,18 +579,15 @@ bool DynamicPartitionControlAndroid::GetSystemOtherPath(
   path->clear();
   *should_unmap = false;
 
-  // In recovery, just erase no matter what.
-  //   - On devices with retrofit dynamic partitions, no logical partitions
-  //     should be mounted at this point. Hence it should be safe to erase.
-  // Otherwise, do check that AVB is enabled on system_other before erasing.
-  if (!IsRecovery()) {
-    auto has_avb = IsAvbEnabledOnSystemOther();
-    TEST_AND_RETURN_FALSE(has_avb.has_value());
-    if (!has_avb.value()) {
-      LOG(INFO) << "AVB is not enabled on system_other. Skip erasing.";
-      return true;
-    }
+  // Check that AVB is enabled on system_other before erasing.
+  auto has_avb = IsAvbEnabledOnSystemOther();
+  TEST_AND_RETURN_FALSE(has_avb.has_value());
+  if (!has_avb.value()) {
+    LOG(INFO) << "AVB is not enabled on system_other. Skip erasing.";
+    return true;
+  }
 
+  if (!IsRecovery()) {
     // Found unexpected avb_keys for system_other on devices retrofitting
     // dynamic partitions. Previous crash in update_engine may leave logical
     // partitions mapped on physical system_other partition. It is difficult to
@@ -641,6 +650,13 @@ bool DynamicPartitionControlAndroid::GetSystemOtherPath(
   if (p->attributes() & LP_PARTITION_ATTR_UPDATED) {
     LOG(INFO) << partition_name_suffix
               << " does not contain system_other, skip erasing.";
+    return true;
+  }
+
+  if (p->size() < AVB_FOOTER_SIZE) {
+    LOG(INFO) << partition_name_suffix << " has length " << p->size()
+              << "( < AVB_FOOTER_SIZE " << AVB_FOOTER_SIZE
+              << "), skip erasing.";
     return true;
   }
 
@@ -867,12 +883,18 @@ bool DynamicPartitionControlAndroid::GetPartitionDevice(
     const std::string& partition_name,
     uint32_t slot,
     uint32_t current_slot,
-    std::string* device) {
+    bool not_in_payload,
+    std::string* device,
+    bool* is_dynamic) {
   const auto& partition_name_suffix =
       partition_name + SlotSuffixForSlotNumber(slot);
   std::string device_dir_str;
   TEST_AND_RETURN_FALSE(GetDeviceDir(&device_dir_str));
   base::FilePath device_dir(device_dir_str);
+
+  if (is_dynamic) {
+    *is_dynamic = false;
+  }
 
   // When looking up target partition devices, treat them as static if the
   // current payload doesn't encode them as dynamic partitions. This may happen
@@ -880,9 +902,16 @@ bool DynamicPartitionControlAndroid::GetPartitionDevice(
   // build.
   if (GetDynamicPartitionsFeatureFlag().IsEnabled() &&
       (slot == current_slot || is_target_dynamic_)) {
-    switch (GetDynamicPartitionDevice(
-        device_dir, partition_name_suffix, slot, current_slot, device)) {
+    switch (GetDynamicPartitionDevice(device_dir,
+                                      partition_name_suffix,
+                                      slot,
+                                      current_slot,
+                                      not_in_payload,
+                                      device)) {
       case DynamicPartitionDeviceStatus::SUCCESS:
+        if (is_dynamic) {
+          *is_dynamic = true;
+        }
         return true;
       case DynamicPartitionDeviceStatus::TRY_STATIC:
         break;
@@ -901,6 +930,15 @@ bool DynamicPartitionControlAndroid::GetPartitionDevice(
   return true;
 }
 
+bool DynamicPartitionControlAndroid::GetPartitionDevice(
+    const std::string& partition_name,
+    uint32_t slot,
+    uint32_t current_slot,
+    std::string* device) {
+  return GetPartitionDevice(
+      partition_name, slot, current_slot, false, device, nullptr);
+}
+
 bool DynamicPartitionControlAndroid::IsSuperBlockDevice(
     const base::FilePath& device_dir,
     uint32_t current_slot,
@@ -917,6 +955,7 @@ DynamicPartitionControlAndroid::GetDynamicPartitionDevice(
     const std::string& partition_name_suffix,
     uint32_t slot,
     uint32_t current_slot,
+    bool not_in_payload,
     std::string* device) {
   std::string super_device =
       device_dir.Append(GetSuperPartitionName(slot)).value();
@@ -956,7 +995,7 @@ DynamicPartitionControlAndroid::GetDynamicPartitionDevice(
     }
   }
 
-  bool force_writable = slot != current_slot;
+  bool force_writable = (slot != current_slot) && !not_in_payload;
   if (MapPartitionOnDeviceMapper(
           super_device, partition_name_suffix, slot, force_writable, device)) {
     return DynamicPartitionDeviceStatus::SUCCESS;
