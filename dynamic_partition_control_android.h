@@ -20,6 +20,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <vector>
 
 #include <base/files/file_util.h>
 #include <libsnapshot/auto_device.h>
@@ -53,11 +54,23 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
 
   bool ResetUpdate(PrefsInterface* prefs) override;
 
+  bool ListDynamicPartitionsForSlot(
+      uint32_t current_slot, std::vector<std::string>* partitions) override;
+
+  bool GetDeviceDir(std::string* path) override;
+
   // Return the device for partition |partition_name| at slot |slot|.
   // |current_slot| should be set to the current active slot.
   // Note: this function is only used by BootControl*::GetPartitionDevice.
   // Other callers should prefer BootControl*::GetPartitionDevice over
   // BootControl*::GetDynamicPartitionControl()->GetPartitionDevice().
+  bool GetPartitionDevice(const std::string& partition_name,
+                          uint32_t slot,
+                          uint32_t current_slot,
+                          bool not_in_payload,
+                          std::string* device,
+                          bool* is_dynamic);
+
   bool GetPartitionDevice(const std::string& partition_name,
                           uint32_t slot,
                           uint32_t current_slot,
@@ -123,9 +136,6 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
   // Retrieve metadata from |super_device| at slot |source_slot|.
   virtual std::unique_ptr<android::fs_mgr::MetadataBuilder> LoadMetadataBuilder(
       const std::string& super_device, uint32_t source_slot);
-
-  // Return a possible location for devices listed by name.
-  virtual bool GetDeviceDir(std::string* path);
 
   // Return the name of the super partition (which stores super partition
   // metadata) for a given slot.
@@ -222,6 +232,7 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
       const std::string& partition_name_suffix,
       uint32_t slot,
       uint32_t current_slot,
+      bool not_in_payload,
       std::string* device);
 
   // Return true if |partition_name_suffix| is a block device of
