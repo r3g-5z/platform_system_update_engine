@@ -49,6 +49,12 @@ class PrefsInterface;
 // This class performs the actions in a delta update synchronously. The delta
 // update itself should be passed in in chunks as it is received.
 
+enum class TimestampCheckResult {
+  SUCCESS,
+  FAILURE,
+  DOWNGRADE,
+};
+
 class DeltaPerformer : public FileWriter {
  public:
   // Defines the granularity of progress logging in terms of how many "completed
@@ -78,7 +84,9 @@ class DeltaPerformer : public FileWriter {
         download_delegate_(download_delegate),
         install_plan_(install_plan),
         payload_(payload),
-        interactive_(interactive) {}
+        interactive_(interactive) {
+    CHECK(install_plan_);
+  }
 
   // FileWriter's Write implementation where caller doesn't care about
   // error codes.
@@ -254,8 +262,6 @@ class DeltaPerformer : public FileWriter {
   // set even if it fails.
   bool PerformReplaceOperation(const InstallOperation& operation);
   bool PerformZeroOrDiscardOperation(const InstallOperation& operation);
-  bool PerformMoveOperation(const InstallOperation& operation);
-  bool PerformBsdiffOperation(const InstallOperation& operation);
   bool PerformSourceCopyOperation(const InstallOperation& operation,
                                   ErrorCode* error);
   bool PerformSourceBsdiffOperation(const InstallOperation& operation,
@@ -269,11 +275,6 @@ class DeltaPerformer : public FileWriter {
   // the |error| accordingly.
   FileDescriptorPtr ChooseSourceFD(const InstallOperation& operation,
                                    ErrorCode* error);
-
-  // Extracts the payload signature message from the blob on the |operation| if
-  // the offset matches the one specified by the manifest. Returns whether the
-  // signature was extracted.
-  bool ExtractSignatureMessageFromOperation(const InstallOperation& operation);
 
   // Extracts the payload signature message from the current |buffer_| if the
   // offset matches the one specified by the manifest. Returns whether the
@@ -314,6 +315,10 @@ class DeltaPerformer : public FileWriter {
   // metadata of partitions and map necessary devices before opening devices.
   // Also see comment for the static PreparePartitionsForUpdate().
   bool PreparePartitionsForUpdate(uint64_t* required_size);
+
+  // Check if current manifest contains timestamp errors. (ill-formed or
+  // downgrade)
+  TimestampCheckResult CheckTimestampError() const;
 
   // Update Engine preference store.
   PrefsInterface* prefs_;

@@ -17,6 +17,7 @@
 #include "update_engine/update_manager/chromeos_policy.h"
 
 #include <algorithm>
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -48,6 +49,7 @@ using std::get;
 using std::min;
 using std::set;
 using std::string;
+using std::unique_ptr;
 using std::vector;
 
 namespace {
@@ -189,6 +191,10 @@ bool IsUrlUsable(const string& url, bool http_allowed) {
 }  // namespace
 
 namespace chromeos_update_manager {
+
+unique_ptr<Policy> GetSystemPolicy() {
+  return std::make_unique<ChromeOSPolicy>();
+}
 
 const NextUpdateCheckPolicyConstants
     ChromeOSPolicy::kNextUpdateCheckPolicyConstants = {
@@ -460,9 +466,9 @@ EvalStatus ChromeOSPolicy::UpdateCanStart(
 // ConnectionManager::IsUpdateAllowedOver(); be sure to deprecate the latter.
 //
 // TODO(garnold) The current logic generally treats the list of allowed
-// connections coming from the device policy as a whitelist, meaning that it
+// connections coming from the device policy as an allowlist, meaning that it
 // can only be used for enabling connections, but not disable them. Further,
-// certain connection types (like Bluetooth) cannot be enabled even by policy.
+// certain connection types cannot be enabled even by policy.
 // In effect, the only thing that device policy can change is to enable
 // updates over a cellular network (disabled by default). We may want to
 // revisit this semantics, allowing greater flexibility in defining specific
@@ -493,10 +499,6 @@ EvalStatus ChromeOSPolicy::UpdateDownloadAllowed(EvaluationContext* ec,
   *result = true;
   bool device_policy_can_override = false;
   switch (conn_type) {
-    case ConnectionType::kBluetooth:
-      *result = false;
-      break;
-
     case ConnectionType::kCellular:
       *result = false;
       device_policy_can_override = true;
@@ -560,8 +562,9 @@ EvalStatus ChromeOSPolicy::P2PEnabled(EvaluationContext* ec,
     if (policy_au_p2p_enabled_p) {
       enabled = *policy_au_p2p_enabled_p;
     } else {
-      const string* policy_owner_p = ec->GetValue(dp_provider->var_owner());
-      if (!policy_owner_p || policy_owner_p->empty())
+      const bool* policy_has_owner_p =
+          ec->GetValue(dp_provider->var_has_owner());
+      if (!policy_has_owner_p || !*policy_has_owner_p)
         enabled = true;
     }
   }
@@ -595,7 +598,6 @@ EvalStatus ChromeOSPolicy::UpdateBackoffAndDownloadUrl(
     string* error,
     UpdateBackoffAndDownloadUrlResult* result,
     const UpdateState& update_state) const {
-  // Sanity checks.
   DCHECK_GE(update_state.download_errors_max, 0);
 
   // Set default result values.
@@ -667,7 +669,7 @@ EvalStatus ChromeOSPolicy::UpdateBackoffAndDownloadUrl(
   Time prev_err_time;
   bool is_first = true;
   for (const auto& err_tuple : update_state.download_errors) {
-    // Do some sanity checks.
+    // Do some validation checks.
     int used_url_idx = get<0>(err_tuple);
     if (is_first && url_idx >= 0 && used_url_idx != url_idx) {
       LOG(WARNING) << "First URL in error log (" << used_url_idx

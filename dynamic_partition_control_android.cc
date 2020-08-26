@@ -21,6 +21,8 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
 
 #include <android-base/properties.h>
@@ -291,9 +293,16 @@ bool DynamicPartitionControlAndroid::GetDmDevicePathByName(
 
 std::unique_ptr<MetadataBuilder>
 DynamicPartitionControlAndroid::LoadMetadataBuilder(
-    const std::string& super_device, uint32_t source_slot) {
-  return LoadMetadataBuilder(
-      super_device, source_slot, BootControlInterface::kInvalidSlot);
+    const std::string& super_device, uint32_t slot) {
+  auto builder = MetadataBuilder::New(PartitionOpener(), super_device, slot);
+  if (builder == nullptr) {
+    LOG(WARNING) << "No metadata slot " << BootControlInterface::SlotName(slot)
+                 << " in " << super_device;
+    return nullptr;
+  }
+  LOG(INFO) << "Loaded metadata from slot "
+            << BootControlInterface::SlotName(slot) << " in " << super_device;
+  return builder;
 }
 
 std::unique_ptr<MetadataBuilder>
@@ -301,26 +310,19 @@ DynamicPartitionControlAndroid::LoadMetadataBuilder(
     const std::string& super_device,
     uint32_t source_slot,
     uint32_t target_slot) {
-  std::unique_ptr<MetadataBuilder> builder;
-  if (target_slot == BootControlInterface::kInvalidSlot) {
-    builder =
-        MetadataBuilder::New(PartitionOpener(), super_device, source_slot);
-  } else {
-    bool always_keep_source_slot = !target_supports_snapshot_;
-    builder = MetadataBuilder::NewForUpdate(PartitionOpener(),
-                                            super_device,
-                                            source_slot,
-                                            target_slot,
-                                            always_keep_source_slot);
-  }
-
+  bool always_keep_source_slot = !target_supports_snapshot_;
+  auto builder = MetadataBuilder::NewForUpdate(PartitionOpener(),
+                                               super_device,
+                                               source_slot,
+                                               target_slot,
+                                               always_keep_source_slot);
   if (builder == nullptr) {
     LOG(WARNING) << "No metadata slot "
                  << BootControlInterface::SlotName(source_slot) << " in "
                  << super_device;
     return nullptr;
   }
-  LOG(INFO) << "Loaded metadata from slot "
+  LOG(INFO) << "Created metadata for new update from slot "
             << BootControlInterface::SlotName(source_slot) << " in "
             << super_device;
   return builder;
@@ -432,16 +434,16 @@ bool DynamicPartitionControlAndroid::PreparePartitionsForUpdate(
     return false;
   }
 
+  if (!SetTargetBuildVars(manifest)) {
+    return false;
+  }
+
   // Although the current build supports dynamic partitions, the given payload
   // doesn't use it for target partitions. This could happen when applying a
   // retrofit update. Skip updating the partition metadata for the target slot.
-  is_target_dynamic_ = !manifest.dynamic_partition_metadata().groups().empty();
   if (!is_target_dynamic_) {
     return true;
   }
-
-  target_supports_snapshot_ =
-      manifest.dynamic_partition_metadata().snapshot_enabled();
 
   if (!update)
     return true;
@@ -493,11 +495,58 @@ bool DynamicPartitionControlAndroid::PreparePartitionsForUpdate(
     }
   }
 
+  // TODO(xunchang) support partial update on non VAB enabled devices.
   TEST_AND_RETURN_FALSE(PrepareDynamicPartitionsForUpdate(
       source_slot, target_slot, manifest, delete_source));
 
   if (required_size != nullptr) {
     *required_size = 0;
+  }
+  return true;
+}
+
+bool DynamicPartitionControlAndroid::SetTargetBuildVars(
+    const DeltaArchiveManifest& manifest) {
+  // Precondition: current build supports dynamic partition.
+  CHECK(GetDynamicPartitionsFeatureFlag().IsEnabled());
+
+  bool is_target_dynamic =
+      !manifest.dynamic_partition_metadata().groups().empty();
+  bool target_supports_snapshot =
+      manifest.dynamic_partition_metadata().snapshot_enabled();
+
+  if (manifest.partial_update()) {
+    // Partial updates requires DAP. On partial updates that does not involve
+    // dynamic partitions, groups() can be empty, so also assume
+    // is_target_dynamic in this case. This assumption should be safe because we
+    // also check target_supports_snapshot below, which presumably also implies
+    // target build supports dynamic partition.
+    if (!is_target_dynamic) {
+      LOG(INFO) << "Assuming target build supports dynamic partitions for "
+                   "partial updates.";
+      is_target_dynamic = true;
+    }
+
+    // Partial updates requires Virtual A/B. Double check that both current
+    // build and target build supports Virtual A/B.
+    if (!GetVirtualAbFeatureFlag().IsEnabled()) {
+      LOG(ERROR) << "Partial update cannot be applied on a device that does "
+                    "not support snapshots.";
+      return false;
+    }
+    if (!target_supports_snapshot) {
+      LOG(ERROR) << "Cannot apply partial update to a build that does not "
+                    "support snapshots.";
+      return false;
+    }
+  }
+
+  // Store the flags.
+  is_target_dynamic_ = is_target_dynamic;
+  // If !is_target_dynamic_, leave target_supports_snapshot_ unset because
+  // snapshots would not work without dynamic partition.
+  if (is_target_dynamic_) {
+    target_supports_snapshot_ = target_supports_snapshot;
   }
   return true;
 }
@@ -789,6 +838,11 @@ bool DynamicPartitionControlAndroid::UpdatePartitionMetadata(
     MetadataBuilder* builder,
     uint32_t target_slot,
     const DeltaArchiveManifest& manifest) {
+  // Check preconditions.
+  CHECK(!GetVirtualAbFeatureFlag().IsEnabled() || IsRecovery())
+      << "UpdatePartitionMetadata is called on a Virtual A/B device "
+         "but source partitions is not deleted. This is not allowed.";
+
   // If applying downgrade from Virtual A/B to non-Virtual A/B, the left-over
   // COW group needs to be deleted to ensure there are enough space to create
   // target partitions.
@@ -804,7 +858,12 @@ bool DynamicPartitionControlAndroid::UpdatePartitionMetadata(
 
   std::string expr;
   uint64_t allocatable_space = builder->AllocatableSpace();
-  if (!GetDynamicPartitionsFeatureFlag().IsRetrofit()) {
+  // On device retrofitting dynamic partitions, allocatable_space = super.
+  // On device launching dynamic partitions w/o VAB,
+  //   allocatable_space = super / 2.
+  // On device launching dynamic partitions with VAB, allocatable_space = super.
+  if (!GetDynamicPartitionsFeatureFlag().IsRetrofit() &&
+      !GetVirtualAbFeatureFlag().IsEnabled()) {
     allocatable_space /= 2;
     expr = "half of ";
   }
@@ -1079,6 +1138,58 @@ bool DynamicPartitionControlAndroid::ResetUpdate(PrefsInterface* prefs) {
   }
 
   return true;
+}
+
+bool DynamicPartitionControlAndroid::ListDynamicPartitionsForSlot(
+    uint32_t current_slot, std::vector<std::string>* partitions) {
+  if (!GetDynamicPartitionsFeatureFlag().IsEnabled()) {
+    LOG(ERROR) << "Dynamic partition is not enabled";
+    return false;
+  }
+
+  std::string device_dir_str;
+  TEST_AND_RETURN_FALSE(GetDeviceDir(&device_dir_str));
+  base::FilePath device_dir(device_dir_str);
+  auto super_device =
+      device_dir.Append(GetSuperPartitionName(current_slot)).value();
+  auto builder = LoadMetadataBuilder(super_device, current_slot);
+  TEST_AND_RETURN_FALSE(builder != nullptr);
+
+  std::vector<std::string> result;
+  auto suffix = SlotSuffixForSlotNumber(current_slot);
+  for (const auto& group : builder->ListGroups()) {
+    for (const auto& partition : builder->ListPartitionsInGroup(group)) {
+      std::string_view partition_name = partition->name();
+      if (!android::base::ConsumeSuffix(&partition_name, suffix)) {
+        continue;
+      }
+      result.emplace_back(partition_name);
+    }
+  }
+  *partitions = std::move(result);
+  return true;
+}
+
+bool DynamicPartitionControlAndroid::VerifyExtentsForUntouchedPartitions(
+    uint32_t source_slot,
+    uint32_t target_slot,
+    const std::vector<std::string>& partitions) {
+  std::string device_dir_str;
+  TEST_AND_RETURN_FALSE(GetDeviceDir(&device_dir_str));
+  base::FilePath device_dir(device_dir_str);
+
+  auto source_super_device =
+      device_dir.Append(GetSuperPartitionName(source_slot)).value();
+  auto source_builder = LoadMetadataBuilder(source_super_device, source_slot);
+  TEST_AND_RETURN_FALSE(source_builder != nullptr);
+
+  auto target_super_device =
+      device_dir.Append(GetSuperPartitionName(target_slot)).value();
+  auto target_builder = LoadMetadataBuilder(target_super_device, target_slot);
+  TEST_AND_RETURN_FALSE(target_builder != nullptr);
+
+  return MetadataBuilder::VerifyExtentsAgainstSourceMetadata(
+      *source_builder, source_slot, *target_builder, target_slot, partitions);
 }
 
 bool DynamicPartitionControlAndroid::ExpectMetadataMounted() {

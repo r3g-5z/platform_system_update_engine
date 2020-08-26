@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python
 #
 # Copyright (C) 2017 The Android Open Source Project
 #
@@ -17,17 +17,22 @@
 
 """Send an A/B update to an Android device over adb."""
 
+from __future__ import absolute_import
+
 import argparse
-import BaseHTTPServer
+import binascii
 import hashlib
 import logging
 import os
 import socket
 import subprocess
 import sys
+import struct
 import threading
 import xml.etree.ElementTree
 import zipfile
+
+from six.moves import BaseHTTPServer
 
 import update_payload.payload
 
@@ -40,6 +45,7 @@ PAYLOAD_KEY_PATH = '/etc/update_engine/update-payload-key.pub.pem'
 
 # The port on the device that update_engine should connect to.
 DEVICE_PORT = 1234
+
 
 def CopyFileObjLength(fsrc, fdst, buffer_size=128 * 1024, copy_length=None):
   """Copy from a file object to another.
@@ -85,6 +91,7 @@ class AndroidOTAPackage(object):
   OTA_PAYLOAD_PROPERTIES_TXT = 'payload_properties.txt'
   SECONDARY_OTA_PAYLOAD_BIN = 'secondary/payload.bin'
   SECONDARY_OTA_PAYLOAD_PROPERTIES_TXT = 'secondary/payload_properties.txt'
+  PAYLOAD_MAGIC_HEADER = b'CrAU'
 
   def __init__(self, otafilename, secondary_payload=False):
     self.otafilename = otafilename
@@ -93,10 +100,34 @@ class AndroidOTAPackage(object):
     payload_entry = (self.SECONDARY_OTA_PAYLOAD_BIN if secondary_payload else
                      self.OTA_PAYLOAD_BIN)
     payload_info = otazip.getinfo(payload_entry)
-    self.offset = payload_info.header_offset
-    self.offset += zipfile.sizeFileHeader
-    self.offset += len(payload_info.extra) + len(payload_info.filename)
-    self.size = payload_info.file_size
+
+    if payload_info.compress_type != 0:
+      logging.error(
+          "Expected layload to be uncompressed, got compression method %d",
+          payload_info.compress_type)
+    # Don't use len(payload_info.extra). Because that returns size of extra
+    # fields in central directory. We need to look at local file directory,
+    # as these two might have different sizes.
+    with open(otafilename, "rb") as fp:
+      fp.seek(payload_info.header_offset)
+      data = fp.read(zipfile.sizeFileHeader)
+      fheader = struct.unpack(zipfile.structFileHeader, data)
+      # Last two fields of local file header are filename length and
+      # extra length
+      filename_len = fheader[-2]
+      extra_len = fheader[-1]
+      self.offset = payload_info.header_offset
+      self.offset += zipfile.sizeFileHeader
+      self.offset += filename_len + extra_len
+      self.size = payload_info.file_size
+      fp.seek(self.offset)
+      payload_header = fp.read(4)
+      if payload_header != self.PAYLOAD_MAGIC_HEADER:
+        logging.warning(
+            "Invalid header, expeted %s, got %s."
+            "Either the offset is not correct, or payload is corrupted",
+            binascii.hexlify(self.PAYLOAD_MAGIC_HEADER),
+            payload_header)
 
     property_entry = (self.SECONDARY_OTA_PAYLOAD_PROPERTIES_TXT if
                       secondary_payload else self.OTA_PAYLOAD_PROPERTIES_TXT)
@@ -136,7 +167,6 @@ class UpdateHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         if int(e) < file_size:
           start_range = file_size - int(e)
     return start_range, end_range
-
 
   def do_GET(self):  # pylint: disable=invalid-name
     """Reply with the requested payload file."""
@@ -179,7 +209,6 @@ class UpdateHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     f.seek(serving_start + start_range)
     CopyFileObjLength(f, self.wfile, copy_length=end_range - start_range)
-
 
   def do_POST(self):  # pylint: disable=invalid-name
     """Reply with the omaha response xml."""
@@ -450,6 +479,7 @@ def main():
       dut.adb(cmd)
 
   return 0
+
 
 if __name__ == '__main__':
   sys.exit(main())

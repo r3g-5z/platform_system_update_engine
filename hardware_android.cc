@@ -19,13 +19,17 @@
 #include <sys/types.h>
 
 #include <memory>
+#include <string>
+#include <string_view>
 
+#include <android-base/parseint.h>
 #include <android-base/properties.h>
 #include <base/files/file_util.h>
 #include <bootloader_message/bootloader_message.h>
 
 #include "update_engine/common/hardware.h"
 #include "update_engine/common/platform_constants.h"
+#include "update_engine/common/utils.h"
 
 using android::base::GetBoolProperty;
 using android::base::GetIntProperty;
@@ -121,6 +125,11 @@ string HardwareAndroid::GetECVersion() const {
   return GetProperty(kPropBootBaseband, "");
 }
 
+string HardwareAndroid::GetDeviceRequisition() const {
+  LOG(WARNING) << "STUB: Getting requisition is not supported.";
+  return "";
+}
+
 int HardwareAndroid::GetMinKernelKeyVersion() const {
   LOG(WARNING) << "STUB: No Kernel key version is available.";
   return -1;
@@ -152,9 +161,10 @@ int HardwareAndroid::GetPowerwashCount() const {
   return 0;
 }
 
-bool HardwareAndroid::SchedulePowerwash(bool is_rollback) {
+bool HardwareAndroid::SchedulePowerwash(bool save_rollback_data) {
   LOG(INFO) << "Scheduling a powerwash to BCB.";
-  LOG_IF(WARNING, is_rollback) << "is_rollback was true but isn't supported.";
+  LOG_IF(WARNING, save_rollback_data) << "save_rollback_data was true but "
+                                      << "isn't supported.";
   string err;
   if (!update_bootloader_message({"--wipe_data", "--reason=wipe_data_from_ota"},
                                  &err)) {
@@ -175,7 +185,7 @@ bool HardwareAndroid::CancelPowerwash() {
 
 bool HardwareAndroid::GetNonVolatileDirectory(base::FilePath* path) const {
   base::FilePath local_path(constants::kNonVolatileDirectory);
-  if (!base::PathExists(local_path)) {
+  if (!base::DirectoryExists(local_path)) {
     LOG(ERROR) << "Non-volatile directory not found: " << local_path.value();
     return false;
   }
@@ -215,6 +225,26 @@ void HardwareAndroid::SetWarmReset(bool warm_reset) {
   if (!android::base::SetProperty(warm_reset_prop, warm_reset ? "1" : "0")) {
     LOG(WARNING) << "Failed to set prop " << warm_reset_prop;
   }
+}
+
+std::string HardwareAndroid::GetVersionForLogging(
+    const std::string& partition_name) const {
+  return android::base::GetProperty("ro." + partition_name + ".build.date.utc",
+                                    "");
+}
+
+bool HardwareAndroid::IsPartitionUpdateValid(
+    const std::string& partition_name, const std::string& new_version) const {
+  const auto old_version = GetVersionForLogging(partition_name);
+  // TODO(zhangkelvin)  for some partitions, missing a current timestamp should
+  // be an error, e.g. system, vendor, product etc.
+  auto applicable = utils::IsTimestampNewer(old_version, new_version);
+  if (!applicable) {
+    LOG(ERROR) << "Timestamp on partition " << partition_name
+               << " is newer than update. Partition timestamp: " << old_version
+               << " Update timestamp: " << new_version;
+  }
+  return applicable;
 }
 
 }  // namespace chromeos_update_engine

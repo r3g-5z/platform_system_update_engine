@@ -16,10 +16,13 @@
 
 """Tools for reading, verifying and applying Chrome OS update payloads."""
 
+from __future__ import absolute_import
 from __future__ import print_function
 
 import hashlib
+import io
 import struct
+import zipfile
 
 from update_payload import applier
 from update_payload import checker
@@ -64,7 +67,7 @@ class Payload(object):
     """Update payload header struct."""
 
     # Header constants; sizes are in bytes.
-    _MAGIC = 'CrAU'
+    _MAGIC = b'CrAU'
     _VERSION_SIZE = 8
     _MANIFEST_LEN_SIZE = 8
     _METADATA_SIGNATURE_LEN_SIZE = 4
@@ -111,7 +114,6 @@ class Payload(object):
             payload_file, self._METADATA_SIGNATURE_LEN_SIZE, True,
             hasher=hasher)
 
-
   def __init__(self, payload_file, payload_file_offset=0):
     """Initialize the payload object.
 
@@ -119,6 +121,10 @@ class Payload(object):
       payload_file: update payload file object open for reading
       payload_file_offset: the offset of the actual payload
     """
+    if zipfile.is_zipfile(payload_file):
+      with zipfile.ZipFile(payload_file) as zfp:
+        with zfp.open("payload.bin") as payload_fp:
+          payload_file = io.BytesIO(payload_fp.read())
     self.payload_file = payload_file
     self.payload_file_offset = payload_file_offset
     self.manifest_hasher = None
@@ -263,9 +269,7 @@ class Payload(object):
   def IsDelta(self):
     """Returns True iff the payload appears to be a delta."""
     self._AssertInit()
-    return (self.manifest.HasField('old_kernel_info') or
-            self.manifest.HasField('old_rootfs_info') or
-            any(partition.HasField('old_partition_info')
+    return (any(partition.HasField('old_partition_info')
                 for partition in self.manifest.partitions))
 
   def IsFull(self):

@@ -20,6 +20,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <vector>
 
 #include <base/files/file_util.h>
 #include <libsnapshot/auto_device.h>
@@ -53,6 +54,16 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
 
   bool ResetUpdate(PrefsInterface* prefs) override;
 
+  bool ListDynamicPartitionsForSlot(
+      uint32_t current_slot, std::vector<std::string>* partitions) override;
+
+  bool VerifyExtentsForUntouchedPartitions(
+      uint32_t source_slot,
+      uint32_t target_slot,
+      const std::vector<std::string>& partitions) override;
+
+  bool GetDeviceDir(std::string* path) override;
+
   // Return the device for partition |partition_name| at slot |slot|.
   // |current_slot| should be set to the current active slot.
   // Note: this function is only used by BootControl*::GetPartitionDevice.
@@ -79,16 +90,14 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
   virtual bool UnmapPartitionOnDeviceMapper(
       const std::string& target_partition_name);
 
-  // Retrieve metadata from |super_device| at slot |source_slot|.
-  //
-  // If |target_slot| != kInvalidSlot, before returning the metadata, this
-  // function modifies the metadata so that during updates, the metadata can be
-  // written to |target_slot|. In particular, on retrofit devices, the returned
-  // metadata automatically includes block devices at |target_slot|.
-  //
-  // If |target_slot| == kInvalidSlot, this function returns metadata at
-  // |source_slot| without modifying it. This is the same as
-  // LoadMetadataBuilder(const std::string&, uint32_t).
+  // Retrieves metadata from |super_device| at slot |slot|.
+  virtual std::unique_ptr<android::fs_mgr::MetadataBuilder> LoadMetadataBuilder(
+      const std::string& super_device, uint32_t slot);
+
+  // Retrieves metadata from |super_device| at slot |source_slot|. And modifies
+  // the metadata so that during updates, the metadata can be written to
+  // |target_slot|. In particular, on retrofit devices, the returned metadata
+  // automatically includes block devices at |target_slot|.
   virtual std::unique_ptr<android::fs_mgr::MetadataBuilder> LoadMetadataBuilder(
       const std::string& super_device,
       uint32_t source_slot,
@@ -126,13 +135,6 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
   // parameter is not set.
   virtual bool GetDmDevicePathByName(const std::string& name,
                                      std::string* path);
-
-  // Retrieve metadata from |super_device| at slot |source_slot|.
-  virtual std::unique_ptr<android::fs_mgr::MetadataBuilder> LoadMetadataBuilder(
-      const std::string& super_device, uint32_t source_slot);
-
-  // Return a possible location for devices listed by name.
-  virtual bool GetDeviceDir(std::string* path);
 
   // Return the name of the super partition (which stores super partition
   // metadata) for a given slot.
@@ -201,8 +203,11 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
                             bool force_writable,
                             std::string* path);
 
-  // Update |builder| according to |partition_metadata|, assuming the device
-  // does not have Virtual A/B.
+  // Update |builder| according to |partition_metadata|.
+  // - In Android mode, this is only called when the device
+  //   does not have Virtual A/B.
+  // - When sideloading, this maybe called as a fallback path if CoW cannot
+  //   be created.
   bool UpdatePartitionMetadata(android::fs_mgr::MetadataBuilder* builder,
                                uint32_t target_slot,
                                const DeltaArchiveManifest& manifest);
@@ -264,6 +269,10 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
   // Note that this function returns true on non-Virtual A/B devices without
   // doing anything.
   bool EnsureMetadataMounted();
+
+  // Set boolean flags related to target build. This includes flags like
+  // target_supports_snapshot_ and is_target_dynamic_.
+  bool SetTargetBuildVars(const DeltaArchiveManifest& manifest);
 
   std::set<std::string> mapped_devices_;
   const FeatureFlag dynamic_partitions_;
