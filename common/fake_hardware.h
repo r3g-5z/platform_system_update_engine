@@ -23,6 +23,7 @@
 
 #include <base/time/time.h>
 
+#include "update_engine/common/error_code.h"
 #include "update_engine/common/hardware_interface.h"
 #include "update_engine/common/utils.h"
 
@@ -201,7 +202,7 @@ class FakeHardware : public HardwareInterface {
     build_timestamp_ = build_timestamp;
   }
 
-  void SetWarmReset(bool warm_reset) { warm_reset_ = warm_reset; }
+  void SetWarmReset(bool warm_reset) override { warm_reset_ = warm_reset; }
 
   // Getters to verify state.
   int GetMaxKernelKeyRollforward() const { return kernel_max_rollforward_; }
@@ -216,8 +217,9 @@ class FakeHardware : public HardwareInterface {
   void SetVersion(const std::string& partition_name, std::string timestamp) {
     partition_timestamps_[partition_name] = std::move(timestamp);
   }
-  bool IsPartitionUpdateValid(const std::string& partition_name,
-                              const std::string& new_version) const override {
+  ErrorCode IsPartitionUpdateValid(
+      const std::string& partition_name,
+      const std::string& new_version) const override {
     const auto old_version = GetVersionForLogging(partition_name);
     return utils::IsTimestampNewer(old_version, new_version);
   }
