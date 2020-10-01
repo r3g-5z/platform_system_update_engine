@@ -30,8 +30,13 @@
 #include <base/macros.h>
 #include <brillo/asynchronous_signal_handler_interface.h>
 #include <brillo/message_loops/message_loop.h>
+#ifdef __CHROMEOS__
+#include <brillo/process/process.h>
+#include <brillo/process/process_reaper.h>
+#else
 #include <brillo/process.h>
 #include <brillo/process_reaper.h>
+#endif  // __CHROMEOS__
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
 // The Subprocess class is a singleton. It's used to spawn off a subprocess
@@ -123,12 +128,8 @@ class Subprocess {
 
     // These are used to monitor the stdout of the running process, including
     // the stderr if it was redirected.
-#ifdef __ANDROID__
-    brillo::MessageLoop::TaskId stdout_task_id{
-        brillo::MessageLoop::kTaskIdNull};
-#else
     std::unique_ptr<base::FileDescriptorWatcher::Controller> stdout_controller;
-#endif  // __ANDROID__
+
     int stdout_fd{-1};
     std::string stdout;
   };

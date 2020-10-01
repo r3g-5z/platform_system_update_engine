@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -22,6 +23,7 @@
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
+#include <base/strings/string_util.h>
 #include <brillo/flag_helper.h>
 #include <brillo/key_value_store.h>
 #include <brillo/message_loops/base_message_loop.h>
@@ -47,6 +49,7 @@
 // and an output file as arguments and the path to an output file and
 // generates a delta that can be sent to Chrome OS clients.
 
+using std::map;
 using std::string;
 using std::vector;
 
@@ -294,6 +297,39 @@ bool ExtractProperties(const string& payload_path,
   return true;
 }
 
+template <typename Key, typename Val>
+string ToString(const map<Key, Val>& map) {
+  vector<string> result;
+  result.reserve(map.size());
+  for (const auto& it : map) {
+    result.emplace_back(it.first + ": " + it.second);
+  }
+  return "{" + base::JoinString(result, ",") + "}";
+}
+
+bool ParsePerPartitionTimestamps(const string& partition_timestamps,
+                                 PayloadGenerationConfig* config) {
+  base::StringPairs pairs;
+  CHECK(base::SplitStringIntoKeyValuePairs(
+      partition_timestamps, ':', ',', &pairs))
+      << "--partition_timestamps accepts commad "
+         "separated pairs. e.x. system:1234,vendor:5678";
+  map<string, string> partition_timestamps_map{
+      std::move_iterator(pairs.begin()), std::move_iterator(pairs.end())};
+  for (auto&& partition : config->target.partitions) {
+    auto&& it = partition_timestamps_map.find(partition.name);
+    if (it != partition_timestamps_map.end()) {
+      partition.version = std::move(it->second);
+      partition_timestamps_map.erase(it);
+    }
+  }
+  if (!partition_timestamps_map.empty()) {
+    LOG(ERROR) << "Unused timestamps: " << ToString(partition_timestamps_map);
+    return false;
+  }
+  return true;
+}
+
 int Main(int argc, char** argv) {
   DEFINE_string(old_image, "", "Path to the old rootfs");
   DEFINE_string(new_image, "", "Path to the new rootfs");
@@ -384,6 +420,11 @@ int Main(int argc, char** argv) {
                0,
                "The maximum timestamp of the OS allowed to apply this "
                "payload.");
+  DEFINE_string(
+      partition_timestamps,
+      "",
+      "The per-partition maximum timestamps which the OS allowed to apply this "
+      "payload. Passed in comma separated pairs, e.x. system:1234,vendor:5678");
 
   DEFINE_string(old_channel,
                 "",
@@ -445,6 +486,10 @@ int Main(int argc, char** argv) {
       out_maximum_signature_size_file,
       "",
       "Path to the output maximum signature size given a private key.");
+  DEFINE_bool(is_partial_update,
+              false,
+              "The payload only targets a subset of partitions on the device,"
+              "e.g. generic kernel image update.");
 
   brillo::FlagHelper::Init(
       argc,
@@ -629,6 +674,10 @@ int Main(int argc, char** argv) {
     CHECK(payload_config.target.ValidateDynamicPartitionMetadata());
   }
 
+  if (FLAGS_is_partial_update) {
+    payload_config.is_partial_update = true;
+  }
+
   CHECK(!FLAGS_out_file.empty());
 
   // Ignore failures. These are optional arguments.
@@ -701,8 +750,13 @@ int Main(int argc, char** argv) {
   }
 
   payload_config.max_timestamp = FLAGS_max_timestamp;
+  if (!FLAGS_partition_timestamps.empty()) {
+    CHECK(ParsePerPartitionTimestamps(FLAGS_partition_timestamps,
+                                      &payload_config));
+  }
 
-  if (payload_config.version.minor >= kVerityMinorPayloadVersion)
+  if (payload_config.is_delta &&
+      payload_config.version.minor >= kVerityMinorPayloadVersion)
     CHECK(payload_config.target.LoadVerityConfig());
 
   LOG(INFO) << "Generating " << (payload_config.is_delta ? "delta" : "full")

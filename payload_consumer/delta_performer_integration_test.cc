@@ -28,6 +28,7 @@
 #include <base/stl_util.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <gmock/gmock-matchers.h>
 #include <google/protobuf/repeated_field.h>
 #include <gtest/gtest.h>
 #include <openssl/pem.h>
@@ -35,9 +36,12 @@
 #include "update_engine/common/constants.h"
 #include "update_engine/common/fake_boot_control.h"
 #include "update_engine/common/fake_hardware.h"
+#include "update_engine/common/fake_prefs.h"
 #include "update_engine/common/mock_prefs.h"
 #include "update_engine/common/test_utils.h"
 #include "update_engine/common/utils.h"
+#include "update_engine/hardware_android.h"
+#include "update_engine/payload_consumer/install_plan.h"
 #include "update_engine/payload_consumer/mock_download_action.h"
 #include "update_engine/payload_consumer/payload_constants.h"
 #include "update_engine/payload_consumer/payload_metadata.h"
@@ -124,7 +128,41 @@ enum OperationHashTest {
 
 }  // namespace
 
-class DeltaPerformerIntegrationTest : public ::testing::Test {};
+class DeltaPerformerIntegrationTest : public ::testing::Test {
+ public:
+  void RunManifestValidation(const DeltaArchiveManifest& manifest,
+                             uint64_t major_version,
+                             ErrorCode expected) {
+    FakePrefs prefs;
+    InstallPlan::Payload payload;
+    InstallPlan install_plan;
+    DeltaPerformer performer{&prefs,
+                             nullptr,
+                             &fake_hardware_,
+                             nullptr,
+                             &install_plan,
+                             &payload,
+                             false /* interactive*/};
+    // Delta performer will treat manifest as kDelta payload
+    // if it's a partial update.
+    payload.type = manifest.partial_update() ? InstallPayloadType::kDelta
+                                             : InstallPayloadType::kFull;
+
+    // The Manifest we are validating.
+    performer.manifest_.CopyFrom(manifest);
+    performer.major_payload_version_ = major_version;
+
+    EXPECT_EQ(expected, performer.ValidateManifest());
+  }
+  void AddPartition(DeltaArchiveManifest* manifest,
+                    std::string name,
+                    int timestamp) {
+    auto& partition = *manifest->add_partitions();
+    partition.set_version(std::to_string(timestamp));
+    partition.set_partition_name(name);
+  }
+  FakeHardware fake_hardware_;
+};
 
 static void CompareFilesByBlock(const string& a_file,
                                 const string& b_file,
@@ -188,7 +226,7 @@ static void SignGeneratedPayload(const string& payload_path,
   string private_key_path = GetBuildArtifactsPath(kUnittestPrivateKeyPath);
   size_t signature_size;
   ASSERT_TRUE(PayloadSigner::GetMaximumSignatureSize(private_key_path,
-                                                   &signature_size));
+                                                     &signature_size));
   brillo::Blob metadata_hash, payload_hash;
   ASSERT_TRUE(PayloadSigner::HashPayloadForSigning(
       payload_path, {signature_size}, &payload_hash, &metadata_hash));
@@ -226,12 +264,13 @@ static void SignGeneratedShellPayloadWithKeys(
   string delta_generator_path = GetBuildArtifactsPath("delta_generator");
   ASSERT_EQ(0,
             System(base::StringPrintf(
-                 "%s -in_file=%s -signature_size=%s -out_hash_file=%s "
-                 "-out_metadata_hash_file=%s",
+                "%s -in_file=%s -signature_size=%s -out_hash_file=%s "
+                "-out_metadata_hash_file=%s",
                 delta_generator_path.c_str(),
                 payload_path.c_str(),
                 signature_size_string.c_str(),
-                hash_file.path().c_str(), metadata_hash_file.path().c_str())));
+                hash_file.path().c_str(),
+                metadata_hash_file.path().c_str())));
 
   // Sign the hash with all private keys.
   vector<test_utils::ScopedTempFile> sig_files, metadata_sig_files;
@@ -248,16 +287,19 @@ static void SignGeneratedShellPayloadWithKeys(
 
     brillo::Blob metadata_hash, metadata_signature;
     ASSERT_TRUE(utils::ReadFile(metadata_hash_file.path(), &metadata_hash));
-    ASSERT_TRUE(PayloadSigner::SignHash(metadata_hash, key_path, &metadata_signature));
+    ASSERT_TRUE(
+        PayloadSigner::SignHash(metadata_hash, key_path, &metadata_signature));
 
     test_utils::ScopedTempFile metadata_sig_file("signature.XXXXXX");
-    ASSERT_TRUE(test_utils::WriteFileVector(metadata_sig_file.path(), metadata_signature));
+    ASSERT_TRUE(test_utils::WriteFileVector(metadata_sig_file.path(),
+                                            metadata_signature));
 
     metadata_sig_file_paths.push_back(metadata_sig_file.path());
     metadata_sig_files.push_back(std::move(metadata_sig_file));
   }
   string sig_files_string = base::JoinString(sig_file_paths, ":");
-  string metadata_sig_files_string = base::JoinString(metadata_sig_file_paths, ":");
+  string metadata_sig_files_string =
+      base::JoinString(metadata_sig_file_paths, ":");
 
   // Add the signature to the payload.
   ASSERT_EQ(0,
@@ -735,6 +777,11 @@ static void ApplyDeltaFile(bool full_kernel,
       .WillRepeatedly(Return(true));
   EXPECT_CALL(prefs, SetString(kPrefsDynamicPartitionMetadataUpdated, _))
       .WillRepeatedly(Return(true));
+  EXPECT_CALL(prefs,
+              SetString(kPrefsManifestBytes,
+                        testing::SizeIs(state->metadata_signature_size +
+                                        state->metadata_size)))
+      .WillRepeatedly(Return(true));
   if (op_hash_test == kValidOperationData && signature_test != kSignatureNone) {
     EXPECT_CALL(prefs, SetString(kPrefsUpdateStateSignatureBlob, _))
         .WillOnce(Return(true));
@@ -985,13 +1032,13 @@ void DoOperationHashMismatchTest(OperationHashTest op_hash_test,
   delete performer;
 }
 
-TEST(DeltaPerformerIntegrationTest, RunAsRootSmallImageTest) {
+TEST_F(DeltaPerformerIntegrationTest, RunAsRootSmallImageTest) {
   DoSmallImageTest(
       false, false, -1, kSignatureGenerator, false, kSourceMinorPayloadVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest,
-     RunAsRootSmallImageSignaturePlaceholderTest) {
+TEST_F(DeltaPerformerIntegrationTest,
+       RunAsRootSmallImageSignaturePlaceholderTest) {
   DoSmallImageTest(false,
                    false,
                    -1,
@@ -1000,8 +1047,8 @@ TEST(DeltaPerformerIntegrationTest,
                    kSourceMinorPayloadVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest,
-     RunAsRootSmallImageSignaturePlaceholderMismatchTest) {
+TEST_F(DeltaPerformerIntegrationTest,
+       RunAsRootSmallImageSignaturePlaceholderMismatchTest) {
   DeltaState state;
   GenerateDeltaFile(false,
                     false,
@@ -1011,7 +1058,7 @@ TEST(DeltaPerformerIntegrationTest,
                     kSourceMinorPayloadVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest, RunAsRootSmallImageChunksTest) {
+TEST_F(DeltaPerformerIntegrationTest, RunAsRootSmallImageChunksTest) {
   DoSmallImageTest(false,
                    false,
                    kBlockSize,
@@ -1020,31 +1067,28 @@ TEST(DeltaPerformerIntegrationTest, RunAsRootSmallImageChunksTest) {
                    kSourceMinorPayloadVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest, RunAsRootFullKernelSmallImageTest) {
+TEST_F(DeltaPerformerIntegrationTest, RunAsRootFullKernelSmallImageTest) {
   DoSmallImageTest(
       true, false, -1, kSignatureGenerator, false, kSourceMinorPayloadVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest, RunAsRootFullSmallImageTest) {
-  DoSmallImageTest(true,
-                   true,
-                   -1,
-                   kSignatureGenerator,
-                   true,
-                   kFullPayloadMinorVersion);
+TEST_F(DeltaPerformerIntegrationTest, RunAsRootFullSmallImageTest) {
+  DoSmallImageTest(
+      true, true, -1, kSignatureGenerator, true, kFullPayloadMinorVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest, RunAsRootSmallImageSignNoneTest) {
+TEST_F(DeltaPerformerIntegrationTest, RunAsRootSmallImageSignNoneTest) {
   DoSmallImageTest(
       false, false, -1, kSignatureNone, false, kSourceMinorPayloadVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest, RunAsRootSmallImageSignGeneratedTest) {
+TEST_F(DeltaPerformerIntegrationTest, RunAsRootSmallImageSignGeneratedTest) {
   DoSmallImageTest(
       false, false, -1, kSignatureGenerated, true, kSourceMinorPayloadVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest, RunAsRootSmallImageSignGeneratedShellTest) {
+TEST_F(DeltaPerformerIntegrationTest,
+       RunAsRootSmallImageSignGeneratedShellTest) {
   DoSmallImageTest(false,
                    false,
                    -1,
@@ -1053,8 +1097,8 @@ TEST(DeltaPerformerIntegrationTest, RunAsRootSmallImageSignGeneratedShellTest) {
                    kSourceMinorPayloadVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest,
-     RunAsRootSmallImageSignGeneratedShellECKeyTest) {
+TEST_F(DeltaPerformerIntegrationTest,
+       RunAsRootSmallImageSignGeneratedShellECKeyTest) {
   DoSmallImageTest(false,
                    false,
                    -1,
@@ -1063,8 +1107,8 @@ TEST(DeltaPerformerIntegrationTest,
                    kSourceMinorPayloadVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest,
-     RunAsRootSmallImageSignGeneratedShellBadKeyTest) {
+TEST_F(DeltaPerformerIntegrationTest,
+       RunAsRootSmallImageSignGeneratedShellBadKeyTest) {
   DoSmallImageTest(false,
                    false,
                    -1,
@@ -1073,8 +1117,8 @@ TEST(DeltaPerformerIntegrationTest,
                    kSourceMinorPayloadVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest,
-     RunAsRootSmallImageSignGeneratedShellRotateCl1Test) {
+TEST_F(DeltaPerformerIntegrationTest,
+       RunAsRootSmallImageSignGeneratedShellRotateCl1Test) {
   DoSmallImageTest(false,
                    false,
                    -1,
@@ -1083,8 +1127,8 @@ TEST(DeltaPerformerIntegrationTest,
                    kSourceMinorPayloadVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest,
-     RunAsRootSmallImageSignGeneratedShellRotateCl2Test) {
+TEST_F(DeltaPerformerIntegrationTest,
+       RunAsRootSmallImageSignGeneratedShellRotateCl2Test) {
   DoSmallImageTest(false,
                    false,
                    -1,
@@ -1093,18 +1137,137 @@ TEST(DeltaPerformerIntegrationTest,
                    kSourceMinorPayloadVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest, RunAsRootSmallImageSourceOpsTest) {
-  DoSmallImageTest(false,
-                   false,
-                   -1,
-                   kSignatureGenerator,
-                   false,
-                   kSourceMinorPayloadVersion);
+TEST_F(DeltaPerformerIntegrationTest, RunAsRootSmallImageSourceOpsTest) {
+  DoSmallImageTest(
+      false, false, -1, kSignatureGenerator, false, kSourceMinorPayloadVersion);
 }
 
-TEST(DeltaPerformerIntegrationTest,
-     RunAsRootMandatoryOperationHashMismatchTest) {
+TEST_F(DeltaPerformerIntegrationTest,
+       RunAsRootMandatoryOperationHashMismatchTest) {
   DoOperationHashMismatchTest(kInvalidOperationData, true);
+}
+
+TEST_F(DeltaPerformerIntegrationTest, ValidatePerPartitionTimestampSuccess) {
+  // The Manifest we are validating.
+  DeltaArchiveManifest manifest;
+
+  fake_hardware_.SetVersion("system", "5");
+  fake_hardware_.SetVersion("product", "99");
+  fake_hardware_.SetBuildTimestamp(1);
+
+  manifest.set_minor_version(kFullPayloadMinorVersion);
+  manifest.set_max_timestamp(2);
+  AddPartition(&manifest, "system", 10);
+  AddPartition(&manifest, "product", 100);
+
+  RunManifestValidation(
+      manifest, kMaxSupportedMajorPayloadVersion, ErrorCode::kSuccess);
+}
+
+TEST_F(DeltaPerformerIntegrationTest, ValidatePerPartitionTimestampFailure) {
+  // The Manifest we are validating.
+  DeltaArchiveManifest manifest;
+
+  fake_hardware_.SetVersion("system", "5");
+  fake_hardware_.SetVersion("product", "99");
+  fake_hardware_.SetBuildTimestamp(1);
+
+  manifest.set_minor_version(kFullPayloadMinorVersion);
+  manifest.set_max_timestamp(2);
+  AddPartition(&manifest, "system", 10);
+  AddPartition(&manifest, "product", 98);
+
+  RunManifestValidation(manifest,
+                        kMaxSupportedMajorPayloadVersion,
+                        ErrorCode::kPayloadTimestampError);
+}
+
+TEST_F(DeltaPerformerIntegrationTest,
+       ValidatePerPartitionTimestampMissingTimestamp) {
+  // The Manifest we are validating.
+  DeltaArchiveManifest manifest;
+
+  fake_hardware_.SetVersion("system", "5");
+  fake_hardware_.SetVersion("product", "99");
+  fake_hardware_.SetBuildTimestamp(1);
+
+  manifest.set_minor_version(kFullPayloadMinorVersion);
+  manifest.set_max_timestamp(2);
+  AddPartition(&manifest, "system", 10);
+  {
+    auto& partition = *manifest.add_partitions();
+    // For complete updates, missing timestamp should not trigger
+    // timestamp error.
+    partition.set_partition_name("product");
+  }
+
+  RunManifestValidation(
+      manifest, kMaxSupportedMajorPayloadVersion, ErrorCode::kSuccess);
+}
+
+TEST_F(DeltaPerformerIntegrationTest,
+       ValidatePerPartitionTimestampPartialUpdatePass) {
+  fake_hardware_.SetVersion("system", "5");
+  fake_hardware_.SetVersion("product", "99");
+
+  DeltaArchiveManifest manifest;
+  manifest.set_minor_version(kPartialUpdateMinorPayloadVersion);
+  manifest.set_partial_update(true);
+  AddPartition(&manifest, "product", 100);
+  RunManifestValidation(
+      manifest, kMaxSupportedMajorPayloadVersion, ErrorCode::kSuccess);
+}
+
+TEST_F(DeltaPerformerIntegrationTest,
+       ValidatePerPartitionTimestampPartialUpdateDowngrade) {
+  fake_hardware_.SetVersion("system", "5");
+  fake_hardware_.SetVersion("product", "99");
+
+  DeltaArchiveManifest manifest;
+  manifest.set_minor_version(kPartialUpdateMinorPayloadVersion);
+  manifest.set_partial_update(true);
+  AddPartition(&manifest, "product", 98);
+  RunManifestValidation(manifest,
+                        kMaxSupportedMajorPayloadVersion,
+                        ErrorCode::kPayloadTimestampError);
+}
+
+TEST_F(DeltaPerformerIntegrationTest,
+       ValidatePerPartitionTimestampPartialUpdateMissingVersion) {
+  fake_hardware_.SetVersion("system", "5");
+  fake_hardware_.SetVersion("product", "99");
+
+  DeltaArchiveManifest manifest;
+  manifest.set_minor_version(kPartialUpdateMinorPayloadVersion);
+  manifest.set_partial_update(true);
+  {
+    auto& partition = *manifest.add_partitions();
+    // For partial updates, missing timestamp should trigger an error
+    partition.set_partition_name("product");
+    // has_version() == false.
+  }
+  RunManifestValidation(manifest,
+                        kMaxSupportedMajorPayloadVersion,
+                        ErrorCode::kDownloadManifestParseError);
+}
+
+TEST_F(DeltaPerformerIntegrationTest,
+       ValidatePerPartitionTimestampPartialUpdateEmptyVersion) {
+  fake_hardware_.SetVersion("system", "5");
+  fake_hardware_.SetVersion("product", "99");
+
+  DeltaArchiveManifest manifest;
+  manifest.set_minor_version(kPartialUpdateMinorPayloadVersion);
+  manifest.set_partial_update(true);
+  {
+    auto& partition = *manifest.add_partitions();
+    // For partial updates, invalid timestamp should trigger an error
+    partition.set_partition_name("product");
+    partition.set_version("something");
+  }
+  RunManifestValidation(manifest,
+                        kMaxSupportedMajorPayloadVersion,
+                        ErrorCode::kDownloadManifestParseError);
 }
 
 }  // namespace chromeos_update_engine

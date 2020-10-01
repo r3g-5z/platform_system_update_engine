@@ -19,13 +19,19 @@
 #include <sys/types.h>
 
 #include <memory>
+#include <string>
+#include <string_view>
 
+#include <android/sysprop/GkiProperties.sysprop.h>
+#include <android-base/parseint.h>
 #include <android-base/properties.h>
 #include <base/files/file_util.h>
 #include <bootloader_message/bootloader_message.h>
 
+#include "update_engine/common/error_code_utils.h"
 #include "update_engine/common/hardware.h"
 #include "update_engine/common/platform_constants.h"
+#include "update_engine/common/utils.h"
 
 using android::base::GetBoolProperty;
 using android::base::GetIntProperty;
@@ -45,6 +51,24 @@ const char kPropProductManufacturer[] = "ro.product.manufacturer";
 const char kPropBootHardwareSKU[] = "ro.boot.hardware.sku";
 const char kPropBootRevision[] = "ro.boot.revision";
 const char kPropBuildDateUTC[] = "ro.build.date.utc";
+
+string GetPartitionBuildDate(const string& partition_name) {
+  return android::base::GetProperty("ro." + partition_name + ".build.date.utc",
+                                    "");
+}
+
+ErrorCode IsTimestampNewerLogged(const std::string& partition_name,
+                                 const std::string& old_version,
+                                 const std::string& new_version) {
+  auto error_code = utils::IsTimestampNewer(old_version, new_version);
+  if (error_code != ErrorCode::kSuccess) {
+    LOG(WARNING) << "Timestamp check failed with "
+                 << utils::ErrorCodeToString(error_code) << ": "
+                 << partition_name << " Partition timestamp: " << old_version
+                 << " Update timestamp: " << new_version;
+  }
+  return error_code;
+}
 
 }  // namespace
 
@@ -221,6 +245,47 @@ void HardwareAndroid::SetWarmReset(bool warm_reset) {
   if (!android::base::SetProperty(warm_reset_prop, warm_reset ? "1" : "0")) {
     LOG(WARNING) << "Failed to set prop " << warm_reset_prop;
   }
+}
+
+string HardwareAndroid::GetVersionForLogging(
+    const string& partition_name) const {
+  if (partition_name == "boot") {
+    // ro.bootimage.build.date.utc
+    return GetPartitionBuildDate("bootimage");
+  }
+  return GetPartitionBuildDate(partition_name);
+}
+
+ErrorCode HardwareAndroid::IsPartitionUpdateValid(
+    const string& partition_name, const string& new_version) const {
+  if (partition_name == "boot") {
+    const auto old_version = GetPartitionBuildDate("bootimage");
+    auto error_code =
+        IsTimestampNewerLogged(partition_name, old_version, new_version);
+    if (error_code == ErrorCode::kPayloadTimestampError) {
+      bool prevent_downgrade =
+          android::sysprop::GkiProperties::prevent_downgrade_version().value_or(
+              false);
+      if (!prevent_downgrade) {
+        LOG(WARNING) << "Downgrade of boot image is detected, but permitting "
+                        "update because device does not prevent boot image "
+                        "downgrade";
+        // If prevent_downgrade_version sysprop is not explicitly set, permit
+        // downgrade in boot image version.
+        // Even though error_code is overridden here, always call
+        // IsTimestampNewerLogged to produce log messages.
+        error_code = ErrorCode::kSuccess;
+      }
+    }
+    return error_code;
+  }
+
+  const auto old_version = GetPartitionBuildDate(partition_name);
+  // TODO(zhangkelvin)  for some partitions, missing a current timestamp should
+  // be an error, e.g. system, vendor, product etc.
+  auto error_code =
+      IsTimestampNewerLogged(partition_name, old_version, new_version);
+  return error_code;
 }
 
 }  // namespace chromeos_update_engine

@@ -36,6 +36,7 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
   ~DynamicPartitionControlAndroid();
   FeatureFlag GetDynamicPartitionsFeatureFlag() override;
   FeatureFlag GetVirtualAbFeatureFlag() override;
+  FeatureFlag GetVirtualAbCompressionFeatureFlag() override;
   bool OptimizeOperation(const std::string& partition_name,
                          const InstallOperation& operation,
                          InstallOperation* optimized) override;
@@ -203,8 +204,11 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
                             bool force_writable,
                             std::string* path);
 
-  // Update |builder| according to |partition_metadata|, assuming the device
-  // does not have Virtual A/B.
+  // Update |builder| according to |partition_metadata|.
+  // - In Android mode, this is only called when the device
+  //   does not have Virtual A/B.
+  // - When sideloading, this maybe called as a fallback path if CoW cannot
+  //   be created.
   bool UpdatePartitionMetadata(android::fs_mgr::MetadataBuilder* builder,
                                uint32_t target_slot,
                                const DeltaArchiveManifest& manifest);
@@ -267,9 +271,14 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
   // doing anything.
   bool EnsureMetadataMounted();
 
+  // Set boolean flags related to target build. This includes flags like
+  // target_supports_snapshot_ and is_target_dynamic_.
+  bool SetTargetBuildVars(const DeltaArchiveManifest& manifest);
+
   std::set<std::string> mapped_devices_;
   const FeatureFlag dynamic_partitions_;
   const FeatureFlag virtual_ab_;
+  const FeatureFlag virtual_ab_compression_;
   std::unique_ptr<android::snapshot::ISnapshotManager> snapshot_;
   std::unique_ptr<android::snapshot::AutoDevice> metadata_device_;
   bool target_supports_snapshot_ = false;
