@@ -206,16 +206,6 @@ class MetricsReporterInterface {
   // |kMetricAttemptInternalErrorCode|
   virtual void ReportInternalErrorCode(ErrorCode error_code) = 0;
 
-  // Helper function to report metrics related to the verified boot key
-  // versions:
-  //
-  //  |kMetricKernelMinVersion|
-  //  |kMetricKernelMaxRollforwardVersion|
-  //  |kMetricKernelMaxRollforwardSetSuccess|
-  virtual void ReportKeyVersionMetrics(int kernel_min_version,
-                                       int kernel_max_rollforward_version,
-                                       bool kernel_max_rollforward_success) = 0;
-
   // Helper function to report the duration between an update being seen by the
   // client to the update being applied. Updates are not always immediately
   // applied when seen, several enterprise policies can affect when an update

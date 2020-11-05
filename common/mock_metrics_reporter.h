@@ -83,11 +83,6 @@ class MockMetricsReporter : public MetricsReporterInterface {
 
   MOCK_METHOD1(ReportInternalErrorCode, void(ErrorCode error_code));
 
-  MOCK_METHOD3(ReportKeyVersionMetrics,
-               void(int kernel_min_version,
-                    int kernel_max_rollforward_version,
-                    bool kernel_max_rollforward_success));
-
   MOCK_METHOD2(ReportEnterpriseUpdateSeenToDownloadDays,
                void(bool has_time_restriction_policy, int time_to_update_days));
   MOCK_METHOD(void, ReportConsecutiveUpdateCount, (int count), (override));

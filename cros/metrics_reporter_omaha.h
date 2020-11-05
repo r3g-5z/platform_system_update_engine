@@ -164,10 +164,6 @@ class MetricsReporterOmaha : public MetricsReporterInterface {
 
   void ReportInternalErrorCode(ErrorCode error_code) override;
 
-  void ReportKeyVersionMetrics(int kernel_min_version,
-                               int kernel_max_rollforward_version,
-                               bool kernel_max_rollforward_success) override;
-
   void ReportEnterpriseUpdateSeenToDownloadDays(
       bool has_time_restriction_policy, int time_to_update_days) override;
 

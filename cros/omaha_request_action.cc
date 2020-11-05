@@ -75,13 +75,10 @@ OmahaRequestAction::OmahaRequestAction(
     const string& session_id)
     : event_(event),
       http_fetcher_(std::move(http_fetcher)),
-      policy_provider_(std::make_unique<policy::PolicyProvider>()),
       ping_only_(ping_only),
       ping_active_days_(0),
       ping_roll_call_days_(0),
-      session_id_(session_id) {
-  policy_provider_->Reload();
-}
+      session_id_(session_id) {}
 
 OmahaRequestAction::~OmahaRequestAction() {}
 
@@ -668,9 +665,6 @@ void OmahaRequestAction::TransferComplete(HttpFetcher* fetcher,
 
   PayloadStateInterface* const payload_state =
       SystemState::Get()->payload_state();
-
-  // Set the max kernel key version based on whether rollback is allowed.
-  SetMaxKernelKeyVersionForRollback();
 
   // Events are best effort transactions -- assume they always succeed.
   if (IsEvent()) {
@@ -1394,68 +1388,6 @@ bool OmahaRequestAction::IsUpdateAllowedOverCurrentConnection(
             << connection_utils::StringForConnectionType(type)
             << ", Updates allowed: " << (is_allowed ? "Yes" : "No");
   return is_allowed;
-}
-
-bool OmahaRequestAction::IsRollbackEnabled() const {
-  if (policy_provider_->IsConsumerDevice()) {
-    LOG(INFO) << "Rollback is not enabled for consumer devices.";
-    return false;
-  }
-
-  if (!policy_provider_->device_policy_is_loaded()) {
-    LOG(INFO) << "No device policy is loaded. Assuming rollback enabled.";
-    return true;
-  }
-
-  int allowed_milestones;
-  if (!policy_provider_->GetDevicePolicy().GetRollbackAllowedMilestones(
-          &allowed_milestones)) {
-    LOG(INFO) << "RollbackAllowedMilestones policy can't be read. "
-                 "Defaulting to rollback enabled.";
-    return true;
-  }
-
-  LOG(INFO) << "Rollback allows " << allowed_milestones << " milestones.";
-  return allowed_milestones > 0;
-}
-
-void OmahaRequestAction::SetMaxKernelKeyVersionForRollback() const {
-  int max_kernel_rollforward;
-  int min_kernel_version =
-      SystemState::Get()->hardware()->GetMinKernelKeyVersion();
-  if (IsRollbackEnabled()) {
-    // If rollback is enabled, set the max kernel key version to the current
-    // kernel key version. This has the effect of freezing kernel key roll
-    // forwards.
-    //
-    // TODO(zentaro): This behavior is temporary, and ensures that no kernel
-    // key roll forward happens until the server side components of rollback
-    // are implemented. Future changes will allow the Omaha server to return
-    // the kernel key version from max_rollback_versions in the past. At that
-    // point the max kernel key version will be set to that value, creating a
-    // sliding window of versions that can be rolled back to.
-    LOG(INFO) << "Rollback is enabled. Setting kernel_max_rollforward to "
-              << min_kernel_version;
-    max_kernel_rollforward = min_kernel_version;
-  } else {
-    // For devices that are not rollback enabled (ie. consumer devices), the
-    // max kernel key version is set to 0xfffffffe, which is logically
-    // infinity. This maintains the previous behavior that that kernel key
-    // versions roll forward each time they are incremented.
-    LOG(INFO) << "Rollback is disabled. Setting kernel_max_rollforward to "
-              << kRollforwardInfinity;
-    max_kernel_rollforward = kRollforwardInfinity;
-  }
-
-  bool max_rollforward_set =
-      SystemState::Get()->hardware()->SetMaxKernelKeyRollforward(
-          max_kernel_rollforward);
-  if (!max_rollforward_set) {
-    LOG(ERROR) << "Failed to set kernel_max_rollforward";
-  }
-  // Report metrics
-  SystemState::Get()->metrics_reporter()->ReportKeyVersionMetrics(
-      min_kernel_version, max_kernel_rollforward, max_rollforward_set);
 }
 
 base::Time OmahaRequestAction::LoadOrPersistUpdateFirstSeenAtPref() const {

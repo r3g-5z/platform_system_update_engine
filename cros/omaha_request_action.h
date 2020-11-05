@@ -273,14 +273,6 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
   // False otherwise.
   bool IsUpdateAllowedOverCurrentConnection(ErrorCode* error) const;
 
-  // Returns true if rollback is enabled. Always returns false for consumer
-  // devices.
-  bool IsRollbackEnabled() const;
-
-  // Sets the appropriate max kernel key version based on whether rollback is
-  // enabled.
-  void SetMaxKernelKeyVersionForRollback() const;
-
   // Reads and returns the kPrefsUpdateFirstSeenAt pref if the pref currently
   // exists. Otherwise saves the current wallclock time to the
   // kPrefsUpdateFirstSeenAt pref and returns it as a base::Time object.
@@ -310,9 +302,6 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
 
   // pointer to the HttpFetcher that does the http work
   std::unique_ptr<HttpFetcher> http_fetcher_;
-
-  // Used for fetching information about the device policy.
-  std::unique_ptr<policy::PolicyProvider> policy_provider_;
 
   // If true, only include the <ping> element in the request.
   bool ping_only_;

@@ -60,7 +60,6 @@
 
 using base::Time;
 using base::TimeDelta;
-using chromeos_update_manager::kRollforwardInfinity;
 using std::pair;
 using std::string;
 using std::vector;
@@ -79,10 +78,6 @@ using testing::SetArgPointee;
 using testing::StrictMock;
 
 namespace {
-
-static_assert(kRollforwardInfinity == 0xfffffffe,
-              "Don't change the value of kRollforward infinity unless its "
-              "size has been changed in firmware.");
 
 const char kCurrentVersion[] = "0.1.0.0";
 const char kTestAppId[] = "test-app-id";
@@ -535,14 +530,6 @@ bool OmahaRequestActionTest::TestUpdateCheck() {
                                            tuc_params_.ping_only,
                                            tuc_params_.session_id);
 
-  auto mock_policy_provider =
-      std::make_unique<NiceMock<policy::MockPolicyProvider>>();
-  EXPECT_CALL(*mock_policy_provider, IsConsumerDevice())
-      .WillRepeatedly(Return(tuc_params_.is_consumer_device));
-
-  EXPECT_CALL(*mock_policy_provider, device_policy_is_loaded())
-      .WillRepeatedly(Return(tuc_params_.is_policy_loaded));
-
   const policy::MockDevicePolicy device_policy;
   const bool get_allowed_milestone_succeeds =
       tuc_params_.rollback_allowed_milestones >= 0;
@@ -550,10 +537,6 @@ bool OmahaRequestActionTest::TestUpdateCheck() {
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(tuc_params_.rollback_allowed_milestones),
                 Return(get_allowed_milestone_succeeds)));
-
-  EXPECT_CALL(*mock_policy_provider, GetDevicePolicy())
-      .WillRepeatedly(ReturnRef(device_policy));
-  omaha_request_action->policy_provider_ = std::move(mock_policy_provider);
 
   delegate_.expected_code_ = tuc_params_.expected_code;
   delegate_.interactive_ = request_params_.interactive();
@@ -2707,148 +2690,6 @@ TEST_F(OmahaRequestActionTest, GetInstallDateWhenOOBECompletedDateChanges) {
   EXPECT_EQ(OmahaRequestAction::GetInstallDate(), 28);
   EXPECT_TRUE(fake_prefs_->GetInt64(kPrefsInstallDateDays, &prefs_days));
   EXPECT_EQ(prefs_days, 28);
-}
-
-// Verifies that a device with no device policy, and is not a consumer
-// device sets the max kernel key version to the current version.
-// ie. the same behavior as if rollback is enabled.
-TEST_F(OmahaRequestActionTest, NoPolicyEnterpriseDevicesSetMaxRollback) {
-  FakeHardware* fake_hw = FakeSystemState::Get()->fake_hardware();
-
-  // Setup and verify some initial default values for the kernel TPM
-  // values that control verified boot and rollback.
-  const int min_kernel_version = 4;
-  fake_hw->SetMinKernelKeyVersion(min_kernel_version);
-  fake_hw->SetMaxKernelKeyRollforward(kRollforwardInfinity);
-  EXPECT_EQ(min_kernel_version, fake_hw->GetMinKernelKeyVersion());
-  EXPECT_EQ(kRollforwardInfinity, fake_hw->GetMaxKernelKeyRollforward());
-
-  EXPECT_CALL(
-      *FakeSystemState::Get()->mock_metrics_reporter(),
-      ReportKeyVersionMetrics(min_kernel_version, min_kernel_version, true))
-      .Times(1);
-
-  fake_update_response_.deadline = "20101020";
-  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
-  tuc_params_.is_consumer_device = false;
-  tuc_params_.rollback_allowed_milestones = 3;
-
-  EXPECT_TRUE(TestUpdateCheck());
-  EXPECT_TRUE(response_.update_exists);
-
-  // Verify kernel_max_rollforward was set to the current minimum
-  // kernel key version. This has the effect of freezing roll
-  // forwards indefinitely. This will hold the rollback window
-  // open until a future change will be able to move this forward
-  // relative the configured window.
-  EXPECT_EQ(min_kernel_version, fake_hw->GetMinKernelKeyVersion());
-  EXPECT_EQ(min_kernel_version, fake_hw->GetMaxKernelKeyRollforward());
-}
-
-// Verifies that a conmsumer device with no device policy sets the
-// max kernel key version to the current version. ie. the same
-// behavior as if rollback is enabled.
-TEST_F(OmahaRequestActionTest, NoPolicyConsumerDevicesSetMaxRollback) {
-  FakeHardware* fake_hw = FakeSystemState::Get()->fake_hardware();
-
-  // Setup and verify some initial default values for the kernel TPM
-  // values that control verified boot and rollback.
-  const int min_kernel_version = 3;
-  fake_hw->SetMinKernelKeyVersion(min_kernel_version);
-  fake_hw->SetMaxKernelKeyRollforward(kRollforwardInfinity);
-  EXPECT_EQ(min_kernel_version, fake_hw->GetMinKernelKeyVersion());
-  EXPECT_EQ(kRollforwardInfinity, fake_hw->GetMaxKernelKeyRollforward());
-
-  EXPECT_CALL(
-      *FakeSystemState::Get()->mock_metrics_reporter(),
-      ReportKeyVersionMetrics(min_kernel_version, kRollforwardInfinity, true))
-      .Times(1);
-
-  fake_update_response_.deadline = "20101020";
-  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
-  tuc_params_.is_consumer_device = true;
-  tuc_params_.rollback_allowed_milestones = 3;
-
-  EXPECT_TRUE(TestUpdateCheck());
-  EXPECT_TRUE(response_.update_exists);
-
-  // Verify that with rollback disabled that kernel_max_rollforward
-  // was set to logical infinity. This is the expected behavior for
-  // consumer devices and matches the existing behavior prior to the
-  // rollback features.
-  EXPECT_EQ(min_kernel_version, fake_hw->GetMinKernelKeyVersion());
-  EXPECT_EQ(kRollforwardInfinity, fake_hw->GetMaxKernelKeyRollforward());
-}
-
-// Verifies that a device with rollback enabled sets kernel_max_rollforward
-// in the TPM to prevent roll forward.
-TEST_F(OmahaRequestActionTest, RollbackEnabledDevicesSetMaxRollback) {
-  FakeHardware* fake_hw = FakeSystemState::Get()->fake_hardware();
-
-  // Setup and verify some initial default values for the kernel TPM
-  // values that control verified boot and rollback.
-  const int allowed_milestones = 4;
-  const int min_kernel_version = 3;
-  fake_hw->SetMinKernelKeyVersion(min_kernel_version);
-  fake_hw->SetMaxKernelKeyRollforward(kRollforwardInfinity);
-  EXPECT_EQ(min_kernel_version, fake_hw->GetMinKernelKeyVersion());
-  EXPECT_EQ(kRollforwardInfinity, fake_hw->GetMaxKernelKeyRollforward());
-
-  EXPECT_CALL(
-      *FakeSystemState::Get()->mock_metrics_reporter(),
-      ReportKeyVersionMetrics(min_kernel_version, min_kernel_version, true))
-      .Times(1);
-
-  fake_update_response_.deadline = "20101020";
-  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
-  tuc_params_.is_consumer_device = false;
-  tuc_params_.rollback_allowed_milestones = allowed_milestones;
-  tuc_params_.is_policy_loaded = true;
-
-  EXPECT_TRUE(TestUpdateCheck());
-  EXPECT_TRUE(response_.update_exists);
-
-  // Verify that with rollback enabled that kernel_max_rollforward
-  // was set to the current minimum kernel key version. This has
-  // the effect of freezing roll forwards indefinitely. This will
-  // hold the rollback window open until a future change will
-  // be able to move this forward relative the configured window.
-  EXPECT_EQ(min_kernel_version, fake_hw->GetMinKernelKeyVersion());
-  EXPECT_EQ(min_kernel_version, fake_hw->GetMaxKernelKeyRollforward());
-}
-
-// Verifies that a device with rollback disabled sets kernel_max_rollforward
-// in the TPM to logical infinity, to allow roll forward.
-TEST_F(OmahaRequestActionTest, RollbackDisabledDevicesSetMaxRollback) {
-  FakeHardware* fake_hw = FakeSystemState::Get()->fake_hardware();
-
-  // Setup and verify some initial default values for the kernel TPM
-  // values that control verified boot and rollback.
-  const int allowed_milestones = 0;
-  const int min_kernel_version = 3;
-  fake_hw->SetMinKernelKeyVersion(min_kernel_version);
-  fake_hw->SetMaxKernelKeyRollforward(kRollforwardInfinity);
-  EXPECT_EQ(min_kernel_version, fake_hw->GetMinKernelKeyVersion());
-  EXPECT_EQ(kRollforwardInfinity, fake_hw->GetMaxKernelKeyRollforward());
-
-  EXPECT_CALL(
-      *FakeSystemState::Get()->mock_metrics_reporter(),
-      ReportKeyVersionMetrics(min_kernel_version, kRollforwardInfinity, true))
-      .Times(1);
-
-  fake_update_response_.deadline = "20101020";
-  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
-  tuc_params_.is_consumer_device = false;
-  tuc_params_.rollback_allowed_milestones = allowed_milestones;
-  tuc_params_.is_policy_loaded = true;
-
-  EXPECT_TRUE(TestUpdateCheck());
-  EXPECT_TRUE(response_.update_exists);
-
-  // Verify that with rollback disabled that kernel_max_rollforward
-  // was set to logical infinity.
-  EXPECT_EQ(min_kernel_version, fake_hw->GetMinKernelKeyVersion());
-  EXPECT_EQ(kRollforwardInfinity, fake_hw->GetMaxKernelKeyRollforward());
 }
 
 TEST_F(OmahaRequestActionTest, RollbackResponseParsedNoEntries) {
