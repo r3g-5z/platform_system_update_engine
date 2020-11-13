@@ -357,18 +357,34 @@ TEST_F(OmahaResponseHandlerActionTest, MultiPackageTest) {
   EXPECT_EQ(in.version, install_plan.version);
 }
 
-TEST_F(OmahaResponseHandlerActionTest, HashChecksForHttpTest) {
+TEST_F(OmahaResponseHandlerActionTest, DisableHashChecks) {
   OmahaResponse in;
   in.update_exists = true;
-  in.version = "a.b.c.d";
   in.packages.push_back(
       {.payload_urls = {"http://test.should/need/hash.checks.signed"},
        .size = 12,
        .hash = kPayloadHashHex,
        .app_id = kPayloadAppId,
        .fp = kPayloadFp1});
+  in.disable_hash_checks = true;
+
+  InstallPlan install_plan;
+  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_FALSE(install_plan.hash_checks_mandatory);
+}
+
+TEST_F(OmahaResponseHandlerActionTest, SignatureChecksForHttpTest) {
+  OmahaResponse in;
+  in.update_exists = true;
+  in.version = "a.b.c.d";
+  in.packages.push_back(
+      {.payload_urls = {"http://test.should/need/signature.checks.signed"},
+       .size = 12,
+       .hash = kPayloadHashHex,
+       .app_id = kPayloadAppId,
+       .fp = kPayloadFp1});
   in.more_info_url = "http://more/info";
-  // Hash checks are always skipped for non-official update URLs.
+  // Signature checks are always skipped for non-official update URLs.
   EXPECT_CALL(*(FakeSystemState::Get()->mock_request_params()),
               IsUpdateUrlOfficial())
       .WillRepeatedly(Return(true));
@@ -378,16 +394,16 @@ TEST_F(OmahaResponseHandlerActionTest, HashChecksForHttpTest) {
   EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
   EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
   EXPECT_EQ(in.packages[0].fp, install_plan.payloads[0].fp);
-  EXPECT_TRUE(install_plan.hash_checks_mandatory);
+  EXPECT_TRUE(install_plan.signature_checks_mandatory);
   EXPECT_EQ(in.version, install_plan.version);
 }
 
-TEST_F(OmahaResponseHandlerActionTest, HashChecksForUnofficialUpdateUrl) {
+TEST_F(OmahaResponseHandlerActionTest, SignatureChecksForUnofficialUpdateUrl) {
   OmahaResponse in;
   in.update_exists = true;
   in.version = "a.b.c.d";
   in.packages.push_back(
-      {.payload_urls = {"http://url.normally/needs/hash.checks.signed"},
+      {.payload_urls = {"http://url.normally/needs/signature.checks.signed"},
        .size = 12,
        .hash = kPayloadHashHex,
        .app_id = kPayloadAppId,
@@ -402,18 +418,19 @@ TEST_F(OmahaResponseHandlerActionTest, HashChecksForUnofficialUpdateUrl) {
   EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
   EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
   EXPECT_EQ(in.packages[0].fp, install_plan.payloads[0].fp);
-  EXPECT_FALSE(install_plan.hash_checks_mandatory);
+  EXPECT_FALSE(install_plan.signature_checks_mandatory);
   EXPECT_EQ(in.version, install_plan.version);
 }
 
 TEST_F(OmahaResponseHandlerActionTest,
-       HashChecksForOfficialUrlUnofficialBuildTest) {
-  // Official URLs for unofficial builds (dev/test images) don't require hash.
+       SignatureChecksForOfficialUrlUnofficialBuildTest) {
+  // Official URLs for unofficial builds (dev/test images) don't require
+  // signature.
   OmahaResponse in;
   in.update_exists = true;
   in.version = "a.b.c.d";
   in.packages.push_back(
-      {.payload_urls = {"http://url.normally/needs/hash.checks.signed"},
+      {.payload_urls = {"http://url.normally/needs/signature.checks.signed"},
        .size = 12,
        .hash = kPayloadHashHex,
        .app_id = kPayloadAppId,
@@ -429,16 +446,16 @@ TEST_F(OmahaResponseHandlerActionTest,
   EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
   EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
   EXPECT_EQ(in.packages[0].fp, install_plan.payloads[0].fp);
-  EXPECT_FALSE(install_plan.hash_checks_mandatory);
+  EXPECT_FALSE(install_plan.signature_checks_mandatory);
   EXPECT_EQ(in.version, install_plan.version);
 }
 
-TEST_F(OmahaResponseHandlerActionTest, HashChecksForHttpsTest) {
+TEST_F(OmahaResponseHandlerActionTest, SignatureChecksForHttpsTest) {
   OmahaResponse in;
   in.update_exists = true;
   in.version = "a.b.c.d";
   in.packages.push_back(
-      {.payload_urls = {"https://test.should/need/hash.checks.signed"},
+      {.payload_urls = {"https://test.should/need/signature.checks.signed"},
        .size = 12,
        .hash = kPayloadHashHex,
        .app_id = kPayloadAppId,
@@ -453,17 +470,17 @@ TEST_F(OmahaResponseHandlerActionTest, HashChecksForHttpsTest) {
   EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
   EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
   EXPECT_EQ(in.packages[0].fp, install_plan.payloads[0].fp);
-  EXPECT_TRUE(install_plan.hash_checks_mandatory);
+  EXPECT_TRUE(install_plan.signature_checks_mandatory);
   EXPECT_EQ(in.version, install_plan.version);
 }
 
-TEST_F(OmahaResponseHandlerActionTest, HashChecksForBothHttpAndHttpsTest) {
+TEST_F(OmahaResponseHandlerActionTest, SignatureChecksForBothHttpAndHttpsTest) {
   OmahaResponse in;
   in.update_exists = true;
   in.version = "a.b.c.d";
   in.packages.push_back(
-      {.payload_urls = {"http://test.should.still/need/hash.checks",
-                        "https://test.should.still/need/hash.checks"},
+      {.payload_urls = {"http://test.should.still/need/signature.checks",
+                        "https://test.should.still/need/signature.checks"},
        .size = 12,
        .hash = kPayloadHashHex,
        .app_id = kPayloadAppId,
@@ -478,7 +495,7 @@ TEST_F(OmahaResponseHandlerActionTest, HashChecksForBothHttpAndHttpsTest) {
   EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
   EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
   EXPECT_EQ(in.packages[0].fp, install_plan.payloads[0].fp);
-  EXPECT_TRUE(install_plan.hash_checks_mandatory);
+  EXPECT_TRUE(install_plan.signature_checks_mandatory);
   EXPECT_EQ(in.version, install_plan.version);
 }
 
@@ -720,7 +737,7 @@ TEST_F(OmahaResponseHandlerActionTest,
   EXPECT_FALSE(install_plan.powerwash_required);
 }
 
-TEST_F(OmahaResponseHandlerActionTest, P2PUrlIsUsedAndHashChecksMandatory) {
+TEST_F(OmahaResponseHandlerActionTest, P2PUrlIsUsed) {
   OmahaResponse in;
   in.update_exists = true;
   in.version = "a.b.c.d";
@@ -755,7 +772,6 @@ TEST_F(OmahaResponseHandlerActionTest, P2PUrlIsUsedAndHashChecksMandatory) {
   EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
   EXPECT_EQ(in.packages[0].fp, install_plan.payloads[0].fp);
   EXPECT_EQ(p2p_url, install_plan.download_url);
-  EXPECT_TRUE(install_plan.hash_checks_mandatory);
 }
 
 TEST_F(OmahaResponseHandlerActionTest, RollbackTest) {

@@ -221,6 +221,7 @@ bool UpdateAttempterAndroid::ApplyPayload(
   install_plan_.public_key_rsa = "";
 
   install_plan_.hash_checks_mandatory = hardware_->IsOfficialBuild();
+  install_plan_.signature_checks_mandatory = hardware_->IsOfficialBuild();
   install_plan_.is_resume = !payload_id.empty() &&
                             DeltaPerformer::CanResumeUpdate(prefs_, payload_id);
   if (!install_plan_.is_resume) {

@@ -70,6 +70,7 @@ namespace chromeos_update_engine {
 
 // List of custom attributes that we interpret in the Omaha response:
 constexpr char kAttrDeadline[] = "deadline";
+constexpr char kAttrDisableHashChecks[] = "DisableHashChecks";
 constexpr char kAttrDisableP2PForDownloading[] = "DisableP2PForDownloading";
 constexpr char kAttrDisableP2PForSharing[] = "DisableP2PForSharing";
 constexpr char kAttrDisablePayloadBackoff[] = "DisablePayloadBackoff";
@@ -184,6 +185,7 @@ struct OmahaParserData {
       string max_failure_count_per_url;
       string disable_payload_backoff;
       string powerwash_required;
+      string disable_hash_checks;
     };
     Optional<PostInstallAction> postinstall_action;
 
@@ -287,6 +289,7 @@ void ParserHandlerStart(void* user_data,
           .max_failure_count_per_url = attrs[kAttrMaxFailureCountPerUrl],
           .disable_payload_backoff = attrs[kAttrDisablePayloadBackoff],
           .powerwash_required = attrs[kAttrPowerwash],
+          .disable_hash_checks = attrs[kAttrDisableHashChecks],
       };
       data->apps.back().postinstall_action = std::move(action);
     }
@@ -926,6 +929,8 @@ bool OmahaRequestAction::ParseParams(OmahaParserData* parser_data,
       ParseBool(app.postinstall_action->disable_p2p_for_downloading);
   output_object->disable_p2p_for_sharing =
       ParseBool(app.postinstall_action->disable_p2p_for_sharing);
+  output_object->disable_hash_checks =
+      ParseBool(app.postinstall_action->disable_hash_checks);
   output_object->public_key_rsa = app.postinstall_action->public_key_rsa;
 
   if (!base::StringToUint(app.postinstall_action->max_failure_count_per_url,

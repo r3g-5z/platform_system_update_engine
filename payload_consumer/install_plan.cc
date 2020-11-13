@@ -96,6 +96,8 @@ string InstallPlan::ToString() const {
           {"target_slot", BootControlInterface::SlotName(target_slot)},
           {"initial url", url_str},
           {"hash_checks_mandatory", utils::ToString(hash_checks_mandatory)},
+          {"signature_checks_mandatory",
+           utils::ToString(signature_checks_mandatory)},
           {"powerwash_required", utils::ToString(powerwash_required)},
           {"switch_slot_on_reboot", utils::ToString(switch_slot_on_reboot)},
           {"run_post_install", utils::ToString(run_post_install)},

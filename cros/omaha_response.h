@@ -79,6 +79,11 @@ struct OmahaResponse {
   // True if the Omaha rule instructs us to disable p2p for sharing.
   bool disable_p2p_for_sharing = false;
 
+  // We sometimes need to waive the hash checks in order to download from
+  // sources that don't provide hashes or when we want to explicitly waive hash
+  // checking because of an internal algorithm error.
+  bool disable_hash_checks = false;
+
   // True if the Omaha rule instructs us to powerwash.
   bool powerwash_required = false;
 

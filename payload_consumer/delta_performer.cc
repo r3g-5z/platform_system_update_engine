@@ -451,14 +451,12 @@ MetadataParseResult DeltaPerformer::ParsePayloadMetadata(
     // even before waiting for that many number of bytes to be downloaded in the
     // payload. This will prevent any attack which relies on us downloading data
     // beyond the expected metadata size.
-    if (install_plan_->hash_checks_mandatory) {
-      if (payload_->metadata_size != metadata_size_) {
-        LOG(ERROR) << "Mandatory metadata size in Omaha response ("
-                   << payload_->metadata_size
-                   << ") is missing/incorrect, actual = " << metadata_size_;
-        *error = ErrorCode::kDownloadInvalidMetadataSize;
-        return MetadataParseResult::kError;
-      }
+    if (payload_->metadata_size != metadata_size_) {
+      LOG(ERROR) << "Mandatory metadata size in Omaha response ("
+                 << payload_->metadata_size
+                 << ") is missing/incorrect, actual = " << metadata_size_;
+      *error = ErrorCode::kDownloadInvalidMetadataSize;
+      return MetadataParseResult::kError;
     }
 
     // Check that the |metadata signature size_| and |metadata_size_| are not
@@ -512,15 +510,15 @@ MetadataParseResult DeltaPerformer::ParsePayloadMetadata(
         payload, payload_->metadata_signature, *payload_verifier);
   }
   if (*error != ErrorCode::kSuccess) {
-    if (install_plan_->hash_checks_mandatory) {
+    if (install_plan_->signature_checks_mandatory) {
       // The autoupdate_CatchBadSignatures test checks for this string
       // in log-files. Keep in sync.
-      LOG(ERROR) << "Mandatory metadata signature validation failed";
+      LOG(ERROR) << "Mandatory metadata signature validation failed.";
       return MetadataParseResult::kError;
     }
 
     // For non-mandatory cases, just send a UMA stat.
-    LOG(WARNING) << "Ignoring metadata signature validation failures";
+    LOG(WARNING) << "Ignoring metadata signature validation failures.";
     *error = ErrorCode::kSuccess;
   }
 
@@ -664,26 +662,14 @@ bool DeltaPerformer::Write(const void* bytes, size_t count, ErrorCode* error) {
     if (!CanPerformInstallOperation(op))
       return true;
 
-    // Validate the operation only if the metadata signature is present.
-    // Otherwise, keep the old behavior. This serves as a knob to disable
-    // the validation logic in case we find some regression after rollout.
-    // NOTE: If hash checks are mandatory and if metadata_signature is empty,
-    // we would have already failed in ParsePayloadMetadata method and thus not
-    // even be here. So no need to handle that case again here.
-    if (!payload_->metadata_signature.empty()) {
-      // Note: Validate must be called only if CanPerformInstallOperation is
+    if (install_plan_->hash_checks_mandatory) {
+      // Note: Validate must be called only if |CanPerformInstallOperation| is
       // called. Otherwise, we might be failing operations before even if there
       // isn't sufficient data to compute the proper hash.
       *error = ValidateOperationHash(op);
       if (*error != ErrorCode::kSuccess) {
-        if (install_plan_->hash_checks_mandatory) {
-          LOG(ERROR) << "Mandatory operation hash check failed";
-          return false;
-        }
-
-        // For non-mandatory cases, just send a UMA stat.
-        LOG(WARNING) << "Ignoring operation validation errors";
-        *error = ErrorCode::kSuccess;
+        LOG(ERROR) << "Mandatory operation hash check failed";
+        return false;
       }
     }
 

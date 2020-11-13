@@ -635,6 +635,7 @@ static void ApplyDeltaFile(bool full_kernel,
                            SignatureTest signature_test,
                            DeltaState* state,
                            bool hash_checks_mandatory,
+                           bool signature_checks_mandatory,
                            OperationHashTest op_hash_test,
                            DeltaPerformer** performer,
                            uint32_t minor_version) {
@@ -754,6 +755,7 @@ static void ApplyDeltaFile(bool full_kernel,
   // Update the A image in place.
   InstallPlan* install_plan = &state->install_plan;
   install_plan->hash_checks_mandatory = hash_checks_mandatory;
+  install_plan->signature_checks_mandatory = signature_checks_mandatory;
   install_plan->payloads = {{.size = state->delta.size(),
                              .metadata_size = state->metadata_size,
                              .type = (full_kernel && full_rootfs)
@@ -949,6 +951,7 @@ void DoSmallImageTest(bool full_kernel,
                       ssize_t chunk_size,
                       SignatureTest signature_test,
                       bool hash_checks_mandatory,
+                      bool signature_checks_mandatory,
                       uint32_t minor_version) {
   DeltaState state;
   DeltaPerformer* performer = nullptr;
@@ -964,6 +967,7 @@ void DoSmallImageTest(bool full_kernel,
                  signature_test,
                  &state,
                  hash_checks_mandatory,
+                 signature_checks_mandatory,
                  kValidOperationData,
                  &performer,
                  minor_version);
@@ -982,6 +986,7 @@ void DoOperationHashMismatchTest(OperationHashTest op_hash_test,
                  kSignatureGenerated,
                  &state,
                  hash_checks_mandatory,
+                 true,
                  op_hash_test,
                  &performer,
                  minor_version);
@@ -989,8 +994,13 @@ void DoOperationHashMismatchTest(OperationHashTest op_hash_test,
 }
 
 TEST_F(DeltaPerformerIntegrationTest, RunAsRootSmallImageTest) {
-  DoSmallImageTest(
-      false, false, -1, kSignatureGenerator, false, kSourceMinorPayloadVersion);
+  DoSmallImageTest(false,
+                   false,
+                   -1,
+                   kSignatureGenerator,
+                   false,
+                   false,
+                   kSourceMinorPayloadVersion);
 }
 
 TEST_F(DeltaPerformerIntegrationTest,
@@ -999,6 +1009,7 @@ TEST_F(DeltaPerformerIntegrationTest,
                    false,
                    -1,
                    kSignatureGeneratedPlaceholder,
+                   false,
                    false,
                    kSourceMinorPayloadVersion);
 }
@@ -1020,27 +1031,48 @@ TEST_F(DeltaPerformerIntegrationTest, RunAsRootSmallImageChunksTest) {
                    kBlockSize,
                    kSignatureGenerator,
                    false,
+                   false,
                    kSourceMinorPayloadVersion);
 }
 
 TEST_F(DeltaPerformerIntegrationTest, RunAsRootFullKernelSmallImageTest) {
-  DoSmallImageTest(
-      true, false, -1, kSignatureGenerator, false, kSourceMinorPayloadVersion);
+  DoSmallImageTest(true,
+                   false,
+                   -1,
+                   kSignatureGenerator,
+                   false,
+                   false,
+                   kSourceMinorPayloadVersion);
 }
 
 TEST_F(DeltaPerformerIntegrationTest, RunAsRootFullSmallImageTest) {
-  DoSmallImageTest(
-      true, true, -1, kSignatureGenerator, true, kFullPayloadMinorVersion);
+  DoSmallImageTest(true,
+                   true,
+                   -1,
+                   kSignatureGenerator,
+                   true,
+                   true,
+                   kFullPayloadMinorVersion);
 }
 
 TEST_F(DeltaPerformerIntegrationTest, RunAsRootSmallImageSignNoneTest) {
-  DoSmallImageTest(
-      false, false, -1, kSignatureNone, false, kSourceMinorPayloadVersion);
+  DoSmallImageTest(false,
+                   false,
+                   -1,
+                   kSignatureNone,
+                   false,
+                   true,
+                   kSourceMinorPayloadVersion);
 }
 
 TEST_F(DeltaPerformerIntegrationTest, RunAsRootSmallImageSignGeneratedTest) {
-  DoSmallImageTest(
-      false, false, -1, kSignatureGenerated, true, kSourceMinorPayloadVersion);
+  DoSmallImageTest(false,
+                   false,
+                   -1,
+                   kSignatureGenerated,
+                   true,
+                   true,
+                   kSourceMinorPayloadVersion);
 }
 
 TEST_F(DeltaPerformerIntegrationTest,
@@ -1049,6 +1081,7 @@ TEST_F(DeltaPerformerIntegrationTest,
                    false,
                    -1,
                    kSignatureGeneratedShell,
+                   false,
                    false,
                    kSourceMinorPayloadVersion);
 }
@@ -1060,6 +1093,7 @@ TEST_F(DeltaPerformerIntegrationTest,
                    -1,
                    kSignatureGeneratedShellECKey,
                    false,
+                   false,
                    kSourceMinorPayloadVersion);
 }
 
@@ -1069,6 +1103,7 @@ TEST_F(DeltaPerformerIntegrationTest,
                    false,
                    -1,
                    kSignatureGeneratedShellBadKey,
+                   false,
                    false,
                    kSourceMinorPayloadVersion);
 }
@@ -1080,6 +1115,7 @@ TEST_F(DeltaPerformerIntegrationTest,
                    -1,
                    kSignatureGeneratedShellRotateCl1,
                    false,
+                   false,
                    kSourceMinorPayloadVersion);
 }
 
@@ -1090,12 +1126,18 @@ TEST_F(DeltaPerformerIntegrationTest,
                    -1,
                    kSignatureGeneratedShellRotateCl2,
                    false,
+                   false,
                    kSourceMinorPayloadVersion);
 }
 
 TEST_F(DeltaPerformerIntegrationTest, RunAsRootSmallImageSourceOpsTest) {
-  DoSmallImageTest(
-      false, false, -1, kSignatureGenerator, false, kSourceMinorPayloadVersion);
+  DoSmallImageTest(false,
+                   false,
+                   -1,
+                   kSignatureGenerator,
+                   false,
+                   false,
+                   kSourceMinorPayloadVersion);
 }
 
 TEST_F(DeltaPerformerIntegrationTest,

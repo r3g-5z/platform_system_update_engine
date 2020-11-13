@@ -112,7 +112,14 @@ void OmahaResponseHandlerAction::PerformAction() {
     update_check_response_hash += package.hash + ":";
   }
   install_plan_.public_key_rsa = response.public_key_rsa;
-  install_plan_.hash_checks_mandatory = AreHashChecksMandatory(response);
+
+  install_plan_.hash_checks_mandatory = !response.disable_hash_checks;
+  LOG_IF(WARNING, !install_plan_.hash_checks_mandatory)
+      << "Operation hash checks are disabled per Omaha request.";
+
+  install_plan_.signature_checks_mandatory =
+      AreSignatureChecksMandatory(response);
+
   install_plan_.is_resume = DeltaPerformer::CanResumeUpdate(
       SystemState::Get()->prefs(), update_check_response_hash);
   if (install_plan_.is_resume) {
@@ -302,37 +309,39 @@ void OmahaResponseHandlerAction::PerformAction() {
   }
 }
 
-bool OmahaResponseHandlerAction::AreHashChecksMandatory(
+bool OmahaResponseHandlerAction::AreSignatureChecksMandatory(
     const OmahaResponse& response) {
-  // We sometimes need to waive the hash checks in order to download from
-  // sources that don't provide hashes, such as dev server.
+  // We sometimes need to waive the signature checks in order to download from
+  // sources that don't provide them.
   // At this point UpdateAttempter::IsAnyUpdateSourceAllowed() has already been
   // checked, so an unofficial update URL won't get this far unless it's OK to
-  // use without a hash. Additionally, we want to always waive hash checks on
-  // unofficial builds (i.e. dev/test images).
+  // use without a signature. Additionally, we want to always waive signature
+  // checks on unofficial builds (i.e. dev/test images).
   // The end result is this:
   //  * Base image:
-  //    - Official URLs require a hash.
+  //    - Official URLs require a signature.
   //    - Unofficial URLs only get this far if the IsAnyUpdateSourceAllowed()
-  //      devmode/debugd checks pass, in which case the hash is waived.
+  //      devmode/debugd checks pass, in which case the signature verification
+  //      is waived.
   //  * Dev/test image:
   //    - Any URL is allowed through with no hash checking.
   if (!SystemState::Get()->request_params()->IsUpdateUrlOfficial() ||
       !SystemState::Get()->hardware()->IsOfficialBuild()) {
-    // Still do a hash check if a public key is included.
+    // Still do a signature check if a public key is included.
     if (!response.public_key_rsa.empty()) {
       // The autoupdate_CatchBadSignatures test checks for this string
       // in log-files. Keep in sync.
-      LOG(INFO) << "Mandating payload hash checks since Omaha Response "
+      LOG(INFO) << "Mandating payload signature checks since Omaha Response "
                 << "for unofficial build includes public RSA key.";
       return true;
     } else {
-      LOG(INFO) << "Waiving payload hash checks for unofficial update URL.";
+      LOG(INFO) << "Waiving payload signature checks for unofficial update "
+                << "URL.";
       return false;
     }
   }
 
-  LOG(INFO) << "Mandating hash checks for official URL on official build.";
+  LOG(INFO) << "Mandating signature checks for official URL on official build.";
   return true;
 }
 

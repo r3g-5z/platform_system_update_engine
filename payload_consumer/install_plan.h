@@ -133,7 +133,11 @@ struct InstallPlan {
 
   // True if payload hash checks are mandatory based on the system state and
   // the Omaha response.
-  bool hash_checks_mandatory{false};
+  bool hash_checks_mandatory{true};
+
+  // True if the payload signature checks are mandatory based on the type of the
+  // image installed, e.g. official images should have this ON.
+  bool signature_checks_mandatory{true};
 
   // True if Powerwash is required on reboot after applying the payload.
   // False otherwise.

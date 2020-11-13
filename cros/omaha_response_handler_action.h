@@ -60,9 +60,9 @@ class OmahaResponseHandlerAction : public Action<OmahaResponseHandlerAction> {
   std::string Type() const override { return StaticType(); }
 
  private:
-  // Returns true if payload hash checks are mandatory based on the state
+  // Returns true if payload signature checks are mandatory based on the state
   // of the system and the contents of the Omaha response. False otherwise.
-  bool AreHashChecksMandatory(const OmahaResponse& response);
+  bool AreSignatureChecksMandatory(const OmahaResponse& response);
 
   // The install plan, if we have an update.
   InstallPlan install_plan_;

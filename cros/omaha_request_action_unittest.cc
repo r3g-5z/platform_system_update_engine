@@ -179,6 +179,7 @@ struct FakeUpdateResponse {
            (disable_p2p_for_downloading ? "DisableP2PForDownloading=\"true\" "
                                         : "") +
            (disable_p2p_for_sharing ? "DisableP2PForSharing=\"true\" " : "") +
+           (disable_hash_checks ? "DisableHashChecks=\"true\" " : "") +
            (powerwash ? "Powerwash=\"true\" " : "") +
            "/></actions></manifest></updatecheck></app>" +
            (multi_app
@@ -260,6 +261,8 @@ struct FakeUpdateResponse {
   // P2P setting defaults to allowed.
   bool disable_p2p_for_downloading = false;
   bool disable_p2p_for_sharing = false;
+  // Hash checks default to allowed.
+  bool disable_hash_checks = false;
 
   bool powerwash = false;
 
@@ -677,6 +680,7 @@ TEST_F(OmahaRequestActionTest, ValidUpdateTest) {
   EXPECT_EQ(fake_update_response_.prompt == "true", response_.prompt);
   EXPECT_EQ(fake_update_response_.deadline, response_.deadline);
   EXPECT_FALSE(response_.powerwash_required);
+  EXPECT_FALSE(response_.disable_hash_checks);
   // Omaha cohort attributes are not set in the response, so they should not be
   // persisted.
   EXPECT_FALSE(fake_prefs_->Exists(kPrefsOmahaCohort));
@@ -798,6 +802,16 @@ TEST_F(OmahaRequestActionTest, PowerwashTest) {
 
   EXPECT_TRUE(response_.update_exists);
   EXPECT_TRUE(response_.powerwash_required);
+}
+
+TEST_F(OmahaRequestActionTest, DisableHashChecksTest) {
+  fake_update_response_.disable_hash_checks = true;
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+
+  ASSERT_TRUE(TestUpdateCheck());
+
+  EXPECT_TRUE(response_.update_exists);
+  EXPECT_TRUE(response_.disable_hash_checks);
 }
 
 TEST_F(OmahaRequestActionTest, ExtraHeadersSentInteractiveTest) {
