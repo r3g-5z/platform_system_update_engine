@@ -16,7 +16,7 @@
 
 #include "update_engine/client_library/client_dbus.h"
 
-#include <base/message_loop/message_loop_current.h>
+#include <base/task/current_thread.h>
 
 #include <memory>
 
@@ -206,7 +206,7 @@ bool DBusUpdateEngineClient::UnregisterStatusUpdateHandler(
 
 bool DBusUpdateEngineClient::RegisterStatusUpdateHandler(
     StatusUpdateHandler* handler) {
-  if (!base::MessageLoopCurrent::IsSet()) {
+  if (!base::CurrentThread::IsSet()) {
     LOG(FATAL) << "Cannot get UpdateEngineClient outside of message loop.";
     return false;
   }
