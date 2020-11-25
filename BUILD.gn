@@ -197,6 +197,8 @@ static_library("libupdate_engine") {
     "cros/image_properties_chromeos.cc",
     "cros/logging.cc",
     "cros/metrics_reporter_omaha.cc",
+    "cros/omaha_parser_data.cc",
+    "cros/omaha_parser_xml.cc",
     "cros/omaha_request_action.cc",
     "cros/omaha_request_builder_xml.cc",
     "cros/omaha_request_params.cc",

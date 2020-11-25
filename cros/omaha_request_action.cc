@@ -19,11 +19,9 @@
 #include <inttypes.h>
 
 #include <limits>
-#include <map>
 #include <sstream>
 #include <string>
 #include <utility>
-#include <vector>
 
 #include <base/bind.h>
 #include <base/files/file_util.h>
@@ -31,12 +29,9 @@
 #include <base/optional.h>
 #include <base/rand_util.h>
 #include <base/strings/string_number_conversions.h>
-#include <base/strings/string_split.h>
-#include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <base/time/time.h>
 #include <brillo/key_value_store.h>
-#include <expat.h>
 #include <metrics/metrics_library.h>
 #include <policy/libpolicy.h>
 
@@ -51,6 +46,8 @@
 #include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/cros/connection_manager_interface.h"
+#include "update_engine/cros/omaha_parser_data.h"
+#include "update_engine/cros/omaha_parser_xml.h"
 #include "update_engine/cros/omaha_request_builder_xml.h"
 #include "update_engine/cros/omaha_request_params.h"
 #include "update_engine/cros/p2p_manager.h"
@@ -62,282 +59,9 @@ using base::Optional;
 using base::Time;
 using base::TimeDelta;
 using chromeos_update_manager::kRollforwardInfinity;
-using std::map;
 using std::string;
-using std::vector;
 
 namespace chromeos_update_engine {
-
-// List of custom attributes that we interpret in the Omaha response:
-constexpr char kAttrDeadline[] = "deadline";
-constexpr char kAttrDisableHashChecks[] = "DisableHashChecks";
-constexpr char kAttrDisableP2PForDownloading[] = "DisableP2PForDownloading";
-constexpr char kAttrDisableP2PForSharing[] = "DisableP2PForSharing";
-constexpr char kAttrDisablePayloadBackoff[] = "DisablePayloadBackoff";
-constexpr char kAttrVersion[] = "version";
-// Deprecated: "IsDelta"
-constexpr char kAttrIsDeltaPayload[] = "IsDeltaPayload";
-constexpr char kAttrMaxFailureCountPerUrl[] = "MaxFailureCountPerUrl";
-constexpr char kAttrMaxDaysToScatter[] = "MaxDaysToScatter";
-// Deprecated: "ManifestSignatureRsa"
-// Deprecated: "ManifestSize"
-constexpr char kAttrMetadataSignatureRsa[] = "MetadataSignatureRsa";
-constexpr char kAttrMetadataSize[] = "MetadataSize";
-constexpr char kAttrMoreInfo[] = "MoreInfo";
-constexpr char kAttrNoUpdate[] = "noupdate";
-// Deprecated: "NeedsAdmin"
-constexpr char kAttrPollInterval[] = "PollInterval";
-constexpr char kAttrPowerwash[] = "Powerwash";
-constexpr char kAttrPrompt[] = "Prompt";
-constexpr char kAttrPublicKeyRsa[] = "PublicKeyRsa";
-
-// List of attributes that we interpret in the Omaha response:
-constexpr char kAttrAppId[] = "appid";
-constexpr char kAttrCodeBase[] = "codebase";
-constexpr char kAttrCohort[] = "cohort";
-constexpr char kAttrCohortHint[] = "cohorthint";
-constexpr char kAttrCohortName[] = "cohortname";
-constexpr char kAttrElapsedDays[] = "elapsed_days";
-constexpr char kAttrElapsedSeconds[] = "elapsed_seconds";
-constexpr char kAttrEvent[] = "event";
-constexpr char kAttrFp[] = "fp";
-constexpr char kAttrHashSha256[] = "hash_sha256";
-// Deprecated: "hash"; Although we still need to pass it from the server for
-// backward compatibility.
-constexpr char kAttrName[] = "name";
-// Deprecated: "sha256"; Although we still need to pass it from the server for
-// backward compatibility.
-constexpr char kAttrSize[] = "size";
-constexpr char kAttrStatus[] = "status";
-
-// List of values that we interpret in the Omaha response:
-constexpr char kValPostInstall[] = "postinstall";
-constexpr char kValNoUpdate[] = "noupdate";
-
-// updatecheck attributes.
-// Deprecated: "eol"
-constexpr char kAttrEolDate[] = "_eol_date";
-constexpr char kAttrRollback[] = "_rollback";
-constexpr char kAttrFirmwareVersion[] = "_firmware_version";
-constexpr char kAttrKernelVersion[] = "_kernel_version";
-
-// Struct used for holding data obtained when parsing the XML.
-struct OmahaParserData {
-  OmahaParserData(XML_Parser _xml_parser, int _rollback_allowed_milestones)
-      : xml_parser(_xml_parser),
-        rollback_allowed_milestones(_rollback_allowed_milestones) {}
-
-  // Pointer to the expat XML_Parser object.
-  XML_Parser xml_parser;
-
-  // Some values that we need during parsing.
-  int rollback_allowed_milestones;
-
-  // This is the state of the parser as it's processing the XML.
-  bool failed = false;
-  bool entity_decl = false;
-  string current_path;
-
-  // These are the values extracted from the XML.
-  struct DayStart {
-    string elapsed_days;
-    string elapsed_seconds;
-  } daystart;
-
-  struct App {
-    string id;
-    Optional<string> cohort;
-    Optional<string> cohorthint;
-    Optional<string> cohortname;
-
-    struct Url {
-      string codebase;
-    };
-    vector<Url> urls;
-
-    struct Manifest {
-      string version;
-    } manifest;
-
-    struct UpdateCheck {
-      string status;
-      string poll_interval;
-      string eol_date;
-      string rollback;
-      string firmware_version;
-      string kernel_version;
-      string past_firmware_version;
-      string past_kernel_version;
-    } updatecheck;
-
-    struct PostInstallAction {
-      vector<string> is_delta_payloads;
-      vector<string> metadata_signature_rsas;
-      vector<string> metadata_sizes;
-      string max_days_to_scatter;
-      string no_update;
-      string more_info_url;
-      string prompt;
-      string deadline;
-      string disable_p2p_for_downloading;
-      string disable_p2p_for_sharing;
-      string public_key_rsa;
-      string max_failure_count_per_url;
-      string disable_payload_backoff;
-      string powerwash_required;
-      string disable_hash_checks;
-    };
-    Optional<PostInstallAction> postinstall_action;
-
-    struct Package {
-      string name;
-      string size;
-      string hash;
-      string fp;
-    };
-    vector<Package> packages;
-  };
-  vector<App> apps;
-};
-
-namespace {
-
-// Callback function invoked by expat.
-void ParserHandlerStart(void* user_data,
-                        const XML_Char* element,
-                        const XML_Char** attr) {
-  OmahaParserData* data = reinterpret_cast<OmahaParserData*>(user_data);
-
-  if (data->failed)
-    return;
-
-  data->current_path += string("/") + element;
-
-  map<string, string> attrs;
-  if (attr != nullptr) {
-    for (int n = 0; attr[n] != nullptr && attr[n + 1] != nullptr; n += 2) {
-      string key = attr[n];
-      string value = attr[n + 1];
-      attrs[key] = value;
-    }
-  }
-
-  if (data->current_path == "/response/daystart") {
-    data->daystart = {
-        .elapsed_days = attrs[kAttrElapsedDays],
-        .elapsed_seconds = attrs[kAttrElapsedSeconds],
-    };
-  } else if (data->current_path == "/response/app") {
-    data->apps.push_back({.id = attrs[kAttrAppId]});
-    if (attrs.find(kAttrCohort) != attrs.end())
-      data->apps.back().cohort = attrs[kAttrCohort];
-    if (attrs.find(kAttrCohortHint) != attrs.end())
-      data->apps.back().cohorthint = attrs[kAttrCohortHint];
-    if (attrs.find(kAttrCohortName) != attrs.end())
-      data->apps.back().cohortname = attrs[kAttrCohortName];
-  } else if (data->current_path == "/response/app/updatecheck") {
-    data->apps.back().updatecheck = {
-        .status = attrs[kAttrStatus],
-        .poll_interval = attrs[kAttrPollInterval],
-        .eol_date = attrs[kAttrEolDate],
-        .rollback = attrs[kAttrRollback],
-        .firmware_version = attrs[kAttrFirmwareVersion],
-        .kernel_version = attrs[kAttrKernelVersion],
-        .past_firmware_version = attrs[base::StringPrintf(
-            "%s_%i", kAttrFirmwareVersion, data->rollback_allowed_milestones)],
-        .past_kernel_version = attrs[base::StringPrintf(
-            "%s_%i", kAttrKernelVersion, data->rollback_allowed_milestones)],
-    };
-  } else if (data->current_path == "/response/app/updatecheck/urls/url") {
-    data->apps.back().urls.push_back({.codebase = attrs[kAttrCodeBase]});
-  } else if (data->current_path ==
-             "/response/app/updatecheck/manifest/packages/package") {
-    data->apps.back().packages.push_back({
-        .name = attrs[kAttrName],
-        .size = attrs[kAttrSize],
-        .hash = attrs[kAttrHashSha256],
-        .fp = attrs[kAttrFp],
-    });
-  } else if (data->current_path == "/response/app/updatecheck/manifest") {
-    data->apps.back().manifest.version = attrs[kAttrVersion];
-  } else if (data->current_path ==
-             "/response/app/updatecheck/manifest/actions/action") {
-    // We only care about the postinstall action.
-    if (attrs[kAttrEvent] == kValPostInstall) {
-      OmahaParserData::App::PostInstallAction action = {
-          .is_delta_payloads = base::SplitString(attrs[kAttrIsDeltaPayload],
-                                                 ":",
-                                                 base::TRIM_WHITESPACE,
-                                                 base::SPLIT_WANT_ALL),
-          .metadata_signature_rsas =
-              base::SplitString(attrs[kAttrMetadataSignatureRsa],
-                                ":",
-                                base::TRIM_WHITESPACE,
-                                base::SPLIT_WANT_ALL),
-          .metadata_sizes = base::SplitString(attrs[kAttrMetadataSize],
-                                              ":",
-                                              base::TRIM_WHITESPACE,
-                                              base::SPLIT_WANT_ALL),
-          .max_days_to_scatter = attrs[kAttrMaxDaysToScatter],
-          .no_update = attrs[kAttrNoUpdate],
-          .more_info_url = attrs[kAttrMoreInfo],
-          .prompt = attrs[kAttrPrompt],
-          .deadline = attrs[kAttrDeadline],
-          .disable_p2p_for_downloading = attrs[kAttrDisableP2PForDownloading],
-          .disable_p2p_for_sharing = attrs[kAttrDisableP2PForSharing],
-          .public_key_rsa = attrs[kAttrPublicKeyRsa],
-          .max_failure_count_per_url = attrs[kAttrMaxFailureCountPerUrl],
-          .disable_payload_backoff = attrs[kAttrDisablePayloadBackoff],
-          .powerwash_required = attrs[kAttrPowerwash],
-          .disable_hash_checks = attrs[kAttrDisableHashChecks],
-      };
-      data->apps.back().postinstall_action = std::move(action);
-    }
-  }
-}
-
-// Callback function invoked by expat.
-void ParserHandlerEnd(void* user_data, const XML_Char* element) {
-  OmahaParserData* data = reinterpret_cast<OmahaParserData*>(user_data);
-  if (data->failed)
-    return;
-
-  const string path_suffix = string("/") + element;
-
-  if (!base::EndsWith(
-          data->current_path, path_suffix, base::CompareCase::SENSITIVE)) {
-    LOG(ERROR) << "Unexpected end element '" << element
-               << "' with current_path='" << data->current_path << "'";
-    data->failed = true;
-    return;
-  }
-  data->current_path.resize(data->current_path.size() - path_suffix.size());
-}
-
-// Callback function invoked by expat.
-//
-// This is called for entity declarations. Since Omaha is guaranteed
-// to never return any XML with entities our course of action is to
-// just stop parsing. This avoids potential resource exhaustion
-// problems AKA the "billion laughs". CVE-2013-0340.
-void ParserHandlerEntityDecl(void* user_data,
-                             const XML_Char* entity_name,
-                             int is_parameter_entity,
-                             const XML_Char* value,
-                             int value_length,
-                             const XML_Char* base,
-                             const XML_Char* system_id,
-                             const XML_Char* public_id,
-                             const XML_Char* notation_name) {
-  OmahaParserData* data = reinterpret_cast<OmahaParserData*>(user_data);
-
-  LOG(ERROR) << "XML entities are not supported. Aborting parsing.";
-  data->failed = true;
-  data->entity_decl = true;
-  XML_StopParser(data->xml_parser, false);
-}
-
-}  // namespace
 
 OmahaRequestAction::OmahaRequestAction(
     OmahaEvent* event,
@@ -997,35 +721,17 @@ void OmahaRequestAction::TransferComplete(HttpFetcher* fetcher,
     return;
   }
 
-  XML_Parser parser = XML_ParserCreate(nullptr);
-  OmahaParserData parser_data(
-      parser,
+  OmahaParserData parser_data;
+  OmahaParserXml parser(
+      &parser_data,
+      reinterpret_cast<const char*>(response_buffer_.data()),
+      response_buffer_.size(),
       SystemState::Get()->request_params()->rollback_allowed_milestones());
-  XML_SetUserData(parser, &parser_data);
-  XML_SetElementHandler(parser, ParserHandlerStart, ParserHandlerEnd);
-  XML_SetEntityDeclHandler(parser, ParserHandlerEntityDecl);
-  XML_Status res =
-      XML_Parse(parser,
-                reinterpret_cast<const char*>(response_buffer_.data()),
-                response_buffer_.size(),
-                XML_TRUE);
-
-  if (res != XML_STATUS_OK || parser_data.failed) {
-    LOG(ERROR) << "Omaha response not valid XML: "
-               << XML_ErrorString(XML_GetErrorCode(parser)) << " at line "
-               << XML_GetCurrentLineNumber(parser) << " col "
-               << XML_GetCurrentColumnNumber(parser);
-    XML_ParserFree(parser);
-    ErrorCode error_code = ErrorCode::kOmahaRequestXMLParseError;
-    if (response_buffer_.empty()) {
-      error_code = ErrorCode::kOmahaRequestEmptyResponseError;
-    } else if (parser_data.entity_decl) {
-      error_code = ErrorCode::kOmahaRequestXMLHasEntityDecl;
-    }
+  ErrorCode error_code;
+  if (!parser.Parse(&error_code)) {
     completer.set_code(error_code);
     return;
   }
-  XML_ParserFree(parser);
 
   // Update the last ping day preferences based on the server daystart response
   // even if we didn't send a ping. Omaha always includes the daystart in the
