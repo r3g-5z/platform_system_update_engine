@@ -54,13 +54,11 @@ struct InstallPlan {
   bool is_resume{false};
   std::string download_url;  // url to download from
   std::string version;       // version we are installing.
-  // system version, if present and separate from version
-  std::string system_version;
 
   struct Payload {
     std::vector<std::string> payload_urls;  // URLs to download the payload
-    uint64_t size = 0;               // size of the payload
-    uint64_t metadata_size = 0;      // size of the metadata
+    uint64_t size = 0;                      // size of the payload
+    uint64_t metadata_size = 0;             // size of the metadata
     std::string metadata_signature;  // signature of the metadata in base64
     brillo::Blob hash;               // SHA256 hash of the payload
     InstallPayloadType type{InstallPayloadType::kUnknown};
@@ -100,9 +98,17 @@ struct InstallPlan {
     uint64_t source_size{0};
     brillo::Blob source_hash;
 
+    // |target_path| is intended to be a path to block device, which you can
+    // open with |open| syscall and perform regular unix style read/write.
+    // For VABC, this will be empty. As you can't read/write VABC devices with
+    // regular syscall.
     std::string target_path;
+    // |mountable_target_device| is intended to be a path to block device which
+    // can be used for mounting this block device's underlying filesystem.
+    std::string postinstall_mount_device;
     uint64_t target_size{0};
     brillo::Blob target_hash;
+
     uint32_t block_size{0};
 
     // Whether we should run the postinstall script from this partition and the

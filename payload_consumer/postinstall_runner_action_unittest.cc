@@ -26,9 +26,14 @@
 
 #include <base/bind.h>
 #include <base/files/file_util.h>
+#if BASE_VER < 780000  // Android
 #include <base/message_loop/message_loop.h>
+#endif  // BASE_VER < 780000
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#if BASE_VER >= 780000  // CrOS
+#include <base/task/single_thread_task_executor.h>
+#endif  // BASE_VER >= 780000
 #include <brillo/message_loops/base_message_loop.h>
 #include <brillo/message_loops/message_loop_utils.h>
 #include <gmock/gmock.h>
@@ -40,7 +45,7 @@
 #include "update_engine/common/subprocess.h"
 #include "update_engine/common/test_utils.h"
 #include "update_engine/common/utils.h"
-#include "update_engine/mock_payload_state.h"
+#include "update_engine/cros/mock_payload_state.h"
 
 using brillo::MessageLoop;
 using chromeos_update_engine::test_utils::ScopedLoopbackDeviceBinder;
@@ -156,8 +161,13 @@ class PostinstallRunnerActionTest : public ::testing::Test {
   }
 
  protected:
+#if BASE_VER < 780000  // Android
   base::MessageLoopForIO base_loop_;
   brillo::BaseMessageLoop loop_{&base_loop_};
+#else   // CrOS
+  base::SingleThreadTaskExecutor base_loop_{base::MessagePumpType::IO};
+  brillo::BaseMessageLoop loop_{base_loop_.task_runner()};
+#endif  // BASE_VER < 780000
   brillo::AsynchronousSignalHandler async_signal_handler_;
   Subprocess subprocess_;
 
@@ -185,6 +195,7 @@ void PostinstallRunnerActionTest::RunPostinstallAction(
   InstallPlan::Partition part;
   part.name = "part";
   part.target_path = device_path;
+  part.postinstall_mount_device = device_path;
   part.run_postinstall = true;
   part.postinstall_path = postinstall_program;
   InstallPlan install_plan;
@@ -346,6 +357,7 @@ TEST_F(PostinstallRunnerActionTest, RunAsRootSkipOptionalPostinstallTest) {
   InstallPlan::Partition part;
   part.name = "part";
   part.target_path = "/dev/null";
+  part.postinstall_mount_device = "/dev/null";
   part.run_postinstall = true;
   part.postinstall_path = kPostinstallDefaultScript;
   part.postinstall_optional = true;

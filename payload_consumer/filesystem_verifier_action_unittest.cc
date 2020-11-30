@@ -72,7 +72,7 @@ class FilesystemVerifierActionTestDelegate : public ActionProcessorDelegate {
     if (action->Type() == FilesystemVerifierAction::StaticType()) {
       ran_ = true;
       code_ = code;
-      EXPECT_FALSE(static_cast<FilesystemVerifierAction*>(action)->src_stream_);
+      EXPECT_FALSE(static_cast<FilesystemVerifierAction*>(action)->read_fd_);
     } else if (action->Type() ==
                ObjectCollectorAction<InstallPlan>::StaticType()) {
       auto collector_action =
@@ -92,7 +92,7 @@ class FilesystemVerifierActionTestDelegate : public ActionProcessorDelegate {
 
 bool FilesystemVerifierActionTest::DoTest(bool terminate_early,
                                           bool hash_fail) {
-  test_utils::ScopedTempFile a_loop_file("a_loop_file.XXXXXX");
+  ScopedTempFile a_loop_file("a_loop_file.XXXXXX");
 
   // Make random data for a.
   const size_t kLoopFileSize = 10 * 1024 * 1024 + 512;
@@ -278,7 +278,7 @@ TEST_F(FilesystemVerifierActionTest, RunAsRootTerminateEarlyTest) {
 
 #ifdef __ANDROID__
 TEST_F(FilesystemVerifierActionTest, RunAsRootWriteVerityTest) {
-  test_utils::ScopedTempFile part_file("part_file.XXXXXX");
+  ScopedTempFile part_file("part_file.XXXXXX");
   constexpr size_t filesystem_size = 200 * 4096;
   constexpr size_t part_size = 256 * 4096;
   brillo::Blob part_data(filesystem_size, 0x1);
@@ -340,7 +340,7 @@ TEST_F(FilesystemVerifierActionTest, RunAsRootWriteVerityTest) {
 #endif  // __ANDROID__
 
 TEST_F(FilesystemVerifierActionTest, RunAsRootSkipWriteVerityTest) {
-  test_utils::ScopedTempFile part_file("part_file.XXXXXX");
+  ScopedTempFile part_file("part_file.XXXXXX");
   constexpr size_t filesystem_size = 200 * 4096;
   constexpr size_t part_size = 256 * 4096;
   brillo::Blob part_data(part_size);
@@ -384,4 +384,5 @@ TEST_F(FilesystemVerifierActionTest, RunAsRootSkipWriteVerityTest) {
   EXPECT_TRUE(delegate.ran());
   EXPECT_EQ(ErrorCode::kSuccess, delegate.code());
 }
+
 }  // namespace chromeos_update_engine

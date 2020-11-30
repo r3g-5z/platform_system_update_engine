@@ -31,6 +31,7 @@ class DynamicPartitionControlStub : public DynamicPartitionControlInterface {
  public:
   FeatureFlag GetDynamicPartitionsFeatureFlag() override;
   FeatureFlag GetVirtualAbFeatureFlag() override;
+  FeatureFlag GetVirtualAbCompressionFeatureFlag() override;
   bool OptimizeOperation(const std::string& partition_name,
                          const InstallOperation& operation,
                          InstallOperation* optimized) override;
@@ -56,8 +57,20 @@ class DynamicPartitionControlStub : public DynamicPartitionControlInterface {
       uint32_t source_slot,
       uint32_t target_slot,
       const std::vector<std::string>& partitions) override;
-};
 
+  std::unique_ptr<android::snapshot::ISnapshotWriter> OpenCowWriter(
+      const std::string& unsuffixed_partition_name,
+      const std::optional<std::string>&,
+      bool is_append) override;
+  FileDescriptorPtr OpenCowReader(const std::string& unsuffixed_partition_name,
+                                  const std::optional<std::string>&,
+                                  bool is_append = false) override;
+
+  bool MapAllPartitions() override;
+  bool UnmapAllPartitions() override;
+
+  bool IsDynamicPartition(const std::string& part_name) override;
+};
 }  // namespace chromeos_update_engine
 
 #endif  // UPDATE_ENGINE_COMMON_DYNAMIC_PARTITION_CONTROL_STUB_H_

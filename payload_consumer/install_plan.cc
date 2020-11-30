@@ -82,11 +82,6 @@ void InstallPlan::Dump() const {
   }
 
   string version_str = base::StringPrintf(", version: %s", version.c_str());
-  if (!system_version.empty()) {
-    version_str +=
-        base::StringPrintf(", system_version: %s", system_version.c_str());
-  }
-
   string url_str = download_url;
   if (base::StartsWith(
           url_str, "fd://", base::CompareCase::INSENSITIVE_ASCII)) {
@@ -98,8 +93,8 @@ void InstallPlan::Dump() const {
             << version_str
             << ", source_slot: " << BootControlInterface::SlotName(source_slot)
             << ", target_slot: " << BootControlInterface::SlotName(target_slot)
-            << ", initial url: " << url_str << payloads_str
-            << partitions_str << ", hash_checks_mandatory: "
+            << ", initial url: " << url_str << payloads_str << partitions_str
+            << ", hash_checks_mandatory: "
             << utils::ToString(hash_checks_mandatory)
             << ", powerwash_required: " << utils::ToString(powerwash_required)
             << ", switch_slot_on_reboot: "
@@ -114,18 +109,19 @@ bool InstallPlan::LoadPartitionsFromSlots(BootControlInterface* boot_control) {
   for (Partition& partition : partitions) {
     if (source_slot != BootControlInterface::kInvalidSlot &&
         partition.source_size > 0) {
-      result = boot_control->GetPartitionDevice(
-                   partition.name, source_slot, &partition.source_path) &&
-               result;
+      TEST_AND_RETURN_FALSE(boot_control->GetPartitionDevice(
+          partition.name, source_slot, &partition.source_path));
     } else {
       partition.source_path.clear();
     }
 
     if (target_slot != BootControlInterface::kInvalidSlot &&
         partition.target_size > 0) {
-      result = boot_control->GetPartitionDevice(
-                   partition.name, target_slot, &partition.target_path) &&
-               result;
+      auto device = boot_control->GetPartitionDevice(
+          partition.name, target_slot, source_slot);
+      TEST_AND_RETURN_FALSE(device.has_value());
+      partition.target_path = device->rw_device_path;
+      partition.postinstall_mount_device = device->mountable_device_path;
     } else {
       partition.target_path.clear();
     }
