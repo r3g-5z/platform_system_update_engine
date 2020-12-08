@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-#include "update_engine/common/download_action.h"
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -38,6 +36,7 @@
 #include "update_engine/common/mock_http_fetcher.h"
 #include "update_engine/common/test_utils.h"
 #include "update_engine/common/utils.h"
+#include "update_engine/cros/download_action_chromeos.h"
 #include "update_engine/cros/fake_p2p_manager_configuration.h"
 #include "update_engine/cros/fake_system_state.h"
 #include "update_engine/payload_consumer/mock_file_writer.h"
@@ -56,7 +55,7 @@ using testing::InSequence;
 using testing::Return;
 using testing::SetArgPointee;
 
-class DownloadActionTest : public ::testing::Test {
+class DownloadActionChromeosTest : public ::testing::Test {
   void SetUp() { FakeSystemState::CreateInstance(); }
 };
 
@@ -87,9 +86,10 @@ class DownloadActionTestProcessorDelegate : public ActionProcessorDelegate {
                        AbstractAction* action,
                        ErrorCode code) override {
     const string type = action->Type();
-    if (type == DownloadAction::StaticType()) {
+    if (type == DownloadActionChromeos::StaticType()) {
       EXPECT_EQ(expected_code_, code);
-      p2p_file_id_ = static_cast<DownloadAction*>(action)->p2p_file_id();
+      p2p_file_id_ =
+          static_cast<DownloadActionChromeos*>(action)->p2p_file_id();
     } else {
       EXPECT_EQ(ErrorCode::kSuccess, code);
     }
@@ -160,12 +160,12 @@ void TestWithData(const brillo::Blob& data,
   MockHttpFetcher* http_fetcher =
       new MockHttpFetcher(data.data(), data.size(), nullptr);
   // takes ownership of passed in HttpFetcher
-  auto download_action =
-      std::make_unique<DownloadAction>(&prefs,
-                                       FakeSystemState::Get()->boot_control(),
-                                       FakeSystemState::Get()->hardware(),
-                                       http_fetcher,
-                                       false /* interactive */);
+  auto download_action = std::make_unique<DownloadActionChromeos>(
+      &prefs,
+      FakeSystemState::Get()->boot_control(),
+      FakeSystemState::Get()->hardware(),
+      http_fetcher,
+      false /* interactive */);
   download_action->SetTestFileWriter(&writer);
   BondActions(feeder_action.get(), download_action.get());
   MockDownloadActionDelegate download_delegate;
@@ -274,12 +274,12 @@ TEST(DownloadActionTest, MultiPayloadProgressTest) {
   MockHttpFetcher* http_fetcher = new MockHttpFetcher(
       payload_datas[0].data(), payload_datas[0].size(), nullptr);
   // takes ownership of passed in HttpFetcher
-  auto download_action =
-      std::make_unique<DownloadAction>(&prefs,
-                                       FakeSystemState::Get()->boot_control(),
-                                       FakeSystemState::Get()->hardware(),
-                                       http_fetcher,
-                                       false /* interactive */);
+  auto download_action = std::make_unique<DownloadActionChromeos>(
+      &prefs,
+      FakeSystemState::Get()->boot_control(),
+      FakeSystemState::Get()->hardware(),
+      http_fetcher,
+      false /* interactive */);
   download_action->SetTestFileWriter(&mock_file_writer);
   BondActions(feeder_action.get(), download_action.get());
   MockDownloadActionDelegate download_delegate;
@@ -363,7 +363,7 @@ void TestTerminateEarly(bool use_download_delegate) {
     feeder_action->set_obj(install_plan);
 
     MockPrefs prefs;
-    auto download_action = std::make_unique<DownloadAction>(
+    auto download_action = std::make_unique<DownloadActionChromeos>(
         &prefs,
         FakeSystemState::Get()->boot_control(),
         FakeSystemState::Get()->hardware(),
@@ -474,12 +474,12 @@ TEST(DownloadActionTest, PassObjectOutTest) {
   auto feeder_action = std::make_unique<ObjectFeederAction<InstallPlan>>();
   feeder_action->set_obj(install_plan);
   MockPrefs prefs;
-  auto download_action =
-      std::make_unique<DownloadAction>(&prefs,
-                                       FakeSystemState::Get()->boot_control(),
-                                       FakeSystemState::Get()->hardware(),
-                                       new MockHttpFetcher("x", 1, nullptr),
-                                       false /* interactive */);
+  auto download_action = std::make_unique<DownloadActionChromeos>(
+      &prefs,
+      FakeSystemState::Get()->boot_control(),
+      FakeSystemState::Get()->hardware(),
+      new MockHttpFetcher("x", 1, nullptr),
+      false /* interactive */);
   download_action->SetTestFileWriter(&writer);
 
   auto test_action = std::make_unique<DownloadActionTestAction>();
@@ -532,11 +532,8 @@ class P2PDownloadActionTest : public testing::Test {
 
     // Setup p2p.
     FakeP2PManagerConfiguration* test_conf = new FakeP2PManagerConfiguration();
-    p2p_manager_.reset(P2PManager::Construct(test_conf,
-                                             &fake_um_,
-                                             "cros_au",
-                                             3,
-                                             base::TimeDelta::FromDays(5)));
+    p2p_manager_.reset(P2PManager::Construct(
+        test_conf, &fake_um_, "cros_au", 3, base::TimeDelta::FromDays(5)));
     FakeSystemState::Get()->set_p2p_manager(p2p_manager_.get());
   }
 
@@ -559,8 +556,9 @@ class P2PDownloadActionTest : public testing::Test {
     auto feeder_action = std::make_unique<ObjectFeederAction<InstallPlan>>();
     feeder_action->set_obj(install_plan);
     MockPrefs prefs;
-    // Note that DownloadAction takes ownership of the passed in HttpFetcher.
-    auto download_action = std::make_unique<DownloadAction>(
+    // Note that DownloadActionChromeos takes ownership of the passed in
+    // HttpFetcher.
+    auto download_action = std::make_unique<DownloadActionChromeos>(
         &prefs,
         FakeSystemState::Get()->boot_control(),
         FakeSystemState::Get()->hardware(),
