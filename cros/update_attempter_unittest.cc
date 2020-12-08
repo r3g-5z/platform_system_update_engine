@@ -94,13 +94,12 @@ namespace chromeos_update_engine {
 
 namespace {
 
-const UpdateStatus kNonIdleUpdateStatuses[] = {
+const UpdateStatus kNonIdleOrRebootUpdateStatuses[] = {
     UpdateStatus::CHECKING_FOR_UPDATE,
     UpdateStatus::UPDATE_AVAILABLE,
     UpdateStatus::DOWNLOADING,
     UpdateStatus::VERIFYING,
     UpdateStatus::FINALIZING,
-    UpdateStatus::UPDATED_NEED_REBOOT,
     UpdateStatus::REPORTING_ERROR_EVENT,
     UpdateStatus::ATTEMPTING_ROLLBACK,
     UpdateStatus::DISABLED,
@@ -512,6 +511,27 @@ TEST_F(UpdateAttempterTest, ActionCompletedErrorTest) {
   attempter_.status_ = UpdateStatus::DOWNLOADING;
   attempter_.ActionCompleted(nullptr, &action, ErrorCode::kError);
   ASSERT_NE(nullptr, attempter_.error_event_.get());
+}
+
+TEST_F(UpdateAttempterTest, ActionCompletedGeneralErrorResetTest) {
+  MockAction action;
+  EXPECT_CALL(action, Type()).WillRepeatedly(Return("MockAction"));
+  // Set boot time.
+  FakeClock fake_clock;
+  fake_clock.SetBootTime(Time::FromTimeT(101));
+  FakeSystemState::Get()->set_clock(&fake_clock);
+  FakePrefs fake_prefs;
+  FakeSystemState::Get()->set_prefs(&fake_prefs);
+  attempter_.allow_repeated_updates_ = true;
+  attempter_.Init();
+  attempter_.WriteUpdateCompletedMarker();
+  // Still awaiting reboot.
+  EXPECT_TRUE(attempter_.GetBootTimeAtUpdate(nullptr));
+
+  attempter_.status_ = UpdateStatus::UPDATE_AVAILABLE;
+  attempter_.ActionCompleted(nullptr, &action, ErrorCode::kError);
+  // If still awaiting reboot and update fails, reset state.
+  EXPECT_EQ(UpdateStatus::UPDATED_NEED_REBOOT, attempter_.status());
 }
 
 TEST_F(UpdateAttempterTest, DownloadProgressAccumulationTest) {
@@ -1396,16 +1416,19 @@ TEST_F(UpdateAttempterTest, AnyUpdateSourceDisallowedOfficialNormal) {
 // TODO(kimjae): Follow testing pattern with params for |CheckForInstall()|.
 // When adding, remove older tests related to |CheckForInstall()|.
 TEST_F(UpdateAttempterTest, CheckForInstallNotIdleFails) {
-  for (const auto status : kNonIdleUpdateStatuses) {
+  for (const auto status : kNonIdleOrRebootUpdateStatuses) {
     // GIVEN a non-idle status.
     attempter_.status_ = status;
 
     EXPECT_FALSE(attempter_.CheckForInstall({}, ""));
   }
+  // Installing not allowed when waiting for reboot.
+  attempter_.status_ = UpdateStatus::UPDATED_NEED_REBOOT;
+  EXPECT_FALSE(attempter_.CheckForInstall({}, ""));
 }
 
 TEST_F(UpdateAttempterTest, CheckForUpdateNotIdleFails) {
-  for (const auto status : kNonIdleUpdateStatuses) {
+  for (const auto status : kNonIdleOrRebootUpdateStatuses) {
     // GIVEN a non-idle status.
     cfu_params_.status = status;
 
@@ -2315,6 +2338,7 @@ TEST_F(UpdateAttempterTest, CalculateDlcParamsNoPrefFilesTest) {
   EXPECT_EQ(0, dlc_app_params.ping_active);
   EXPECT_EQ(-1, dlc_app_params.ping_date_last_active);
   EXPECT_EQ(-1, dlc_app_params.ping_date_last_rollcall);
+  EXPECT_EQ("", dlc_app_params.last_fp);
 }
 
 TEST_F(UpdateAttempterTest, CalculateDlcParamsNonParseableValuesTest) {
@@ -2363,10 +2387,13 @@ TEST_F(UpdateAttempterTest, CalculateDlcParamsValidValuesTest) {
       {kDlcPrefsSubDir, dlc_id, kPrefsPingLastActive});
   auto last_rollcall_key = PrefsInterface::CreateSubKey(
       {kDlcPrefsSubDir, dlc_id, kPrefsPingLastRollcall});
+  auto last_fp_key =
+      PrefsInterface::CreateSubKey({kDlcPrefsSubDir, dlc_id, kPrefsLastFp});
 
   FakeSystemState::Get()->prefs()->SetInt64(active_key, 1);
   FakeSystemState::Get()->prefs()->SetInt64(last_active_key, 78);
   FakeSystemState::Get()->prefs()->SetInt64(last_rollcall_key, 99);
+  FakeSystemState::Get()->prefs()->SetString(last_fp_key, "3.75");
   attempter_.is_install_ = false;
   attempter_.CalculateDlcParams();
 
@@ -2380,6 +2407,7 @@ TEST_F(UpdateAttempterTest, CalculateDlcParamsValidValuesTest) {
   EXPECT_EQ(1, dlc_app_params.ping_active);
   EXPECT_EQ(78, dlc_app_params.ping_date_last_active);
   EXPECT_EQ(99, dlc_app_params.ping_date_last_rollcall);
+  EXPECT_EQ("3.75", dlc_app_params.last_fp);
 }
 
 TEST_F(UpdateAttempterTest, CalculateDlcParamsRemoveStaleMetadata) {

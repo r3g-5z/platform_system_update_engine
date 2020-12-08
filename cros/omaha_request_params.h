@@ -29,6 +29,7 @@
 
 #include "update_engine/common/constants.h"
 #include "update_engine/common/platform_constants.h"
+#include "update_engine/common/prefs.h"
 #include "update_engine/cros/image_properties.h"
 #include "update_engine/update_manager/policy.h"
 
@@ -76,6 +77,9 @@ class OmahaRequestParams {
     // |updated| is only used for DLCs to decide sending DBus message to
     // dlcservice on an install/update completion.
     bool updated = true;
+    // |last_fp| is used for DLCs to store the fingerprint value of previous
+    // update.
+    std::string last_fp;
   };
 
   // Setters and getters for the various properties.
@@ -140,6 +144,10 @@ class OmahaRequestParams {
   inline std::string lts_tag() const { return lts_tag_; }
 
   inline void set_lts_tag(const std::string& hint) { lts_tag_ = hint; }
+
+  inline std::string last_fp() const { return last_fp_; }
+
+  inline void set_last_fp(const std::string& last_fp) { last_fp_ = last_fp; }
 
   inline void set_rollback_allowed(bool rollback_allowed) {
     rollback_allowed_ = rollback_allowed;
@@ -353,6 +361,10 @@ class OmahaRequestParams {
   //   in which case, we'd detect elsewhere that the target channel has been
   //   changed and cancel the current download attempt.
   std::string download_channel_;
+
+  // The value defining the OS fingerprint of the previous update. Empty
+  // otherwise.
+  std::string last_fp_;
 
   // The value defining the parameters of the LTS (Long Term Support).
   std::string lts_tag_;

@@ -148,6 +148,7 @@ void OmahaParserXml::ParserHandlerStart(void* user_data,
           .disable_payload_backoff = attrs[kAttrDisablePayloadBackoff],
           .powerwash_required = attrs[kAttrPowerwash],
           .disable_hash_checks = attrs[kAttrDisableHashChecks],
+          .disable_repeated_updates = attrs[kAttrDisableRepeatedUpdates],
       };
       data->apps.back().postinstall_action = std::move(action);
     }

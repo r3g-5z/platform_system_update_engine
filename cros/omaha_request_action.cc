@@ -621,6 +621,8 @@ bool OmahaRequestAction::ParseParams(ScopedActionCompleter* completer) {
       ParseBool(app.postinstall_action->disable_p2p_for_sharing);
   response_.disable_hash_checks =
       ParseBool(app.postinstall_action->disable_hash_checks);
+  response_.disable_repeated_updates =
+      ParseBool(app.postinstall_action->disable_repeated_updates);
   response_.public_key_rsa = app.postinstall_action->public_key_rsa;
 
   if (!base::StringToUint(app.postinstall_action->max_failure_count_per_url,

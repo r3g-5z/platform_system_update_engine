@@ -117,6 +117,22 @@ TEST_F(OmahaRequestBuilderXmlTest, PlatformGetAppTest) {
   EXPECT_NE(string::npos, app.find("requisition="));
 }
 
+TEST_F(OmahaRequestBuilderXmlTest, GetLastFpTest) {
+  params_.set_device_requisition("device requisition");
+  params_.set_last_fp("1.75");
+  FakeSystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
+  OmahaRequestBuilderXml omaha_request{nullptr, false, false, 0, 0, 0, ""};
+  OmahaAppData dlc_app_data = {.id = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+                               .version = "",
+                               .skip_update = false,
+                               .is_dlc = false};
+
+  // Verify that the attributes that shouldn't be missing for Platform AppID are
+  // in fact present in the <app ...></app>.
+  const string app = omaha_request.GetApp(dlc_app_data);
+  EXPECT_NE(string::npos, app.find("last_fp=\"1.75\""));
+}
+
 TEST_F(OmahaRequestBuilderXmlTest, DlcGetAppTest) {
   params_.set_device_requisition("device requisition");
   OmahaRequestBuilderXml omaha_request{nullptr,
@@ -292,6 +308,16 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlDlcPingRollCallAndActive) {
   EXPECT_EQ(1,
             CountSubstringInString(request_xml,
                                    "<ping active=\"1\" ad=\"25\" rd=\"36\""))
+      << request_xml;
+}
+
+TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlDlcFp) {
+  FakeSystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
+  params_.set_dlc_apps_params({{params_.GetDlcAppId("dlc_no_0"),
+                                {.name = "dlc_no_0", .last_fp = "1.1"}}});
+  OmahaRequestBuilderXml omaha_request{nullptr, false, false, 0, 0, 0, ""};
+  const string request_xml = omaha_request.GetRequest();
+  EXPECT_EQ(1, CountSubstringInString(request_xml, "last_fp=\"1.1\""))
       << request_xml;
 }
 

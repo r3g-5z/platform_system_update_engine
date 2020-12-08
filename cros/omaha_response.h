@@ -87,6 +87,9 @@ struct OmahaResponse {
   // True if the Omaha rule instructs us to powerwash.
   bool powerwash_required = false;
 
+  // Whether we continue checking for updates.
+  bool disable_repeated_updates = false;
+
   // If not blank, a base-64 encoded representation of the PEM-encoded
   // public key in the response.
   std::string public_key_rsa;

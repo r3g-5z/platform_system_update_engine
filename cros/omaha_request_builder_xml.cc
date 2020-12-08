@@ -31,6 +31,7 @@
 #include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/cros/omaha_request_params.h"
+#include "update_engine/cros/update_attempter.h"
 
 using std::string;
 
@@ -143,6 +144,7 @@ string OmahaRequestBuilderXml::GetAppBody(const OmahaAppData& app_data) const {
       }
     }
     if (!ping_only_) {
+      auto* prefs = SystemState::Get()->prefs();
       if (!app_data.skip_update) {
         const auto* params = SystemState::Get()->request_params();
         app_body += "        <updatecheck";
@@ -160,6 +162,18 @@ string OmahaRequestBuilderXml::GetAppBody(const OmahaAppData& app_data) const {
               " ltstag=\"%s\"",
               XmlEncodeWithDefault(params->lts_tag()).c_str());
         }
+        // If allowing repeated update checks, send fp value of the last update.
+        if (SystemState::Get()
+                ->update_attempter()
+                ->IsRepeatedUpdatesEnabled()) {
+          string last_fp =
+              app_data.is_dlc ? app_data.app_params.last_fp : params->last_fp();
+
+          if (!last_fp.empty()) {
+            app_body += base::StringPrintf(
+                " last_fp=\"%s\"", XmlEncodeWithDefault(last_fp).c_str());
+          }
+        }
         app_body += "></updatecheck>\n";
       }
 
@@ -171,7 +185,6 @@ string OmahaRequestBuilderXml::GetAppBody(const OmahaAppData& app_data) const {
       // for ping-only requests because they come before the client has
       // rebooted. The previous version event is also not sent if it was already
       // sent for this new version with a previous updatecheck.
-      auto* prefs = SystemState::Get()->prefs();
       string prev_version;
       if (!prefs->GetString(kPrefsPreviousVersion, &prev_version)) {
         prev_version = kNoVersion;

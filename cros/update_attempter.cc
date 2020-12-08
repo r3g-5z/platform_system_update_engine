@@ -279,23 +279,33 @@ void UpdateAttempter::Update(const UpdateCheckParams& params) {
   CheckAndReportDailyMetrics();
 
   fake_update_success_ = false;
-  if (status_ == UpdateStatus::UPDATED_NEED_REBOOT) {
-    // Although we have applied an update, we still want to ping Omaha
-    // to ensure the number of active statistics is accurate.
-    //
-    // Also convey to the UpdateEngine.Check.Result metric that we're
-    // not performing an update check because of this.
-    LOG(INFO) << "Not updating b/c we already updated and we're waiting for "
-              << "reboot, we'll ping Omaha instead";
-    SystemState::Get()->metrics_reporter()->ReportUpdateCheckMetrics(
-        metrics::CheckResult::kRebootPending,
-        metrics::CheckReaction::kUnset,
-        metrics::DownloadErrorCode::kUnset);
-    PingOmaha();
-    return;
+  // Get repeated updates feature status if it exists.
+  if (!SystemState::Get()->prefs()->GetBoolean(kPrefsAllowRepeatedUpdates,
+                                               &allow_repeated_updates_)) {
+    allow_repeated_updates_ = false;
+    LOG(WARNING)
+        << "Unable to get RepeatedUpdates feature value, defaulting to false.";
   }
-  if (status_ != UpdateStatus::IDLE) {
-    // Update in progress. Do nothing
+  if (status_ == UpdateStatus::UPDATED_NEED_REBOOT) {
+    if (!allow_repeated_updates_) {
+      // Although we have applied an update, we still want to ping Omaha
+      // to ensure the number of active statistics is accurate.
+      //
+      // Also convey to the UpdateEngine.Check.Result metric that we're
+      // not performing an update check because of this.
+      LOG(INFO) << "Not updating b/c we already updated and we're waiting for "
+                << "reboot, we'll ping Omaha instead";
+      SystemState::Get()->metrics_reporter()->ReportUpdateCheckMetrics(
+          metrics::CheckResult::kRebootPending,
+          metrics::CheckReaction::kUnset,
+          metrics::DownloadErrorCode::kUnset);
+      PingOmaha();
+      return;
+    }
+    LOG(INFO) << "Already updated but checking to see if there are more recent "
+                 "updates available.";
+  } else if (status_ != UpdateStatus::IDLE) {
+    // Update in progress. Do nothing.
     return;
   }
 
@@ -724,6 +734,10 @@ void UpdateAttempter::CalculateDlcParams() {
       dlc_params.ping_date_last_rollcall =
           GetPingMetadata(ping_last_rollcall_key);
 
+      auto dlc_fp_key =
+          prefs_->CreateSubKey({kDlcPrefsSubDir, dlc_id, kPrefsLastFp});
+      prefs_->GetString(dlc_fp_key, &dlc_params.last_fp);
+
       dlc_params.send_ping = true;
     }
     dlc_apps_params[omaha_request_params_->GetDlcAppId(dlc_id)] = dlc_params;
@@ -910,7 +924,8 @@ BootControlInterface::Slot UpdateAttempter::GetRollbackSlot() const {
 bool UpdateAttempter::CheckForUpdate(const string& app_version,
                                      const string& omaha_url,
                                      UpdateAttemptFlags flags) {
-  if (status_ != UpdateStatus::IDLE) {
+  if (status_ != UpdateStatus::IDLE &&
+      status_ != UpdateStatus::UPDATED_NEED_REBOOT) {
     LOG(INFO) << "Refusing to do an update as there is an "
               << (is_install_ ? "install" : "update")
               << " already in progress.";
@@ -1320,6 +1335,10 @@ void UpdateAttempter::ActionCompleted(ActionProcessor* processor,
         case UpdateStatus::CHECKING_FOR_UPDATE:
         case UpdateStatus::UPDATE_AVAILABLE:
         case UpdateStatus::NEED_PERMISSION_TO_UPDATE:
+          // Errored out before partition marked unbootable.
+          // If there was a previous valid update. Reset status to NEED_REBOOT.
+          if (allow_repeated_updates_ && GetBootTimeAtUpdate(nullptr))
+            status_ = UpdateStatus::UPDATED_NEED_REBOOT;
           break;
         case UpdateStatus::DOWNLOADING:
         case UpdateStatus::VERIFYING:
@@ -1832,6 +1851,7 @@ bool UpdateAttempter::IsAnyUpdateSourceAllowed() const {
 }
 
 bool UpdateAttempter::ChangeRepeatedUpdates(bool enable) {
+  allow_repeated_updates_ = enable;
   if (!enable &&
       SystemState::Get()->prefs()->Delete(kPrefsAllowRepeatedUpdates)) {
     return true;

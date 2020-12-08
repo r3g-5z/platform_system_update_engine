@@ -32,6 +32,7 @@
 #include "update_engine/cros/connection_manager_interface.h"
 #include "update_engine/cros/omaha_request_params.h"
 #include "update_engine/cros/payload_state_interface.h"
+#include "update_engine/cros/update_attempter.h"
 #include "update_engine/payload_consumer/delta_performer.h"
 #include "update_engine/update_manager/policy.h"
 #include "update_engine/update_manager/update_manager.h"
@@ -119,6 +120,11 @@ void OmahaResponseHandlerAction::PerformAction() {
 
   install_plan_.signature_checks_mandatory =
       AreSignatureChecksMandatory(response);
+
+  if (response.disable_repeated_updates) {
+    SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(false);
+    LOG(INFO) << "Turned off repeated updates checks per Omaha request.";
+  }
 
   install_plan_.is_resume = DeltaPerformer::CanResumeUpdate(
       SystemState::Get()->prefs(), update_check_response_hash);

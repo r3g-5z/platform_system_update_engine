@@ -181,6 +181,8 @@ struct FakeUpdateResponse {
            (disable_p2p_for_sharing ? "DisableP2PForSharing=\"true\" " : "") +
            (disable_hash_checks ? "DisableHashChecks=\"true\" " : "") +
            (powerwash ? "Powerwash=\"true\" " : "") +
+           (disable_repeated_updates ? " DisableRepeatedUpdates=\"true\" "
+                                     : "") +
            "/></actions></manifest></updatecheck></app>" +
            (multi_app
                 ? "<app appid=\"" + app_id2 + "\"" +
@@ -263,6 +265,7 @@ struct FakeUpdateResponse {
   bool disable_p2p_for_sharing = false;
   // Hash checks default to allowed.
   bool disable_hash_checks = false;
+  bool disable_repeated_updates = false;
 
   bool powerwash = false;
 
@@ -681,6 +684,7 @@ TEST_F(OmahaRequestActionTest, ValidUpdateTest) {
   EXPECT_EQ(fake_update_response_.deadline, response_.deadline);
   EXPECT_FALSE(response_.powerwash_required);
   EXPECT_FALSE(response_.disable_hash_checks);
+  EXPECT_FALSE(response_.disable_repeated_updates);
   // Omaha cohort attributes are not set in the response, so they should not be
   // persisted.
   EXPECT_FALSE(fake_prefs_->Exists(kPrefsOmahaCohort));
@@ -2810,6 +2814,14 @@ TEST_F(OmahaRequestActionTest, RollbackResponseValidVersionsParsed) {
   EXPECT_EQ(2, response_.rollback_key_version.firmware);
   EXPECT_EQ(3, response_.rollback_key_version.kernel_key);
   EXPECT_EQ(4, response_.rollback_key_version.kernel);
+}
+
+TEST_F(OmahaRequestActionTest, DisableRepeatedUpdatesCheck) {
+  fake_update_response_.disable_repeated_updates = true;
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+  EXPECT_TRUE(TestUpdateCheck());
+  EXPECT_TRUE(response_.update_exists);
+  EXPECT_TRUE(response_.disable_repeated_updates);
 }
 
 TEST_F(OmahaRequestActionTest,

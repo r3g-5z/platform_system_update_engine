@@ -118,6 +118,8 @@ bool OmahaRequestParams::Init(const string& app_version,
   // Set false so it will do update by default.
   is_install_ = false;
 
+  SystemState::Get()->prefs()->GetString(kPrefsLastFp, &last_fp_);
+
   target_version_prefix_ = params.target_version_prefix;
 
   lts_tag_ = params.lts_tag;

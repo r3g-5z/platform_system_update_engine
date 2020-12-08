@@ -56,6 +56,7 @@ const char kAttrDisableHashChecks[] = "DisableHashChecks";
 const char kAttrDisableP2PForDownloading[] = "DisableP2PForDownloading";
 const char kAttrDisableP2PForSharing[] = "DisableP2PForSharing";
 const char kAttrDisablePayloadBackoff[] = "DisablePayloadBackoff";
+const char kAttrDisableRepeatedUpdates[] = "DisableRepeatedUpdates";
 const char kAttrEvent[] = "event";
 // Deprecated: "IsDelta"
 const char kAttrIsDeltaPayload[] = "IsDeltaPayload";

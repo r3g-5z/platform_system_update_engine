@@ -59,6 +59,7 @@ extern const char kAttrDisableHashChecks[];
 extern const char kAttrDisableP2PForDownloading[];
 extern const char kAttrDisableP2PForSharing[];
 extern const char kAttrDisablePayloadBackoff[];
+extern const char kAttrDisableRepeatedUpdates[];
 extern const char kAttrEvent[];
 extern const char kAttrIsDeltaPayload[];
 extern const char kAttrMaxFailureCountPerUrl[];
@@ -124,6 +125,7 @@ struct OmahaParserData {
       std::string disable_payload_backoff;
       std::string powerwash_required;
       std::string disable_hash_checks;
+      std::string disable_repeated_updates;
     };
     base::Optional<PostInstallAction> postinstall_action;
 
