@@ -25,6 +25,7 @@
 #include <brillo/message_loops/message_loop.h>
 #include <brillo/strings/string_utils.h>
 #include <policy/device_policy.h>
+#include <update_engine/dbus-constants.h>
 
 #include "update_engine/common/hardware_interface.h"
 #include "update_engine/common/prefs.h"
@@ -357,6 +358,26 @@ bool UpdateEngineService::GetUpdateOverCellularPermission(ErrorPtr* error,
     *out_allowed = is_allowed;
   }
   return true;
+}
+
+bool UpdateEngineService::ToggleFeature(ErrorPtr* error,
+                                        const std::string& feature,
+                                        bool enable) {
+  if (feature == update_engine::kFeatureRepeatedUpdates) {
+    if (!SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(
+            enable)) {
+      LogAndSetError(error,
+                     FROM_HERE,
+                     string("Error setting AllowRepeatedUpdates to ") +
+                         (enable ? "true" : "false"));
+      return false;
+    }
+    return true;
+  } else {
+    LogAndSetError(
+        error, FROM_HERE, string("Feature ") + feature + " is not supported");
+    return false;
+  }
 }
 
 bool UpdateEngineService::GetDurationSinceUpdate(ErrorPtr* error,

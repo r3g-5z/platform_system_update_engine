@@ -111,6 +111,10 @@
     <method name="GetUpdateOverCellularPermission">
       <arg type="b" name="allowed" direction="out" />
     </method>
+     <method name="ToggleFeature">
+      <arg type="s" name="feature" direction="in" />
+      <arg type="b" name="enable" direction="in" />
+    </method>
     <method name="GetDurationSinceUpdate">
       <arg type="x" name="usec_wallclock" direction="out" />
     </method>

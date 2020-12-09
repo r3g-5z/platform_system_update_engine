@@ -172,6 +172,12 @@ bool DBusUpdateEngineService::GetUpdateOverCellularPermission(
   return common_->GetUpdateOverCellularPermission(error, out_allowed);
 }
 
+bool DBusUpdateEngineService::ToggleFeature(brillo::ErrorPtr* error,
+                                            const string& feature,
+                                            bool enable) {
+  return common_->ToggleFeature(error, feature, enable);
+}
+
 bool DBusUpdateEngineService::GetDurationSinceUpdate(
     ErrorPtr* error, int64_t* out_usec_wallclock) {
   return common_->GetDurationSinceUpdate(error, out_usec_wallclock);

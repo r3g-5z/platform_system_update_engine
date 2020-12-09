@@ -134,6 +134,13 @@ class DBusUpdateEngineService
   bool GetUpdateOverCellularPermission(brillo::ErrorPtr* error,
                                        bool* out_allowed) override;
 
+  // Given the value of a feature, will enable or disable the corresponding
+  // update engine feature. If unable to make the update, this method returns
+  // with an error.
+  bool ToggleFeature(brillo::ErrorPtr* error,
+                     const std::string& feature,
+                     bool enable) override;
+
   // Returns the duration since the last successful update, as the
   // duration on the wallclock. Returns an error if the device has not
   // updated.

@@ -219,6 +219,10 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // 'cros flash' to function properly).
   bool IsAnyUpdateSourceAllowed() const;
 
+  // Changes the reapeated updates flag based on the feature value. Deletes pref
+  // if feature is false. Returns false if unable to store the change.
+  bool ChangeRepeatedUpdates(bool enable);
+
   // |DaemonStateInterface| overrides.
   bool StartUpdater() override;
   void AddObserver(ServiceObserverInterface* observer) override {

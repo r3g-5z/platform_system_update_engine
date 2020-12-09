@@ -38,6 +38,7 @@ extern const char kPostinstallDefaultScript[];
 extern const char kStatefulPartition[];
 
 // Constants related to preferences.
+extern const char kPrefsAllowRepeatedUpdates[];
 extern const char kPrefsAttemptInProgress[];
 extern const char kPrefsBackoffExpiryTime[];
 extern const char kPrefsBootId[];

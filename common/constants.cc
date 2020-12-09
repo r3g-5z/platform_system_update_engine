@@ -31,6 +31,7 @@ const char kStatefulPartition[] = "/mnt/stateful_partition";
 const char kPostinstallDefaultScript[] = "postinst";
 
 // Constants defining keys for the persisted state of update engine.
+const char kPrefsAllowRepeatedUpdates[] = "allow-repeated-updates";
 const char kPrefsAttemptInProgress[] = "attempt-in-progress";
 const char kPrefsBackoffExpiryTime[] = "backoff-expiry-time";
 const char kPrefsBootId[] = "boot-id";

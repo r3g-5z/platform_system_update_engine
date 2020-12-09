@@ -1831,6 +1831,19 @@ bool UpdateAttempter::IsAnyUpdateSourceAllowed() const {
   return false;
 }
 
+bool UpdateAttempter::ChangeRepeatedUpdates(bool enable) {
+  if (!enable &&
+      SystemState::Get()->prefs()->Delete(kPrefsAllowRepeatedUpdates)) {
+    return true;
+  } else if (enable && SystemState::Get()->prefs()->SetBoolean(
+                           kPrefsAllowRepeatedUpdates, enable)) {
+    return true;
+  }
+  LOG(ERROR) << "Could not change " << kPrefsAllowRepeatedUpdates
+             << " feature to " << (enable ? "enabled." : "disabled.");
+  return false;
+}
+
 void UpdateAttempter::ReportTimeToUpdateAppliedMetric() {
   const policy::DevicePolicy* device_policy =
       SystemState::Get()->device_policy();

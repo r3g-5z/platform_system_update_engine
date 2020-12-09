@@ -141,6 +141,13 @@ class UpdateEngineService {
   bool GetUpdateOverCellularPermission(brillo::ErrorPtr* error,
                                        bool* out_allowed);
 
+  // Sets feature value in update engine based on the corresponding feature
+  // value. For example, whether a feature flag is turned on in chrome. Returns
+  // an error if unable to set feature.
+  bool ToggleFeature(brillo::ErrorPtr* error,
+                     const std::string& feature,
+                     bool enable);
+
   // Returns the duration since the last successful update, as the
   // duration on the wallclock. Returns an error if the device has not
   // updated.
