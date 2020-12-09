@@ -86,6 +86,7 @@ enum class ErrorCode : int {
   kNotEnoughSpace = 60,
   kDeviceCorrupted = 61,
   kPackageExcludedFromUpdate = 62,
+  kDownloadCancelledPerPolicy = 63,
 
   // VERY IMPORTANT! When adding new error codes:
   //

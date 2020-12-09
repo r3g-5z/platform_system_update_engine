@@ -105,6 +105,8 @@ string InstallPlan::ToString() const {
           {"rollback_data_save_requested",
            utils::ToString(rollback_data_save_requested)},
           {"write_verity", utils::ToString(write_verity)},
+          {"can_download_be_canceled",
+           utils::ToString(can_download_be_canceled)},
       },
       "\n"));
 

@@ -52,7 +52,8 @@ class UmUpdateTimeRestrictionsPolicyImplTest : public UmPolicyTestBase {
   void TestPolicy(const Time::Exploded& exploded,
                   const WeeklyTimeIntervalVector& test_intervals,
                   const EvalStatus& expected_value,
-                  bool kiosk) {
+                  bool kiosk,
+                  bool expected_can_download_be_canceled) {
     if (kiosk)
       fake_state_.device_policy_provider()
           ->var_auto_launched_kiosk_app_id()
@@ -69,6 +70,8 @@ class UmUpdateTimeRestrictionsPolicyImplTest : public UmPolicyTestBase {
     InstallPlan install_plan;
     ExpectPolicyStatus(
         expected_value, &Policy::UpdateCanBeApplied, &result, &install_plan);
+    EXPECT_EQ(install_plan.can_download_be_canceled,
+              expected_can_download_be_canceled);
     if (expected_value == EvalStatus::kSucceeded)
       EXPECT_EQ(result, ErrorCode::kOmahaUpdateDeferredPerPolicy);
   }
@@ -80,7 +83,8 @@ TEST_F(UmUpdateTimeRestrictionsPolicyImplTest, NoIntervalsSetTest) {
   TestPolicy(random_time,
              WeeklyTimeIntervalVector(),
              EvalStatus::kContinue,
-             /* kiosk = */ true);
+             /* kiosk = */ true,
+             /*expected_can_download_be_canceled=*/true);
 }
 
 // Check that all intervals are checked.
@@ -90,7 +94,8 @@ TEST_F(UmUpdateTimeRestrictionsPolicyImplTest, TimeInRange) {
   TestPolicy(first_interval_time,
              kTestIntervals,
              EvalStatus::kSucceeded,
-             /* kiosk = */ true);
+             /* kiosk = */ true,
+             /*expected_can_download_be_canceled=*/true);
 
   // Check second interval.
   // Thursday, July 12th 2018 4:30 AM.
@@ -98,7 +103,8 @@ TEST_F(UmUpdateTimeRestrictionsPolicyImplTest, TimeInRange) {
   TestPolicy(second_interval_time,
              kTestIntervals,
              EvalStatus::kSucceeded,
-             /* kiosk = */ true);
+             /* kiosk = */ true,
+             /*expected_can_download_be_canceled=*/true);
 }
 
 TEST_F(UmUpdateTimeRestrictionsPolicyImplTest, TimeOutOfRange) {
@@ -107,7 +113,8 @@ TEST_F(UmUpdateTimeRestrictionsPolicyImplTest, TimeOutOfRange) {
   TestPolicy(out_of_range_time,
              kTestIntervals,
              EvalStatus::kContinue,
-             /* kiosk = */ true);
+             /* kiosk = */ true,
+             /*expected_can_download_be_canceled=*/true);
 }
 
 TEST_F(UmUpdateTimeRestrictionsPolicyImplTest, NoKioskDisablesPolicy) {
@@ -115,6 +122,7 @@ TEST_F(UmUpdateTimeRestrictionsPolicyImplTest, NoKioskDisablesPolicy) {
   TestPolicy(in_range_time,
              kTestIntervals,
              EvalStatus::kContinue,
-             /* kiosk = */ false);
+             /* kiosk = */ false,
+             /*expected_can_download_be_canceled=*/false);
 }
 }  // namespace chromeos_update_manager

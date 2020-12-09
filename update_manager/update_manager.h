@@ -29,6 +29,7 @@
 #include "update_engine/update_manager/evaluation_context.h"
 #include "update_engine/update_manager/policy.h"
 #include "update_engine/update_manager/state.h"
+#include "update_engine/update_manager/update_time_restrictions_monitor.h"
 
 namespace chromeos_update_manager {
 
@@ -106,6 +107,13 @@ class UpdateManager : public SpecializedPolicyRequestInterface {
                                           State*,
                                           std::string*,
                                           UpdateCheckParams*) const) override;
+
+  // Returns instance of update time restrictions monitor if |install_plan|
+  // requires one. Otherwise returns nullptr.
+  std::unique_ptr<UpdateTimeRestrictionsMonitor>
+  BuildUpdateTimeRestrictionsMonitorIfNeeded(
+      const chromeos_update_engine::InstallPlan& install_plan,
+      UpdateTimeRestrictionsMonitor::Delegate* delegate);
 
  protected:
   // The UpdateManager receives ownership of the passed Policy instance.

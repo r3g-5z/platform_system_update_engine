@@ -27,6 +27,7 @@
 #include <base/files/file_util.h>
 #include <base/location.h>
 #include <base/strings/stringprintf.h>
+#include <base/test/simple_test_clock.h>
 #include <brillo/message_loops/fake_message_loop.h>
 #include <brillo/message_loops/message_loop.h>
 
@@ -39,6 +40,7 @@
 #include "update_engine/cros/download_action_chromeos.h"
 #include "update_engine/cros/fake_p2p_manager_configuration.h"
 #include "update_engine/cros/fake_system_state.h"
+#include "update_engine/payload_consumer/install_plan.h"
 #include "update_engine/payload_consumer/mock_file_writer.h"
 #include "update_engine/update_manager/fake_update_manager.h"
 
@@ -47,6 +49,9 @@ namespace chromeos_update_engine {
 using base::FilePath;
 using base::ReadFileToString;
 using base::WriteFile;
+using chromeos_update_manager::WeeklyTime;
+using chromeos_update_manager::WeeklyTimeInterval;
+using chromeos_update_manager::WeeklyTimeIntervalVector;
 using std::string;
 using std::unique_ptr;
 using testing::_;
@@ -60,6 +65,8 @@ class DownloadActionChromeosTest : public ::testing::Test {
 };
 
 namespace {
+constexpr base::TimeDelta kHour = base::TimeDelta::FromHours(1);
+constexpr base::TimeDelta kMinute = base::TimeDelta::FromMinutes(1);
 
 class DownloadActionTestProcessorDelegate : public ActionProcessorDelegate {
  public:
@@ -73,7 +80,7 @@ class DownloadActionTestProcessorDelegate : public ActionProcessorDelegate {
     brillo::MessageLoop::current()->BreakLoop();
     brillo::Blob found_data;
     ASSERT_TRUE(utils::ReadFile(path_, &found_data));
-    if (expected_code_ != ErrorCode::kDownloadWriteError) {
+    if (expected_code_ == ErrorCode::kSuccess) {
       ASSERT_EQ(expected_data_.size(), found_data.size());
       for (unsigned i = 0; i < expected_data_.size(); i++) {
         EXPECT_EQ(expected_data_[i], found_data[i]);
@@ -694,6 +701,134 @@ TEST_F(P2PDownloadActionTest, DeletePartialP2PFileIfResumingWithoutP2P) {
   // DownloadAction should have deleted the p2p file. Check that it's gone.
   EXPECT_EQ(-1, p2p_manager_->FileGetSize(file_id));
   EXPECT_EQ(0, p2p_manager_->CountSharedFiles());
+}
+
+class RestrictedTimeIntervalDownloadActionTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    fake_loop_.SetAsCurrent();
+    FakeSystemState::CreateInstance();
+
+    // Setup restricted interval policy.
+    auto* var_disallowed_time_intervals = FakeSystemState::Get()
+                                              ->fake_update_manager()
+                                              ->state()
+                                              ->device_policy_provider()
+                                              ->var_disallowed_time_intervals();
+    var_disallowed_time_intervals->reset(
+        new WeeklyTimeIntervalVector(restricted_time_intervals_));
+    // Sunday, May 3th 2020 7:51 PM.
+    ASSERT_TRUE(SetNow(base::Time::Exploded{2020, 5, 0, 3, 19, 51, 0, 0}));
+  }
+
+  void TearDown() override { EXPECT_FALSE(fake_loop_.PendingTasks()); }
+
+  bool SetNow(const base::Time::Exploded& exploded_now) {
+    base::Time now;
+    if (!base::Time::FromLocalExploded(exploded_now, &now))
+      return false;
+
+    test_clock_.SetNow(now);
+    FakeSystemState::Get()->fake_clock()->SetWallclockTime(now);
+    return true;
+  }
+
+  void AdvanceTime(const base::TimeDelta& duration) {
+    test_clock_.Advance(duration);
+    FakeSystemState::Get()->fake_clock()->SetWallclockTime(test_clock_.Now());
+  }
+
+  void StartDownloadAction(const brillo::Blob& data,
+                           const ErrorCode& expected_error_code,
+                           base::TimeDelta advance_time);
+
+  brillo::Blob CreateBigData() {
+    brillo::Blob big(3 * kMockHttpFetcherChunkSize);
+    return big;
+  }
+
+  base::SimpleTestClock test_clock_;
+  // For EvaluationContext inside monitor.
+  brillo::FakeMessageLoop fake_loop_{&test_clock_};
+  static WeeklyTimeIntervalVector restricted_time_intervals_;
+};
+
+WeeklyTimeIntervalVector
+    RestrictedTimeIntervalDownloadActionTest::restricted_time_intervals_ =
+        WeeklyTimeIntervalVector{
+            // Monday 10:15 AM to Monday 3:30 PM.
+            WeeklyTimeInterval(WeeklyTime(1, kHour * 10 + kMinute * 15),
+                               WeeklyTime(1, kHour * 15 + kMinute * 30)),
+            // Wednesday 8:30 PM to Thursday 8:40 AM.
+            WeeklyTimeInterval(WeeklyTime(3, kHour * 20 + kMinute * 30),
+                               WeeklyTime(4, kHour * 8 + kMinute * 40))};
+
+void RestrictedTimeIntervalDownloadActionTest::StartDownloadAction(
+    const brillo::Blob& data,
+    const ErrorCode& expected_error_code,
+    base::TimeDelta advance_time) {
+  ScopedTempFile output_temp_file;
+  TestDirectFileWriter writer;
+  EXPECT_EQ(
+      0, writer.Open(output_temp_file.path().c_str(), O_WRONLY | O_CREAT, 0));
+
+  InstallPlan install_plan;
+  install_plan.can_download_be_canceled = true;
+  install_plan.payloads.push_back(
+      {.size = data.size(), .type = InstallPayloadType::kFull});
+
+  EXPECT_TRUE(HashCalculator::RawHashOfBytes(
+      &data[0], data.size(), &install_plan.payloads[0].hash));
+  auto feeder_action = std::make_unique<ObjectFeederAction<InstallPlan>>();
+  feeder_action->set_obj(install_plan);
+
+  MockPrefs prefs;
+  MockHttpFetcher* http_fetcher =
+      new MockHttpFetcher(data.data(), data.size(), nullptr);
+  // Takes ownership of passed in |HttpFetcher|.
+  auto download_action = std::make_unique<DownloadActionChromeos>(
+      &prefs,
+      FakeSystemState::Get()->boot_control(),
+      FakeSystemState::Get()->hardware(),
+      http_fetcher,
+      /*interactive=*/false);
+  download_action->SetTestFileWriter(&writer);
+  BondActions(feeder_action.get(), download_action.get());
+
+  DownloadActionTestProcessorDelegate delegate;
+  delegate.expected_code_ = expected_error_code;
+  delegate.expected_data_ = brillo::Blob(data.begin(), data.end());
+  delegate.path_ = output_temp_file.path();
+
+  ActionProcessor processor;
+  processor.set_delegate(&delegate);
+  processor.EnqueueAction(std::move(feeder_action));
+  processor.EnqueueAction(std::move(download_action));
+  processor.StartProcessing();
+
+  http_fetcher->Pause();
+  AdvanceTime(advance_time);
+  http_fetcher->Unpause();
+  fake_loop_.Run();
+}
+
+TEST_F(RestrictedTimeIntervalDownloadActionTest,
+       DownloadCancelledDueToRestrictedInterval) {
+  const base::TimeDelta duration_till_interval =
+      WeeklyTime::FromTime(test_clock_.Now())
+          .GetDurationTo(restricted_time_intervals_[0].start());
+  StartDownloadAction(CreateBigData(),
+                      ErrorCode::kDownloadCancelledPerPolicy,
+                      duration_till_interval + kMinute);
+}
+
+TEST_F(RestrictedTimeIntervalDownloadActionTest,
+       DownloadCompletedOutsideRestrictedInterval) {
+  const base::TimeDelta duration_till_interval =
+      WeeklyTime::FromTime(test_clock_.Now())
+          .GetDurationTo(restricted_time_intervals_[0].start());
+  StartDownloadAction(
+      CreateBigData(), ErrorCode::kSuccess, duration_till_interval - kMinute);
 }
 
 }  // namespace chromeos_update_engine

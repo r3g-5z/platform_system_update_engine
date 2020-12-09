@@ -375,6 +375,7 @@ void PayloadState::UpdateFailed(ErrorCode error) {
     case ErrorCode::kNotEnoughSpace:
     case ErrorCode::kDeviceCorrupted:
     case ErrorCode::kPackageExcludedFromUpdate:
+    case ErrorCode::kDownloadCancelledPerPolicy:
       LOG(INFO) << "Not incrementing URL index or failure count for this error";
       break;
 

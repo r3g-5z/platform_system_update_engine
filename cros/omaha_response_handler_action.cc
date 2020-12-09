@@ -225,11 +225,6 @@ void OmahaResponseHandlerAction::PerformAction() {
     }
   }
 
-  TEST_AND_RETURN(HasOutputPipe());
-  if (HasOutputPipe())
-    SetOutputObject(install_plan_);
-  install_plan_.Dump();
-
   // Send the deadline data (if any) to Chrome through a file. This is a pretty
   // hacky solution but should be OK for now.
   //
@@ -259,6 +254,14 @@ void OmahaResponseHandlerAction::PerformAction() {
   update_manager->PolicyRequest(
       &Policy::UpdateCanBeApplied, &ec, &install_plan_);
   completer.set_code(ec);
+
+  // Set the |InstallPlan| in the pipe after evaluating
+  // |Policy::UpdateCanBeApplied| as it can set
+  // |InstallPlan::can_download_be_canceled|.
+  TEST_AND_RETURN(HasOutputPipe());
+  if (HasOutputPipe())
+    SetOutputObject(install_plan_);
+  install_plan_.Dump();
 
   const auto allowed_milestones = params->rollback_allowed_milestones();
   if (allowed_milestones > 0) {

@@ -57,6 +57,11 @@ using std::vector;
 
 namespace {
 
+class FakeUpdateTimeRestrictionsMonitorDelegate
+    : public chromeos_update_manager::UpdateTimeRestrictionsMonitor::Delegate {
+  void OnRestrictedIntervalStarts() override {}
+};
+
 // Generates a fixed timestamp for use in faking the current time.
 Time FixedTime() {
   Time::Exploded now_exp;
@@ -328,6 +333,21 @@ TEST_F(UmUpdateManagerTest, AsyncPolicyRequestTimesOut) {
   EXPECT_EQ(3, num_called);
   ASSERT_EQ(1U, calls.size());
   EXPECT_EQ(EvalStatus::kSucceeded, calls[0].first);
+}
+
+TEST_F(UmUpdateManagerTest, UpdateTimeRestrictionsMonitorIsNotNeeded) {
+  FakeUpdateTimeRestrictionsMonitorDelegate delegate;
+  chromeos_update_engine::InstallPlan install_plan;
+  EXPECT_FALSE(umut_->BuildUpdateTimeRestrictionsMonitorIfNeeded(install_plan,
+                                                                 &delegate));
+}
+
+TEST_F(UmUpdateManagerTest, UpdateTimeRestrictionsMonitorIsNeeded) {
+  FakeUpdateTimeRestrictionsMonitorDelegate delegate;
+  chromeos_update_engine::InstallPlan install_plan;
+  install_plan.can_download_be_canceled = true;
+  EXPECT_TRUE(umut_->BuildUpdateTimeRestrictionsMonitorIfNeeded(install_plan,
+                                                                &delegate));
 }
 
 }  // namespace chromeos_update_manager

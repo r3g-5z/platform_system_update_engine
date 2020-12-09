@@ -31,6 +31,7 @@
 #include "update_engine/common/multi_range_http_fetcher.h"
 #include "update_engine/payload_consumer/delta_performer.h"
 #include "update_engine/payload_consumer/install_plan.h"
+#include "update_engine/update_manager/update_time_restrictions_monitor.h"
 
 // The Download Action downloads a specified url to disk. The url should point
 // to an update in a delta payload format. The payload will be piped into a
@@ -40,8 +41,10 @@ namespace chromeos_update_engine {
 
 class PrefsInterface;
 
-class DownloadActionChromeos : public InstallPlanAction,
-                               public HttpFetcherDelegate {
+class DownloadActionChromeos
+    : public InstallPlanAction,
+      public HttpFetcherDelegate,
+      public chromeos_update_manager::UpdateTimeRestrictionsMonitor::Delegate {
  public:
   static std::string StaticType() { return "DownloadActionChromeos"; }
 
@@ -87,6 +90,10 @@ class DownloadActionChromeos : public InstallPlanAction,
   // string if we're not writing to a p2p file.
   std::string p2p_file_id() { return p2p_file_id_; }
 
+  // |UpdateTimeRestrictionsMonitor::Delegate| overrides:
+  // Cancels the action when an update restricted interval starts.
+  void OnRestrictedIntervalStarts() override;
+
  private:
   // Closes the file descriptor for the p2p file being written and
   // clears |p2p_file_id_| to indicate that we're no longer sharing
@@ -112,6 +119,10 @@ class DownloadActionChromeos : public InstallPlanAction,
 
   // Start downloading the current payload using delta_performer.
   void StartDownloading();
+
+  // Attempts to create a monitor for update restricted time intervals to track
+  // events of started intervals.
+  void StartMonitoringRestrictedIntervals();
 
   // Pointer to the current payload in install_plan_.payloads.
   InstallPlan::Payload* payload_{nullptr};
@@ -161,6 +172,16 @@ class DownloadActionChromeos : public InstallPlanAction,
 
   // Offset of the payload in the download URL, used by UpdateAttempterAndroid.
   int64_t base_offset_{0};
+
+  // Terminate can be requested from |ActionProcessor| and also due to update
+  // restricted interval start. This flag is set to true when termination is
+  // requested from either of them and helps to prevent processing duplicate
+  // termination requests.
+  bool terminate_requested_{false};
+
+  // Tracker of update restricted time intervals.
+  std::unique_ptr<chromeos_update_manager::UpdateTimeRestrictionsMonitor>
+      update_time_restrictions_monitor_;
 
   DISALLOW_COPY_AND_ASSIGN(DownloadActionChromeos);
 };

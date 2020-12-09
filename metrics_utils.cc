@@ -124,6 +124,7 @@ metrics::AttemptResult GetAttemptResult(ErrorCode code) {
 
     case ErrorCode::kOmahaUpdateDeferredPerPolicy:
     case ErrorCode::kNonCriticalUpdateInOOBE:
+    case ErrorCode::kDownloadCancelledPerPolicy:
       return metrics::AttemptResult::kUpdateSkipped;
 
     // Special flags. These can't happen (we mask them out above) but
@@ -241,6 +242,7 @@ metrics::DownloadErrorCode GetDownloadErrorCode(ErrorCode code) {
     case ErrorCode::kNotEnoughSpace:
     case ErrorCode::kDeviceCorrupted:
     case ErrorCode::kPackageExcludedFromUpdate:
+    case ErrorCode::kDownloadCancelledPerPolicy:
       break;
 
     // Special flags. These can't happen (we mask them out above) but

@@ -53,4 +53,15 @@ void UpdateManager::UnregisterEvalContext(EvaluationContext* ec) {
   }
 }
 
+std::unique_ptr<UpdateTimeRestrictionsMonitor>
+UpdateManager::BuildUpdateTimeRestrictionsMonitorIfNeeded(
+    const chromeos_update_engine::InstallPlan& install_plan,
+    UpdateTimeRestrictionsMonitor::Delegate* delegate) {
+  if (!install_plan.can_download_be_canceled || delegate == nullptr)
+    return nullptr;
+
+  return std::make_unique<UpdateTimeRestrictionsMonitor>(
+      state_->device_policy_provider(), delegate);
+}
+
 }  // namespace chromeos_update_manager

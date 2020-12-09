@@ -38,12 +38,16 @@ EvalStatus UpdateTimeRestrictionsPolicyImpl::UpdateCanBeApplied(
     ErrorCode* result,
     InstallPlan* install_plan) const {
   DevicePolicyProvider* const dp_provider = state->device_policy_provider();
-  TimeProvider* const time_provider = state->time_provider();
 
   // If kiosk mode is not enabled, don't restrict updates.
   if (!ec->GetValue(dp_provider->var_auto_launched_kiosk_app_id()))
     return EvalStatus::kContinue;
 
+  // Set to true even if currently there are no restricted intervals. It may
+  // change later and nothing else prevents download cancellation.
+  install_plan->can_download_be_canceled = true;
+
+  TimeProvider* const time_provider = state->time_provider();
   const Time* curr_date = ec->GetValue(time_provider->var_curr_date());
   const int* curr_hour = ec->GetValue(time_provider->var_curr_hour());
   const int* curr_minute = ec->GetValue(time_provider->var_curr_minute());

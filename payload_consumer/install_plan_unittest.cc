@@ -58,6 +58,7 @@ run_post_install: true
 is_rollback: false
 rollback_data_save_requested: false
 write_verity: true
+can_download_be_canceled: false
 Partition: foo-partition_name
   source_size: 0
   source_path: foo-source-path

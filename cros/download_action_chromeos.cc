@@ -34,6 +34,7 @@
 #include "update_engine/cros/omaha_request_params.h"
 #include "update_engine/cros/p2p_manager.h"
 #include "update_engine/cros/payload_state_interface.h"
+#include "update_engine/update_manager/update_manager.h"
 
 using base::FilePath;
 using std::string;
@@ -200,6 +201,7 @@ void DownloadActionChromeos::PerformAction() {
                  << ". Proceeding with the update anyway.";
   }
 
+  StartMonitoringRestrictedIntervals();
   StartDownloading();
 }
 
@@ -346,6 +348,12 @@ void DownloadActionChromeos::ResumeAction() {
 }
 
 void DownloadActionChromeos::TerminateProcessing() {
+  if (terminate_requested_) {
+    LOG(WARNING) << "Returning as terminate processing is already requested.";
+    return;
+  }
+  terminate_requested_ = true;
+
   if (writer_) {
     writer_->Close();
     writer_ = nullptr;
@@ -464,6 +472,21 @@ void DownloadActionChromeos::TransferTerminated(HttpFetcher* fetcher) {
                  "payload has already applied, treating as TransferComplete.";
     TransferComplete(fetcher, true);
   }
+}
+
+void DownloadActionChromeos::StartMonitoringRestrictedIntervals() {
+  update_time_restrictions_monitor_ =
+      SystemState::Get()
+          ->update_manager()
+          ->BuildUpdateTimeRestrictionsMonitorIfNeeded(install_plan_,
+                                                       /*delegate=*/this);
+}
+
+void DownloadActionChromeos::OnRestrictedIntervalStarts() {
+  LOG(INFO) << "Going inside restricted time interval. Cancelling download.";
+  code_ = ErrorCode::kDownloadCancelledPerPolicy;
+  update_time_restrictions_monitor_.reset();
+  TerminateProcessing();
 }
 
 }  // namespace chromeos_update_engine
