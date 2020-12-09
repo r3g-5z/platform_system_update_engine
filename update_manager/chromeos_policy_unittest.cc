@@ -153,20 +153,16 @@ class UmChromeOSPolicyTest : public UmPolicyTestBase {
   // time.
   void TestDisallowedTimeIntervals(const WeeklyTimeIntervalVector& intervals,
                                    const ErrorCode& expected_error_code,
-                                   bool kiosk,
+                                   bool is_rollback,
                                    bool expected_can_download_be_canceled) {
     SetUpDefaultTimeProvider();
-    if (kiosk)
-      fake_state_.device_policy_provider()
-          ->var_auto_launched_kiosk_app_id()
-          ->reset(new string("myapp"));
     fake_state_.device_policy_provider()
         ->var_disallowed_time_intervals()
         ->reset(new WeeklyTimeIntervalVector(intervals));
 
-    // Check that |expected_status| matches the value of UpdateCheckAllowed
+    // Check that |expected_status| matches the value of UpdateCanBeApplied.
     ErrorCode result;
-    InstallPlan install_plan;
+    InstallPlan install_plan{.is_rollback = is_rollback};
     ExpectPolicyStatus(EvalStatus::kSucceeded,
                        &Policy::UpdateCanBeApplied,
                        &result,
@@ -1515,13 +1511,57 @@ TEST_F(UmChromeOSPolicyTest,
   Time curr_time = fake_clock_->GetWallclockTime();
   fake_state_.updater_provider()->var_forced_update_requested()->reset(
       new UpdateRequestStatus(UpdateRequestStatus::kInteractive));
-  // Should return kAskMeAgainLater when updated are not forced.
   TestDisallowedTimeIntervals(
       {WeeklyTimeInterval(
           WeeklyTime::FromTime(curr_time),
           WeeklyTime::FromTime(curr_time + TimeDelta::FromMinutes(1)))},
       ErrorCode::kSuccess,
-      /*kiosk=*/true,
+      /*is_rollback=*/false,
+      /*expected_can_download_be_canceled=*/false);
+}
+
+TEST_F(UmChromeOSPolicyTest,
+       UpdateCanBeAppliedEnterpriseRollbackDisablesTimeRestrictions) {
+  Time curr_time = fake_clock_->GetWallclockTime();
+  TestDisallowedTimeIntervals(
+      {WeeklyTimeInterval(
+          WeeklyTime::FromTime(curr_time),
+          WeeklyTime::FromTime(curr_time + TimeDelta::FromMinutes(1)))},
+      ErrorCode::kSuccess,
+      /*is_rollback=*/true,
+      /*expected_can_download_be_canceled=*/false);
+}
+
+TEST_F(UmChromeOSPolicyTest,
+       UpdateCanBeAppliedMinimumVersionUpdateDisablesTimeRestrictions) {
+  const char* kCurrentVersion = "13315.60.22";
+  fake_state_.system_provider()->var_chromeos_version()->reset(
+      new base::Version(kCurrentVersion));
+  const char* kMinimumVersion = "13315.60.55";
+  fake_state_.device_policy_provider()->var_device_minimum_version()->reset(
+      new base::Version(kMinimumVersion));
+
+  Time curr_time = fake_clock_->GetWallclockTime();
+  TestDisallowedTimeIntervals(
+      {WeeklyTimeInterval(
+          WeeklyTime::FromTime(curr_time),
+          WeeklyTime::FromTime(curr_time + TimeDelta::FromMinutes(1)))},
+      ErrorCode::kSuccess,
+      /*is_rollback=*/false,
+      /*expected_can_download_be_canceled=*/false);
+}
+
+TEST_F(UmChromeOSPolicyTest,
+       UpdateCanBeAppliedQuickFixBuildUpdateDisablesTimeRestrictions) {
+  fake_state_.device_policy_provider()->var_quick_fix_build_token()->reset(
+      new string("foo-token"));
+  Time curr_time = fake_clock_->GetWallclockTime();
+  TestDisallowedTimeIntervals(
+      {WeeklyTimeInterval(
+          WeeklyTime::FromTime(curr_time),
+          WeeklyTime::FromTime(curr_time + TimeDelta::FromMinutes(1)))},
+      ErrorCode::kSuccess,
+      /*is_rollback=*/false,
       /*expected_can_download_be_canceled=*/false);
 }
 
@@ -1532,7 +1572,7 @@ TEST_F(UmChromeOSPolicyTest, UpdateCanBeAppliedFailsInDisallowedTime) {
           WeeklyTime::FromTime(curr_time),
           WeeklyTime::FromTime(curr_time + TimeDelta::FromMinutes(1)))},
       ErrorCode::kOmahaUpdateDeferredPerPolicy,
-      /*kiosk=*/true,
+      /*is_rollback=*/false,
       /*expected_can_download_be_canceled=*/true);
 }
 
@@ -1543,19 +1583,8 @@ TEST_F(UmChromeOSPolicyTest, UpdateCanBeAppliedOutsideDisallowedTime) {
           WeeklyTime::FromTime(curr_time - TimeDelta::FromHours(3)),
           WeeklyTime::FromTime(curr_time))},
       ErrorCode::kSuccess,
-      /*kiosk=*/true,
+      /*is_rollback=*/false,
       /*expected_can_download_be_canceled=*/true);
-}
-
-TEST_F(UmChromeOSPolicyTest, UpdateCanBeAppliedPassesOnNonKiosk) {
-  Time curr_time = fake_clock_->GetWallclockTime();
-  TestDisallowedTimeIntervals(
-      {WeeklyTimeInterval(
-          WeeklyTime::FromTime(curr_time),
-          WeeklyTime::FromTime(curr_time + TimeDelta::FromMinutes(1)))},
-      ErrorCode::kSuccess,
-      /*kiosk=*/false,
-      /*expected_can_download_be_canceled=*/false);
 }
 
 }  // namespace chromeos_update_manager

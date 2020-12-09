@@ -49,19 +49,11 @@ class UmUpdateTimeRestrictionsPolicyImplTest : public UmPolicyTestBase {
     policy_ = std::make_unique<UpdateTimeRestrictionsPolicyImpl>();
   }
 
-  void TestPolicy(const Time::Exploded& exploded,
+  void TestPolicy(const Time& current_time,
                   const WeeklyTimeIntervalVector& test_intervals,
                   const EvalStatus& expected_value,
-                  bool kiosk,
                   bool expected_can_download_be_canceled) {
-    if (kiosk)
-      fake_state_.device_policy_provider()
-          ->var_auto_launched_kiosk_app_id()
-          ->reset(new string("myapp"));
-
-    Time time;
-    EXPECT_TRUE(Time::FromLocalExploded(exploded, &time));
-    fake_clock_->SetWallclockTime(time);
+    fake_clock_->SetWallclockTime(current_time);
     SetUpDefaultTimeProvider();
     fake_state_.device_policy_provider()
         ->var_disallowed_time_intervals()
@@ -77,13 +69,11 @@ class UmUpdateTimeRestrictionsPolicyImplTest : public UmPolicyTestBase {
   }
 };
 
-// If there are no intervals, then the check should always return kContinue.
+// If there are no intervals, then the policy should always return |kContinue|.
 TEST_F(UmUpdateTimeRestrictionsPolicyImplTest, NoIntervalsSetTest) {
-  Time::Exploded random_time{2018, 7, 1, 9, 12, 30, 0, 0};
-  TestPolicy(random_time,
+  TestPolicy(base::Time::Now(),
              WeeklyTimeIntervalVector(),
              EvalStatus::kContinue,
-             /* kiosk = */ true,
              /*expected_can_download_be_canceled=*/true);
 }
 
@@ -91,38 +81,45 @@ TEST_F(UmUpdateTimeRestrictionsPolicyImplTest, NoIntervalsSetTest) {
 TEST_F(UmUpdateTimeRestrictionsPolicyImplTest, TimeInRange) {
   // Monday, July 9th 2018 12:30 PM.
   Time::Exploded first_interval_time{2018, 7, 1, 9, 12, 30, 0, 0};
-  TestPolicy(first_interval_time,
+  Time time;
+  EXPECT_TRUE(Time::FromLocalExploded(first_interval_time, &time));
+  TestPolicy(time,
              kTestIntervals,
              EvalStatus::kSucceeded,
-             /* kiosk = */ true,
              /*expected_can_download_be_canceled=*/true);
 
   // Check second interval.
   // Thursday, July 12th 2018 4:30 AM.
   Time::Exploded second_interval_time{2018, 7, 4, 12, 4, 30, 0, 0};
-  TestPolicy(second_interval_time,
+  EXPECT_TRUE(Time::FromLocalExploded(second_interval_time, &time));
+  TestPolicy(time,
              kTestIntervals,
              EvalStatus::kSucceeded,
-             /* kiosk = */ true,
              /*expected_can_download_be_canceled=*/true);
 }
 
+// If the current time is out of restrictions, then the policy should always
+// return |kContinue|.
 TEST_F(UmUpdateTimeRestrictionsPolicyImplTest, TimeOutOfRange) {
   // Monday, July 9th 2018 6:30 PM.
+  Time time;
   Time::Exploded out_of_range_time{2018, 7, 1, 9, 18, 30, 0, 0};
-  TestPolicy(out_of_range_time,
+  EXPECT_TRUE(Time::FromLocalExploded(out_of_range_time, &time));
+  TestPolicy(time,
              kTestIntervals,
              EvalStatus::kContinue,
-             /* kiosk = */ true,
              /*expected_can_download_be_canceled=*/true);
 }
 
-TEST_F(UmUpdateTimeRestrictionsPolicyImplTest, NoKioskDisablesPolicy) {
-  Time::Exploded in_range_time{2018, 7, 1, 9, 12, 30, 0, 0};
-  TestPolicy(in_range_time,
+// If the quick fix build token is set, then the policy should always return
+// |kContinue|.
+TEST_F(UmUpdateTimeRestrictionsPolicyImplTest, QuickFixBuildToken) {
+  fake_state_.device_policy_provider()->var_quick_fix_build_token()->reset(
+      new std::string("foo-token"));
+  TestPolicy(base::Time::Now(),
              kTestIntervals,
              EvalStatus::kContinue,
-             /* kiosk = */ false,
              /*expected_can_download_be_canceled=*/false);
 }
+
 }  // namespace chromeos_update_manager

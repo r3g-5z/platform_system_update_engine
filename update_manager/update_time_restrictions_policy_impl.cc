@@ -25,6 +25,7 @@
 
 using base::Time;
 using base::TimeDelta;
+using std::string;
 
 using chromeos_update_engine::ErrorCode;
 using chromeos_update_engine::InstallPlan;
@@ -34,14 +35,17 @@ namespace chromeos_update_manager {
 EvalStatus UpdateTimeRestrictionsPolicyImpl::UpdateCanBeApplied(
     EvaluationContext* ec,
     State* state,
-    std::string* error,
+    string* error,
     ErrorCode* result,
     InstallPlan* install_plan) const {
   DevicePolicyProvider* const dp_provider = state->device_policy_provider();
 
-  // If kiosk mode is not enabled, don't restrict updates.
-  if (!ec->GetValue(dp_provider->var_auto_launched_kiosk_app_id()))
+  const string* quick_fix_build_token_p =
+      ec->GetValue(dp_provider->var_quick_fix_build_token());
+  if (quick_fix_build_token_p != nullptr && !quick_fix_build_token_p->empty()) {
+    LOG(INFO) << "Quick fix build token found - Skip update time restrictions";
     return EvalStatus::kContinue;
+  }
 
   // Set to true even if currently there are no restricted intervals. It may
   // change later and nothing else prevents download cancellation.

@@ -20,13 +20,14 @@
 
 using chromeos_update_engine::ErrorCode;
 using chromeos_update_engine::InstallPlan;
+using std::string;
 
 namespace chromeos_update_manager {
 
 EvalStatus MinimumVersionPolicyImpl::UpdateCanBeApplied(
     EvaluationContext* ec,
     State* state,
-    std::string* error,
+    string* error,
     ErrorCode* result,
     InstallPlan* install_plan) const {
   const base::Version* current_version(

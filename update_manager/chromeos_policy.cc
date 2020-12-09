@@ -32,7 +32,9 @@
 #include "update_engine/update_manager/device_policy_provider.h"
 #include "update_engine/update_manager/enough_slots_ab_updates_policy_impl.h"
 #include "update_engine/update_manager/enterprise_device_policy_impl.h"
+#include "update_engine/update_manager/enterprise_rollback_policy_impl.h"
 #include "update_engine/update_manager/interactive_update_policy_impl.h"
+#include "update_engine/update_manager/minimum_version_policy_impl.h"
 #include "update_engine/update_manager/official_build_check_policy_impl.h"
 #include "update_engine/update_manager/out_of_box_experience_policy_impl.h"
 #include "update_engine/update_manager/policy_utils.h"
@@ -280,12 +282,21 @@ EvalStatus ChromeOSPolicy::UpdateCanBeApplied(EvaluationContext* ec,
                                               std::string* error,
                                               ErrorCode* result,
                                               InstallPlan* install_plan) const {
-  UpdateTimeRestrictionsPolicyImpl update_time_restrictions_policy;
   InteractiveUpdatePolicyImpl interactive_update_policy;
+  EnterpriseRollbackPolicyImpl enterprise_rollback_policy;
+  MinimumVersionPolicyImpl minimum_version_policy;
+  UpdateTimeRestrictionsPolicyImpl update_time_restrictions_policy;
 
   vector<Policy const*> policies_to_consult = {
       // Check to see if an interactive update has been requested.
       &interactive_update_policy,
+
+      // Check whether current update is enterprise rollback.
+      &enterprise_rollback_policy,
+
+      // Check whether update happens from a version less than the minimum
+      // required one.
+      &minimum_version_policy,
 
       // Do not apply or download an update if we are inside one of the
       // restricted times.

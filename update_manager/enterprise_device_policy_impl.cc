@@ -27,7 +27,7 @@ namespace chromeos_update_manager {
 EvalStatus EnterpriseDevicePolicyImpl::UpdateCheckAllowed(
     EvaluationContext* ec,
     State* state,
-    std::string* error,
+    string* error,
     UpdateCheckParams* result) const {
   DevicePolicyProvider* const dp_provider = state->device_policy_provider();
   SystemProvider* const system_provider = state->system_provider();
