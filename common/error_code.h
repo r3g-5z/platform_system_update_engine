@@ -90,7 +90,8 @@ enum class ErrorCode : int {
 
   // VERY IMPORTANT! When adding new error codes:
   //
-  // 1) Update tools/metrics/histograms/enums.xml in Chrome.
+  // 1) Update tools/metrics/histograms/enums.xml in Chrome. Please make sure
+  //    that the enum value is the same in both files.
   //
   // 2) Update the assorted switch statements in update_engine which won't
   //    build until this case is added.
