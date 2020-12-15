@@ -34,6 +34,7 @@
 
 #include "update_engine/common/action.h"
 #include "update_engine/common/http_fetcher.h"
+#include "update_engine/cros/omaha_parser_data.h"
 #include "update_engine/cros/omaha_request_builder_xml.h"
 #include "update_engine/cros/omaha_response.h"
 
@@ -49,9 +50,6 @@ namespace chromeos_update_engine {
 class NoneType;
 class OmahaRequestAction;
 class OmahaRequestParams;
-
-// This struct is declared in the .cc file.
-struct OmahaParserData;
 
 template <>
 class ActionTraits<OmahaRequestAction> {
@@ -158,10 +156,9 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
 
   // Parses the Omaha Response in |doc| and sets the
   // |install_date_days| field of |output_object| to the value of the
-  // elapsed_days attribute of the daystart element. Returns True if
+  // |elapsed_days| attribute of the daystart element. Returns True if
   // the value was set, False if it wasn't found.
-  static bool ParseInstallDate(OmahaParserData* parser_data,
-                               OmahaResponse* output_object);
+  bool ParseInstallDate(OmahaResponse* output_object);
 
   // Returns True if the kPrefsInstallDateDays state variable is set,
   // False otherwise.
@@ -183,7 +180,7 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
 
   // Parses and persists the cohorts sent back in the updatecheck tag
   // attributes.
-  void PersistCohorts(const OmahaParserData& parser_data);
+  void PersistCohorts();
 
   // If this is an update check request, initializes
   // |ping_active_days_| and |ping_roll_call_days_| to values that may
@@ -194,13 +191,17 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
   // number of days since the last ping sent for |key|.
   int CalculatePingDays(const std::string& key);
 
+  // Update the last ping day preferences based on the server daystart
+  // response. Returns true on success, false otherwise.
+  bool UpdateLastPingDays();
+
   // Returns whether we have "active_days" or "roll_call_days" ping values to
   // send to Omaha and thus we should include them in the response.
   bool ShouldPing() const;
 
   // Process Omaha's response to a ping request and store the results in the DLC
   // metadata directory.
-  void StorePingReply(const OmahaParserData& parser_data) const;
+  void StorePingReply() const;
 
   // Returns true if the download of a new update should be deferred.
   // False if the update can be downloaded.
@@ -221,29 +222,25 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
   // helper methods below and populates the |output_object| with the relevant
   // values. Returns true if we should continue the parsing.  False otherwise,
   // in which case it sets any error code using |completer|.
-  bool ParseResponse(OmahaParserData* parser_data,
-                     OmahaResponse* output_object,
+  bool ParseResponse(OmahaResponse* output_object,
                      ScopedActionCompleter* completer);
 
   // Parses the status property in the given update_check_node and populates
   // |output_object| if valid. Returns true if we should continue the parsing.
   // False otherwise, in which case it sets any error code using |completer|.
-  bool ParseStatus(OmahaParserData* parser_data,
-                   OmahaResponse* output_object,
+  bool ParseStatus(OmahaResponse* output_object,
                    ScopedActionCompleter* completer);
 
   // Parses the URL nodes in the given XML document and populates
   // |output_object| if valid. Returns true if we should continue the parsing.
   // False otherwise, in which case it sets any error code using |completer|.
-  bool ParseUrls(OmahaParserData* parser_data,
-                 OmahaResponse* output_object,
+  bool ParseUrls(OmahaResponse* output_object,
                  ScopedActionCompleter* completer);
 
   // Parses the other parameters in the given XML document and populates
   // |output_object| if valid. Returns true if we should continue the parsing.
   // False otherwise, in which case it sets any error code using |completer|.
-  bool ParseParams(OmahaParserData* parser_data,
-                   OmahaResponse* output_object,
+  bool ParseParams(OmahaResponse* output_object,
                    ScopedActionCompleter* completer);
 
   // Called by TransferComplete() to complete processing, either
@@ -280,6 +277,8 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
   // exists. Otherwise saves the current wallclock time to the
   // kPrefsUpdateFirstSeenAt pref and returns it as a base::Time object.
   base::Time LoadOrPersistUpdateFirstSeenAtPref() const;
+
+  OmahaParserData parser_data_;
 
   // Pointer to the OmahaEvent info. This is an UpdateCheck request if null.
   std::unique_ptr<OmahaEvent> event_;

@@ -193,10 +193,9 @@ int OmahaRequestAction::GetInstallDate() {
   return num_days;
 }
 
-void OmahaRequestAction::StorePingReply(
-    const OmahaParserData& parser_data) const {
+void OmahaRequestAction::StorePingReply() const {
   const auto* params = SystemState::Get()->request_params();
-  for (const auto& app : parser_data.apps) {
+  for (const auto& app : parser_data_.apps) {
     auto it = params->dlc_apps_params().find(app.id);
     if (it == params->dlc_apps_params().end())
       continue;
@@ -217,7 +216,8 @@ void OmahaRequestAction::StorePingReply(
 
     auto last_rollcall_key =
         prefs->CreateSubKey({kDlcPrefsSubDir, dlc_id, kPrefsPingLastRollcall});
-    if (!prefs->SetString(last_rollcall_key, parser_data.daystart.elapsed_days))
+    if (!prefs->SetString(last_rollcall_key,
+                          parser_data_.daystart.elapsed_days))
       LOG(ERROR) << "Failed to set the value of ping metadata '"
                  << last_rollcall_key << "'.";
 
@@ -226,7 +226,8 @@ void OmahaRequestAction::StorePingReply(
       // the previous ping was an active one.
       auto last_active_key =
           prefs->CreateSubKey({kDlcPrefsSubDir, dlc_id, kPrefsPingLastActive});
-      if (!prefs->SetString(last_active_key, parser_data.daystart.elapsed_days))
+      if (!prefs->SetString(last_active_key,
+                            parser_data_.daystart.elapsed_days))
         LOG(ERROR) << "Failed to set the value of ping metadata '"
                    << last_active_key << "'.";
     }
@@ -301,12 +302,12 @@ bool ParseBool(const string& str) {
   return str == "true";
 }
 
-// Update the last ping day preferences based on the server daystart
-// response. Returns true on success, false otherwise.
-bool UpdateLastPingDays(OmahaParserData* parser_data) {
+}  // namespace
+
+bool OmahaRequestAction::UpdateLastPingDays() {
   int64_t elapsed_seconds = 0;
   TEST_AND_RETURN_FALSE(base::StringToInt64(
-      parser_data->daystart.elapsed_seconds, &elapsed_seconds));
+      parser_data_.daystart.elapsed_seconds, &elapsed_seconds));
   TEST_AND_RETURN_FALSE(elapsed_seconds >= 0);
 
   // Remember the local time that matches the server's last midnight
@@ -317,6 +318,8 @@ bool UpdateLastPingDays(OmahaParserData* parser_data) {
   prefs->SetInt64(kPrefsLastRollCallPingDay, daystart.ToInternalValue());
   return true;
 }
+
+namespace {
 
 // Parses the package node in the given XML document and populates
 // |output_object| if valid. Returns true if we should continue the parsing.
@@ -483,10 +486,9 @@ void PersistEolInfo(const OmahaParserData::App& platform_app) {
 
 }  // namespace
 
-bool OmahaRequestAction::ParseResponse(OmahaParserData* parser_data,
-                                       OmahaResponse* output_object,
+bool OmahaRequestAction::ParseResponse(OmahaResponse* output_object,
                                        ScopedActionCompleter* completer) {
-  if (parser_data->apps.empty()) {
+  if (parser_data_.apps.empty()) {
     completer->set_code(ErrorCode::kOmahaResponseInvalid);
     return false;
   }
@@ -494,12 +496,12 @@ bool OmahaRequestAction::ParseResponse(OmahaParserData* parser_data,
   // Locate the platform App since it's an important one that has specific
   // information attached to it that may not be available from other Apps.
   const auto* params = SystemState::Get()->request_params();
-  auto platform_app = std::find_if(parser_data->apps.begin(),
-                                   parser_data->apps.end(),
+  auto platform_app = std::find_if(parser_data_.apps.begin(),
+                                   parser_data_.apps.end(),
                                    [&params](const OmahaParserData::App& app) {
                                      return app.id == params->GetAppId();
                                    });
-  if (platform_app == parser_data->apps.end()) {
+  if (platform_app == parser_data_.apps.end()) {
     LOG(WARNING) << "Platform App is missing.";
   } else {
     // chromium-os:37289: The PollInterval is not supported by Omaha server
@@ -531,7 +533,7 @@ bool OmahaRequestAction::ParseResponse(OmahaParserData* parser_data,
   // element. This is the number of days since Jan 1 2007, 0:00
   // PST. If we don't have a persisted value of the Omaha InstallDate,
   // we'll use it to calculate it and then persist it.
-  if (ParseInstallDate(parser_data, output_object) && !HasInstallDate()) {
+  if (ParseInstallDate(output_object) && !HasInstallDate()) {
     // Since output_object->install_date_days is never negative, the
     // elapsed_days -> install-date calculation is reduced to simply
     // rounding down to the nearest number divisible by 7.
@@ -546,17 +548,17 @@ bool OmahaRequestAction::ParseResponse(OmahaParserData* parser_data,
   }
 
   // We persist the cohorts sent by omaha even if the status is "noupdate".
-  PersistCohorts(*parser_data);
+  PersistCohorts();
 
-  if (!ParseStatus(parser_data, output_object, completer))
+  if (!ParseStatus(output_object, completer))
     return false;
 
-  if (!ParseParams(parser_data, output_object, completer))
+  if (!ParseParams(output_object, completer))
     return false;
 
   // Package has to be parsed after Params now because ParseParams need to make
   // sure that postinstall action exists.
-  for (auto& app : parser_data->apps) {
+  for (auto& app : parser_data_.apps) {
     // Only allow exclusions for a non-critical package during an update. For
     // non-critical package installations, let the errors propagate instead
     // of being handled inside update_engine as installations are a dlcservice
@@ -569,12 +571,11 @@ bool OmahaRequestAction::ParseResponse(OmahaParserData* parser_data,
   return true;
 }
 
-bool OmahaRequestAction::ParseStatus(OmahaParserData* parser_data,
-                                     OmahaResponse* output_object,
+bool OmahaRequestAction::ParseStatus(OmahaResponse* output_object,
                                      ScopedActionCompleter* completer) {
   output_object->update_exists = false;
   auto* params = SystemState::Get()->request_params();
-  for (const auto& app : parser_data->apps) {
+  for (const auto& app : parser_data_.apps) {
     const string& status = app.updatecheck.status;
     if (status == kValNoUpdate) {
       // If the app is a DLC, allow status "noupdate" to support DLC
@@ -615,12 +616,11 @@ bool OmahaRequestAction::ParseStatus(OmahaParserData* parser_data,
   return output_object->update_exists;
 }
 
-bool OmahaRequestAction::ParseParams(OmahaParserData* parser_data,
-                                     OmahaResponse* output_object,
+bool OmahaRequestAction::ParseParams(OmahaResponse* output_object,
                                      ScopedActionCompleter* completer) {
   const auto* params = SystemState::Get()->request_params();
   const OmahaParserData::App* main_app = nullptr;
-  for (const auto& app : parser_data->apps) {
+  for (const auto& app : parser_data_.apps) {
     if (app.id == params->GetAppId() && app.postinstall_action) {
       main_app = &app;
     } else if (params->is_install()) {
@@ -721,9 +721,8 @@ void OmahaRequestAction::TransferComplete(HttpFetcher* fetcher,
     return;
   }
 
-  OmahaParserData parser_data;
   OmahaParserXml parser(
-      &parser_data,
+      &parser_data_,
       reinterpret_cast<const char*>(response_buffer_.data()),
       response_buffer_.size(),
       SystemState::Get()->request_params()->rollback_allowed_milestones());
@@ -736,7 +735,7 @@ void OmahaRequestAction::TransferComplete(HttpFetcher* fetcher,
   // Update the last ping day preferences based on the server daystart response
   // even if we didn't send a ping. Omaha always includes the daystart in the
   // response, but log the error if it didn't.
-  LOG_IF(ERROR, !UpdateLastPingDays(&parser_data))
+  LOG_IF(ERROR, !UpdateLastPingDays())
       << "Failed to update the last ping day preferences!";
 
   // Sets first_active_omaha_ping_sent to true (vpd in CrOS). We only do this if
@@ -753,7 +752,7 @@ void OmahaRequestAction::TransferComplete(HttpFetcher* fetcher,
   }
 
   // Create/update the metadata files for each DLC app received.
-  StorePingReply(parser_data);
+  StorePingReply();
 
   if (!HasOutputPipe()) {
     // Just set success to whether or not the http transfer succeeded,
@@ -763,7 +762,7 @@ void OmahaRequestAction::TransferComplete(HttpFetcher* fetcher,
   }
 
   OmahaResponse output_object;
-  if (!ParseResponse(&parser_data, &output_object, &completer))
+  if (!ParseResponse(&output_object, &completer))
     return;
   ProcessExclusions(&output_object,
                     SystemState::Get()->request_params(),
@@ -1101,11 +1100,9 @@ bool OmahaRequestAction::IsUpdateCheckCountBasedWaitingSatisfied() {
   return false;
 }
 
-// static
-bool OmahaRequestAction::ParseInstallDate(OmahaParserData* parser_data,
-                                          OmahaResponse* output_object) {
+bool OmahaRequestAction::ParseInstallDate(OmahaResponse* output_object) {
   int64_t elapsed_days = 0;
-  if (!base::StringToInt64(parser_data->daystart.elapsed_days, &elapsed_days))
+  if (!base::StringToInt64(parser_data_.daystart.elapsed_days, &elapsed_days))
     return false;
 
   if (elapsed_days < 0)
@@ -1155,9 +1152,9 @@ void OmahaRequestAction::PersistCohortData(const string& prefs_key,
   }
 }
 
-void OmahaRequestAction::PersistCohorts(const OmahaParserData& parser_data) {
+void OmahaRequestAction::PersistCohorts() {
   const auto* params = SystemState::Get()->request_params();
-  for (const auto& app : parser_data.apps) {
+  for (const auto& app : parser_data_.apps) {
     // For platform App ID.
     if (app.id == params->GetAppId()) {
       PersistCohortData(kPrefsOmahaCohort, app.cohort);
