@@ -284,19 +284,6 @@ bool OmahaRequestAction::ReceivedBytes(HttpFetcher* fetcher,
 
 namespace {
 
-// Parses a 64 bit base-10 int from a string and returns it. Returns 0
-// on error. If the string contains "0", that's indistinguishable from
-// error.
-off_t ParseInt(const string& str) {
-  off_t ret = 0;
-  int rc = sscanf(str.c_str(), "%" PRIi64, &ret);  // NOLINT(runtime/printf)
-  if (rc < 1) {
-    // failure
-    return 0;
-  }
-  return ret;
-}
-
 // Parses |str| and returns |true| if, and only if, its value is "true".
 bool ParseBool(const string& str) {
   return str == "true";
@@ -647,8 +634,10 @@ bool OmahaRequestAction::ParseParams(OmahaResponse* output_object,
   output_object->more_info_url = app.postinstall_action->more_info_url;
   output_object->prompt = ParseBool(app.postinstall_action->prompt);
   output_object->deadline = app.postinstall_action->deadline;
-  output_object->max_days_to_scatter =
-      ParseInt(app.postinstall_action->max_days_to_scatter);
+  if (!base::StringToInt64(app.postinstall_action->max_days_to_scatter,
+                           &output_object->max_days_to_scatter)) {
+    output_object->max_days_to_scatter = 0;
+  }
   output_object->disable_p2p_for_downloading =
       ParseBool(app.postinstall_action->disable_p2p_for_downloading);
   output_object->disable_p2p_for_sharing =
