@@ -33,6 +33,7 @@
 #include <curl/curl.h>
 
 #include "update_engine/common/action.h"
+#include "update_engine/common/excluder_interface.h"
 #include "update_engine/common/http_fetcher.h"
 #include "update_engine/cros/omaha_parser_data.h"
 #include "update_engine/cros/omaha_request_builder_xml.h"
@@ -155,10 +156,10 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
   static int GetInstallDate();
 
   // Parses the Omaha Response in |doc| and sets the
-  // |install_date_days| field of |output_object| to the value of the
+  // |install_date_days| field of |response_| to the value of the
   // |elapsed_days| attribute of the daystart element. Returns True if
   // the value was set, False if it wasn't found.
-  bool ParseInstallDate(OmahaResponse* output_object);
+  bool ParseInstallDate();
 
   // Returns True if the kPrefsInstallDateDays state variable is set,
   // False otherwise.
@@ -205,65 +206,64 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
 
   // Returns true if the download of a new update should be deferred.
   // False if the update can be downloaded.
-  bool ShouldDeferDownload(OmahaResponse* output_object);
+  bool ShouldDeferDownload();
 
   // Returns true if the basic wall-clock-based waiting period has been
   // satisfied based on the scattering policy setting. False otherwise.
   // If true, it also indicates whether the additional update-check-count-based
   // waiting period also needs to be satisfied before the download can begin.
-  WallClockWaitResult IsWallClockBasedWaitingSatisfied(
-      OmahaResponse* output_object);
+  WallClockWaitResult IsWallClockBasedWaitingSatisfied();
 
   // Returns true if the update-check-count-based waiting period has been
   // satisfied. False otherwise.
   bool IsUpdateCheckCountBasedWaitingSatisfied();
 
   // Parses the response from Omaha that's available in |doc| using the other
-  // helper methods below and populates the |output_object| with the relevant
+  // helper methods below and populates the |response_| with the relevant
   // values. Returns true if we should continue the parsing.  False otherwise,
   // in which case it sets any error code using |completer|.
-  bool ParseResponse(OmahaResponse* output_object,
-                     ScopedActionCompleter* completer);
+  bool ParseResponse(ScopedActionCompleter* completer);
 
   // Parses the status property in the given update_check_node and populates
-  // |output_object| if valid. Returns true if we should continue the parsing.
+  // |response_| if valid. Returns true if we should continue the parsing.
   // False otherwise, in which case it sets any error code using |completer|.
-  bool ParseStatus(OmahaResponse* output_object,
-                   ScopedActionCompleter* completer);
+  bool ParseStatus(ScopedActionCompleter* completer);
 
   // Parses the URL nodes in the given XML document and populates
-  // |output_object| if valid. Returns true if we should continue the parsing.
+  // |response_| if valid. Returns true if we should continue the parsing.
   // False otherwise, in which case it sets any error code using |completer|.
-  bool ParseUrls(OmahaResponse* output_object,
-                 ScopedActionCompleter* completer);
+  bool ParseUrls(ScopedActionCompleter* completer);
 
   // Parses the other parameters in the given XML document and populates
-  // |output_object| if valid. Returns true if we should continue the parsing.
+  // |response_| if valid. Returns true if we should continue the parsing.
   // False otherwise, in which case it sets any error code using |completer|.
-  bool ParseParams(OmahaResponse* output_object,
-                   ScopedActionCompleter* completer);
+  bool ParseParams(ScopedActionCompleter* completer);
 
+  // Parses the package node in the given XML document and populates
+  // |response_| if valid. Returns true if we should continue the parsing.
+  // False otherwise, in which case it sets any error code using |completer|.
+  bool ParsePackage(OmahaParserData::App* app,
+                    bool can_exclude,
+                    ScopedActionCompleter* completer);
   // Called by TransferComplete() to complete processing, either
   // asynchronously after looking up resources via p2p or directly.
   void CompleteProcessing();
 
   // Helper to asynchronously look up payload on the LAN.
-  void LookupPayloadViaP2P(const OmahaResponse& response);
+  void LookupPayloadViaP2P();
 
   // Callback used by LookupPayloadViaP2P().
   void OnLookupPayloadViaP2PCompleted(const std::string& url);
 
   // Returns true if the current update should be ignored.
-  bool ShouldIgnoreUpdate(const OmahaResponse& response,
-                          ErrorCode* error) const;
+  bool ShouldIgnoreUpdate(ErrorCode* error) const;
 
   // Return true if updates are allowed by user preferences.
-  bool IsUpdateAllowedOverCellularByPrefs(const OmahaResponse& response) const;
+  bool IsUpdateAllowedOverCellularByPrefs() const;
 
   // Returns true if updates are allowed over the current type of connection.
   // False otherwise.
-  bool IsUpdateAllowedOverCurrentConnection(
-      ErrorCode* error, const OmahaResponse& response) const;
+  bool IsUpdateAllowedOverCurrentConnection(ErrorCode* error) const;
 
   // Returns true if rollback is enabled. Always returns false for consumer
   // devices.
@@ -278,7 +278,21 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
   // kPrefsUpdateFirstSeenAt pref and returns it as a base::Time object.
   base::Time LoadOrPersistUpdateFirstSeenAtPref() const;
 
+  // Removes the candidate URLs which are excluded within packages, if all the
+  // candidate URLs are excluded within a package, the package will be excluded.
+  void ProcessExclusions(OmahaRequestParams* params,
+                         ExcluderInterface* excluder);
+
+  // Parses the 2 key version strings kernel_version and firmware_version. If
+  // the field is not present, or cannot be parsed the values default to 0xffff.
+  void ParseRollbackVersions(const OmahaParserData::App& platform_app,
+                             int allowed_milestones);
+
+  void PersistEolInfo(const OmahaParserData::App& platform_app);
+
   OmahaParserData parser_data_;
+
+  OmahaResponse response_;
 
   // Pointer to the OmahaEvent info. This is an UpdateCheck request if null.
   std::unique_ptr<OmahaEvent> event_;
