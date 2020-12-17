@@ -70,7 +70,6 @@ pkg_config("target_defaults") {
     "_FILE_OFFSET_BITS=64",
     "_POSIX_C_SOURCE=199309L",
     "USE_CFM=${use.cfm}",
-    "USE_DBUS=${use.dbus}",
     "USE_FEC=0",
     "USE_HWID_OVERRIDE=${use.hwid_override}",
   ]

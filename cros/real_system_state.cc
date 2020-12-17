@@ -33,10 +33,8 @@
 #include "update_engine/common/dlcservice_interface.h"
 #include "update_engine/common/hardware.h"
 #include "update_engine/common/utils.h"
-#include "update_engine/cros/metrics_reporter_omaha.h"
-#if USE_DBUS
 #include "update_engine/cros/dbus_connection.h"
-#endif  // USE_DBUS
+#include "update_engine/cros/metrics_reporter_omaha.h"
 #include "update_engine/update_manager/state_factory.h"
 
 namespace chromeos_update_engine {

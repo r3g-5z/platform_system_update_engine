@@ -19,14 +19,10 @@
 #include <memory>
 
 #include <base/logging.h>
-#if USE_DBUS
 #include <session_manager/dbus-proxies.h>
-#endif  // USE_DBUS
 
-#if USE_DBUS
-#include "update_engine/cros/dbus_connection.h"
-#endif  // USE_DBUS
 #include "update_engine/common/system_state.h"
+#include "update_engine/cros/dbus_connection.h"
 #include "update_engine/cros/shill_proxy.h"
 #include "update_engine/update_manager/fake_shill_provider.h"
 #include "update_engine/update_manager/real_config_provider.h"
@@ -48,17 +44,12 @@ State* DefaultStateFactory(
     org::chromium::KioskAppServiceInterfaceProxyInterface* kiosk_app_proxy) {
   unique_ptr<RealConfigProvider> config_provider(
       new RealConfigProvider(SystemState::Get()->hardware()));
-#if USE_DBUS
   scoped_refptr<dbus::Bus> bus =
       chromeos_update_engine::DBusConnection::Get()->GetDBus();
   unique_ptr<RealDevicePolicyProvider> device_policy_provider(
       new RealDevicePolicyProvider(
           std::make_unique<org::chromium::SessionManagerInterfaceProxy>(bus),
           policy_provider));
-#else
-  unique_ptr<RealDevicePolicyProvider> device_policy_provider(
-      new RealDevicePolicyProvider(policy_provider));
-#endif  // USE_DBUS
   unique_ptr<RealShillProvider> shill_provider(
       new RealShillProvider(new chromeos_update_engine::ShillProxy()));
   unique_ptr<RealRandomProvider> random_provider(new RealRandomProvider());
