@@ -42,6 +42,7 @@ using org::chromium::flimflam::ManagerProxyMock;
 using org::chromium::flimflam::ServiceProxyMock;
 using std::unique_ptr;
 using testing::_;
+using testing::DoAll;
 using testing::Mock;
 using testing::Return;
 using testing::SetArgPointee;

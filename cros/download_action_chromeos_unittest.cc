@@ -56,6 +56,7 @@ using std::string;
 using std::unique_ptr;
 using testing::_;
 using testing::AtLeast;
+using testing::DoAll;
 using testing::InSequence;
 using testing::Return;
 using testing::SetArgPointee;

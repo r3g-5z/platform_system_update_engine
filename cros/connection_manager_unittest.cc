@@ -41,6 +41,7 @@ using org::chromium::flimflam::ServiceProxyMock;
 using std::set;
 using std::string;
 using testing::_;
+using testing::DoAll;
 using testing::Return;
 using testing::SetArgPointee;
 

@@ -61,6 +61,7 @@ using test_utils::GetBuildArtifactsPath;
 using test_utils::kRandomString;
 using test_utils::System;
 using testing::_;
+using testing::DoAll;
 
 extern const char* kUnittestPrivateKeyPath;
 extern const char* kUnittestPublicKeyPath;

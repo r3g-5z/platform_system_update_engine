@@ -40,6 +40,7 @@ using std::string;
 using testing::_;
 using testing::AnyNumber;
 using testing::AtLeast;
+using testing::DoAll;
 using testing::Mock;
 using testing::NiceMock;
 using testing::Return;

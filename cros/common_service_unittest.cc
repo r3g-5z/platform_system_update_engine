@@ -30,6 +30,7 @@
 using std::string;
 using std::vector;
 using testing::_;
+using testing::DoAll;
 using testing::Return;
 using testing::SetArgPointee;
 using update_engine::UpdateAttemptFlags;
