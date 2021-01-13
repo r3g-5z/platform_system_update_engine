@@ -20,7 +20,6 @@
 // TODO(b/179419726): Remove.
 #include "update_engine/update_manager/update_can_be_applied_policy.h"
 #include "update_engine/update_manager/update_can_be_applied_policy_data.h"
-#include "update_engine/update_manager/update_can_start_policy.h"
 #include "update_engine/update_manager/update_check_allowed_policy.h"
 
 using chromeos_update_engine::ErrorCode;
@@ -79,27 +78,6 @@ EvalStatus UpdateCanBeAppliedPolicy::EvaluateDefault(
     PolicyDataInterface* data) const {
   static_cast<UpdateCanBeAppliedPolicyData*>(data)->set_error_code(
       ErrorCode::kSuccess);
-  return EvalStatus::kSucceeded;
-}
-
-EvalStatus UpdateCanStartPolicy::EvaluateDefault(
-    EvaluationContext* ec,
-    State* state,
-    std::string* error,
-    PolicyDataInterface* data) const {
-  UpdateDownloadParams* result =
-      &(static_cast<UpdateCanStartPolicyData*>(data)->result);
-  result->update_can_start = true;
-  result->cannot_start_reason = UpdateCannotStartReason::kUndefined;
-  result->download_url_idx = 0;
-  result->download_url_allowed = true;
-  result->download_url_num_errors = 0;
-  result->p2p_downloading_allowed = false;
-  result->p2p_sharing_allowed = false;
-  result->do_increment_failures = false;
-  result->backoff_expiry = base::Time();
-  result->scatter_wait_period = base::TimeDelta();
-  result->scatter_check_threshold = 0;
   return EvalStatus::kSucceeded;
 }
 
