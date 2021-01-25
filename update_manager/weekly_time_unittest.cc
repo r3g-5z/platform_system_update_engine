@@ -60,7 +60,7 @@ TEST_P(WeeklyTimeDurationTest, GetDurationTo) {
   EXPECT_EQ(result(), start.GetDurationTo(end));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SameMinutes,
     WeeklyTimeDurationTest,
     testing::Values(std::make_tuple(kThursday,
@@ -69,7 +69,7 @@ INSTANTIATE_TEST_CASE_P(
                                     TimeDelta::FromMinutes(30),
                                     TimeDelta::FromDays(2))));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     DifferentMinutes,
     WeeklyTimeDurationTest,
     testing::Values(std::make_tuple(kMonday,
@@ -79,7 +79,7 @@ INSTANTIATE_TEST_CASE_P(
                                     TimeDelta::FromDays(2) +
                                         TimeDelta::FromMinutes(20))));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     EndLessThanStartSameMinutes,
     WeeklyTimeDurationTest,
     testing::Values(std::make_tuple(kSaturday,
@@ -88,7 +88,7 @@ INSTANTIATE_TEST_CASE_P(
                                     TimeDelta::FromMinutes(100),
                                     TimeDelta::FromDays(3))));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     EndLessThanStartDifferentMinutes,
     WeeklyTimeDurationTest,
     testing::Values(std::make_tuple(kSaturday,
@@ -117,7 +117,7 @@ TEST_P(WeeklyTimeOffsetTest, WeekTimeAddTime) {
   EXPECT_EQ(result(), test_time);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SameDayTest,
     WeeklyTimeOffsetTest,
     testing::Values(std::make_tuple(kTuesday,
@@ -126,21 +126,22 @@ INSTANTIATE_TEST_CASE_P(
                                     WeeklyTime(kTuesday,
                                                TimeDelta::FromMinutes(600)))));
 
-INSTANTIATE_TEST_CASE_P(DayChangeTest,
-                        WeeklyTimeOffsetTest,
-                        testing::Values(std::make_tuple(
-                            kThursday,
-                            TimeDelta::FromHours(23),
-                            TimeDelta::FromHours(2),
-                            WeeklyTime(kFriday, TimeDelta::FromHours(1)))));
+INSTANTIATE_TEST_SUITE_P(DayChangeTest,
+                         WeeklyTimeOffsetTest,
+                         testing::Values(std::make_tuple(
+                             kThursday,
+                             TimeDelta::FromHours(23),
+                             TimeDelta::FromHours(2),
+                             WeeklyTime(kFriday, TimeDelta::FromHours(1)))));
 
-INSTANTIATE_TEST_CASE_P(DayChangeTestOver7,
-                        WeeklyTimeOffsetTest,
-                        testing::Values(std::make_tuple(
-                            kSunday,
-                            TimeDelta::FromHours(20),
-                            TimeDelta::FromDays(3),
-                            WeeklyTime(kWednesday, TimeDelta::FromHours(20)))));
+INSTANTIATE_TEST_SUITE_P(
+    DayChangeTestOver7,
+    WeeklyTimeOffsetTest,
+    testing::Values(std::make_tuple(kSunday,
+                                    TimeDelta::FromHours(20),
+                                    TimeDelta::FromDays(3),
+                                    WeeklyTime(kWednesday,
+                                               TimeDelta::FromHours(20)))));
 
 class WeeklyTimeIntervalRangeTest
     : public testing::TestWithParam<tuple<int /* test_day_of_week */,
@@ -176,35 +177,35 @@ TEST_P(WeeklyTimeIntervalRangeTest, InRange) {
 }
 
 // Test the left side of the range being inclusive.
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     InclusiveSuccessLeft,
     WeeklyTimeIntervalRangeTest,
     testing::Values(std::make_tuple(kThursday, 10, false, true, false)));
 
 // Test the right side of the range being exclusive.
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ExclusiveSuccessRight,
     WeeklyTimeIntervalRangeTest,
     testing::Values(std::make_tuple(kThursday, 11, false, false, false)));
 
 // Test falling out of the interval by a small amount.
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     FailOutsideRangeSmall,
     WeeklyTimeIntervalRangeTest,
     testing::Values(std::make_tuple(kThursday, 12, false, false, false)));
 
 // These test cases check that intervals wrap around properly.
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     WraparoundOutside,
     WeeklyTimeIntervalRangeTest,
     testing::Values(std::make_tuple(kWednesday, 10, true, false, false)));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     WraparoundInsideRight,
     WeeklyTimeIntervalRangeTest,
     testing::Values(std::make_tuple(kSaturday, 10, false, false, true)));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     WraparoundInsideLeft,
     WeeklyTimeIntervalRangeTest,
     testing::Values(std::make_tuple(kMonday, 0, false, false, true)));

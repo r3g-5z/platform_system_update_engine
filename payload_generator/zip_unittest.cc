@@ -114,7 +114,7 @@ class ZipTest<XzTest> : public ::testing::Test {
 
 typedef ::testing::Types<BzipTest, XzTest> ZipTestTypes;
 
-TYPED_TEST_CASE(ZipTest, ZipTestTypes);
+TYPED_TEST_SUITE(ZipTest, ZipTestTypes);
 
 TYPED_TEST(ZipTest, SimpleTest) {
   string in_str(

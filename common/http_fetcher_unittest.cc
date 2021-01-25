@@ -440,7 +440,7 @@ typedef ::testing::Types<LibcurlHttpFetcherTest,
                          FileFetcherTest,
                          MultiRangeHttpFetcherOverFileFetcherTest>
     HttpFetcherTestTypes;
-TYPED_TEST_CASE(HttpFetcherTest, HttpFetcherTestTypes);
+TYPED_TEST_SUITE(HttpFetcherTest, HttpFetcherTestTypes);
 
 namespace {
 class HttpFetcherTestDelegate : public HttpFetcherDelegate {
