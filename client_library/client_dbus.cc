@@ -251,5 +251,10 @@ bool DBusUpdateEngineClient::GetLastAttemptError(
   return proxy_->GetLastAttemptError(last_attempt_error, nullptr);
 }
 
+bool DBusUpdateEngineClient::ToggleFeature(const std::string& feature,
+                                           bool enable) {
+  return proxy_->ToggleFeature(feature, enable, nullptr);
+}
+
 }  // namespace internal
 }  // namespace update_engine

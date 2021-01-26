@@ -286,6 +286,15 @@ int UpdateEngineClient::ProcessFlags() {
               "Show the previous OS version used before the update reboot.");
   DEFINE_bool(last_attempt_error, false, "Show the last attempt error.");
   DEFINE_bool(eol_status, false, "Show the current end-of-life status.");
+  DEFINE_string(
+      enable_feature,
+      "",
+      "Give the name of the feature to enable, ex.\"feature-repeated-updates\" "
+      "to continue checking for updates while waiting for reboot.");
+  DEFINE_string(disable_feature,
+                "",
+                "Give the name of the feature to disable, "
+                "ex.\"feature-repeated-updates\".");
 
   // Boilerplate init commands.
   base::CommandLine::Init(argc_, argv_);
@@ -466,6 +475,29 @@ int UpdateEngineClient::ProcessFlags() {
     LOG(INFO) << "Requesting rollback.";
     if (!client_->Rollback(FLAGS_powerwash)) {
       LOG(ERROR) << "Rollback request failed.";
+      return 1;
+    }
+  }
+
+  if (!FLAGS_enable_feature.empty() && !FLAGS_disable_feature.empty() &&
+      FLAGS_enable_feature == FLAGS_disable_feature) {
+    LOG(ERROR) << "Cannot both enable and disable feature: "
+               << FLAGS_disable_feature;
+    return 1;
+  }
+
+  if (!FLAGS_enable_feature.empty()) {
+    LOG(INFO) << "Requesting to enable feature " << FLAGS_enable_feature;
+    if (!client_->ToggleFeature(FLAGS_enable_feature, true)) {
+      LOG(ERROR) << "Enabling feature failed.";
+      return 1;
+    }
+  }
+
+  if (!FLAGS_disable_feature.empty()) {
+    LOG(INFO) << "Requesting to disable feature " << FLAGS_disable_feature;
+    if (!client_->ToggleFeature(FLAGS_disable_feature, false)) {
+      LOG(ERROR) << "Disabling feature failed.";
       return 1;
     }
   }

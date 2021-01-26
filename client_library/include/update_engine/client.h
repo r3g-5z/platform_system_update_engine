@@ -119,6 +119,8 @@ class UpdateEngineClient {
   // Get the last UpdateAttempt error code.
   virtual bool GetLastAttemptError(int32_t* last_attempt_error) const = 0;
 
+  virtual bool ToggleFeature(const std::string& feature, bool enable) = 0;
+
  protected:
   // Use CreateInstance().
   UpdateEngineClient() = default;
