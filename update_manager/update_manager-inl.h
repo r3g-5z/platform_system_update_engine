@@ -49,7 +49,6 @@ EvalStatus UpdateManager::EvaluatePolicy(
   ec->ResetEvaluation();
 
   const std::string policy_name = policy_->PolicyRequestName(policy_method);
-  LOG(INFO) << policy_name << ": START";
 
   // First try calling the actual policy.
   std::string error;
@@ -70,8 +69,6 @@ EvalStatus UpdateManager::EvaluatePolicy(
       status = EvalStatus::kFailed;
     }
   }
-
-  LOG(INFO) << policy_name << ": END";
 
   return status;
 }
@@ -119,7 +116,7 @@ EvalStatus UpdateManager::PolicyRequest(
         EvaluationContext*, State*, std::string*, R*, ExpectedArgs...) const,
     R* result,
     ActualArgs... args) {
-  auto ec = std::make_shared<EvaluationContext>(clock_, evaluation_timeout_);
+  auto ec = std::make_shared<EvaluationContext>(evaluation_timeout_);
   // A PolicyRequest always consists on a single evaluation on a new
   // EvaluationContext.
   // IMPORTANT: To ensure that ActualArgs can be converted to ExpectedArgs, we
@@ -141,7 +138,6 @@ void UpdateManager::AsyncPolicyRequest(
         EvaluationContext*, State*, std::string*, R*, ExpectedArgs...) const,
     ActualArgs... args) {
   auto ec = std::make_shared<EvaluationContext>(
-      clock_,
       evaluation_timeout_,
       expiration_timeout_,
       std::unique_ptr<base::Callback<void(EvaluationContext*)>>(

@@ -20,6 +20,7 @@
 #include <gtest/gtest.h>
 
 #include "update_engine/payload_consumer/payload_constants.h"
+#include "update_engine/payload_generator/extent_ranges.h"
 #include "update_engine/payload_generator/extent_utils.h"
 #include "update_engine/payload_generator/merge_sequence_generator.h"
 
@@ -116,6 +117,20 @@ TEST_F(MergeSequenceGeneratorTest, FindDependency) {
             merge_after.at(transfers[2]));
 }
 
+TEST_F(MergeSequenceGeneratorTest, FindDependencyEdgeCase) {
+  std::vector<CowMergeOperation> transfers = {
+      CreateCowMergeOperation(ExtentForRange(10, 10), ExtentForRange(15, 10)),
+      CreateCowMergeOperation(ExtentForRange(40, 10), ExtentForRange(50, 10)),
+      CreateCowMergeOperation(ExtentForRange(59, 10), ExtentForRange(60, 10)),
+  };
+
+  std::map<CowMergeOperation, std::set<CowMergeOperation>> merge_after;
+  FindDependency(transfers, &merge_after);
+  ASSERT_EQ(std::set<CowMergeOperation>(), merge_after.at(transfers[0]));
+  ASSERT_EQ(std::set<CowMergeOperation>(), merge_after.at(transfers[1]));
+  ASSERT_EQ(merge_after[transfers[2]].size(), 1U);
+}
+
 TEST_F(MergeSequenceGeneratorTest, FindDependency_ReusedSourceBlocks) {
   std::vector<CowMergeOperation> transfers = {
       CreateCowMergeOperation(ExtentForRange(5, 10), ExtentForRange(15, 10)),
@@ -191,6 +206,45 @@ TEST_F(MergeSequenceGeneratorTest, GenerateSequenceMultipleCycles) {
   std::vector<CowMergeOperation> expected{
       transfers[1], transfers[0], transfers[4], transfers[3]};
   GenerateSequence(transfers, expected);
+}
+
+void ValidateSplitSequence(const Extent& src_extent, const Extent& dst_extent) {
+  std::vector<CowMergeOperation> sequence;
+  SplitSelfOverlapping(src_extent, dst_extent, &sequence);
+  ExtentRanges src_extent_set;
+  src_extent_set.AddExtent(src_extent);
+  ExtentRanges dst_extent_set;
+  dst_extent_set.AddExtent(dst_extent);
+
+  size_t src_block_count = 0;
+  size_t dst_block_count = 0;
+  std::cout << "src_extent: " << src_extent << " dst_extent: " << dst_extent
+            << '\n';
+  for (const auto& merge_op : sequence) {
+    src_extent_set.SubtractExtent(merge_op.src_extent());
+    dst_extent_set.SubtractExtent(merge_op.dst_extent());
+    src_block_count += merge_op.src_extent().num_blocks();
+    dst_block_count += merge_op.dst_extent().num_blocks();
+    std::cout << merge_op.src_extent() << " -> " << merge_op.dst_extent()
+              << '\n';
+    ASSERT_FALSE(ExtentRanges::ExtentsOverlap(merge_op.src_extent(),
+                                              merge_op.dst_extent()));
+  }
+  std::cout << '\n';
+  // Check that all blocks are covered
+  ASSERT_EQ(src_extent_set.extent_set().size(), 0UL);
+  ASSERT_EQ(dst_extent_set.extent_set().size(), 0UL);
+
+  // Check that the split didn't cover extra blocks
+  ASSERT_EQ(src_block_count, src_extent.num_blocks());
+  ASSERT_EQ(dst_block_count, dst_extent.num_blocks());
+}
+
+TEST_F(MergeSequenceGeneratorTest, SplitSelfOverlappingTest) {
+  auto a = ExtentForRange(25, 16);
+  auto b = ExtentForRange(30, 16);
+  ValidateSplitSequence(a, b);
+  ValidateSplitSequence(b, a);
 }
 
 }  // namespace chromeos_update_engine

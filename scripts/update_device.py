@@ -17,6 +17,7 @@
 
 """Send an A/B update to an Android device over adb."""
 
+from __future__ import print_function
 from __future__ import absolute_import
 
 import argparse
@@ -103,7 +104,7 @@ class AndroidOTAPackage(object):
 
     if payload_info.compress_type != 0:
       logging.error(
-          "Expected layload to be uncompressed, got compression method %d",
+          "Expected payload to be uncompressed, got compression method %d",
           payload_info.compress_type)
     # Don't use len(payload_info.extra). Because that returns size of extra
     # fields in central directory. We need to look at local file directory,
@@ -124,10 +125,10 @@ class AndroidOTAPackage(object):
       payload_header = fp.read(4)
       if payload_header != self.PAYLOAD_MAGIC_HEADER:
         logging.warning(
-            "Invalid header, expeted %s, got %s."
+            "Invalid header, expected %s, got %s."
             "Either the offset is not correct, or payload is corrupted",
             binascii.hexlify(self.PAYLOAD_MAGIC_HEADER),
-            payload_header)
+            binascii.hexlify(payload_header))
 
     property_entry = (self.SECONDARY_OTA_PAYLOAD_PROPERTIES_TXT if
                       secondary_payload else self.OTA_PAYLOAD_PROPERTIES_TXT)
@@ -305,6 +306,7 @@ class ServerThread(threading.Thread):
     logging.info('Server Terminated')
 
   def StopServer(self):
+    self._httpd.shutdown()
     self._httpd.socket.close()
 
 
@@ -318,13 +320,13 @@ def AndroidUpdateCommand(ota_filename, secondary, payload_url, extra_headers):
   """Return the command to run to start the update in the Android device."""
   ota = AndroidOTAPackage(ota_filename, secondary)
   headers = ota.properties
-  headers += 'USER_AGENT=Dalvik (something, something)\n'
-  headers += 'NETWORK_ID=0\n'
-  headers += extra_headers
+  headers += b'USER_AGENT=Dalvik (something, something)\n'
+  headers += b'NETWORK_ID=0\n'
+  headers += extra_headers.encode()
 
   return ['update_engine_client', '--update', '--follow',
           '--payload=%s' % payload_url, '--offset=%d' % ota.offset,
-          '--size=%d' % ota.size, '--headers="%s"' % headers]
+          '--size=%d' % ota.size, '--headers="%s"' % headers.decode()]
 
 
 def OmahaUpdateCommand(omaha_url):
@@ -401,6 +403,8 @@ def main():
                       help='Extra headers to pass to the device.')
   parser.add_argument('--secondary', action='store_true',
                       help='Update with the secondary payload in the package.')
+  parser.add_argument('--no-slot-switch', action='store_true',
+                      help='Do not perform slot switch after the update.')
   args = parser.parse_args()
   logging.basicConfig(
       level=logging.WARNING if args.no_verbose else logging.INFO)
@@ -417,6 +421,9 @@ def main():
 
   help_cmd = ['shell', 'su', '0', 'update_engine_client', '--help']
   use_omaha = 'omaha' in dut.adb_output(help_cmd)
+
+  if args.no_slot_switch:
+    args.extra_headers += "\nSWITCH_SLOT_ON_REBOOT=0"
 
   if args.file:
     # Update via pushing a file to /data.

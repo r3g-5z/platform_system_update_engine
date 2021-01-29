@@ -20,6 +20,8 @@
 #include <inttypes.h>
 #include <time.h>
 
+#include <algorithm>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -31,6 +33,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <brillo/secure_blob.h>
 #include <gmock/gmock.h>
 #include <google/protobuf/repeated_field.h>
 #include <gtest/gtest.h>
@@ -41,10 +44,12 @@
 #include "update_engine/common/fake_hardware.h"
 #include "update_engine/common/fake_prefs.h"
 #include "update_engine/common/hardware_interface.h"
+#include "update_engine/common/hash_calculator.h"
+#include "update_engine/common/mock_download_action.h"
 #include "update_engine/common/test_utils.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/payload_consumer/fake_file_descriptor.h"
-#include "update_engine/payload_consumer/mock_download_action.h"
+#include "update_engine/payload_consumer/mock_partition_writer.h"
 #include "update_engine/payload_consumer/payload_constants.h"
 #include "update_engine/payload_consumer/payload_metadata.h"
 #include "update_engine/payload_generator/bzip.h"
@@ -59,8 +64,9 @@ using std::string;
 using std::vector;
 using test_utils::GetBuildArtifactsPath;
 using test_utils::kRandomString;
-using test_utils::System;
 using testing::_;
+using testing::Return;
+using ::testing::Sequence;
 
 extern const char* kUnittestPrivateKeyPath;
 extern const char* kUnittestPublicKeyPath;
@@ -202,7 +208,7 @@ class DeltaPerformerTest : public ::testing::Test {
                                uint64_t major_version,
                                uint32_t minor_version,
                                PartitionConfig* old_part = nullptr) {
-    test_utils::ScopedTempFile blob_file("Blob-XXXXXX");
+    ScopedTempFile blob_file("Blob-XXXXXX");
     EXPECT_TRUE(test_utils::WriteFileVector(blob_file.path(), blob_data));
 
     PayloadGenerationConfig config;
@@ -228,15 +234,15 @@ class DeltaPerformerTest : public ::testing::Test {
     new_part.path = "/dev/zero";
     new_part.size = 1234;
 
-    payload.AddPartition(*old_part, new_part, aops, {});
+    payload.AddPartition(*old_part, new_part, aops, {}, 0);
 
     // We include a kernel partition without operations.
     old_part->name = kPartitionNameKernel;
     new_part.name = kPartitionNameKernel;
     new_part.size = 0;
-    payload.AddPartition(*old_part, new_part, {}, {});
+    payload.AddPartition(*old_part, new_part, {}, {}, 0);
 
-    test_utils::ScopedTempFile payload_file("Payload-XXXXXX");
+    ScopedTempFile payload_file("Payload-XXXXXX");
     string private_key =
         sign_payload ? GetBuildArtifactsPath(kUnittestPrivateKeyPath) : "";
     EXPECT_TRUE(payload.WritePayload(payload_file.path(),
@@ -275,7 +281,14 @@ class DeltaPerformerTest : public ::testing::Test {
                             const string& source_path,
                             bool expect_success) {
     return ApplyPayloadToData(
-        payload_data, source_path, brillo::Blob(), expect_success);
+        &performer_, payload_data, source_path, brillo::Blob(), expect_success);
+  }
+  brillo::Blob ApplyPayloadToData(const brillo::Blob& payload_data,
+                                  const string& source_path,
+                                  const brillo::Blob& target_data,
+                                  bool expect_success) {
+    return ApplyPayloadToData(
+        &performer_, payload_data, source_path, target_data, expect_success);
   }
 
   // Apply the payload provided in |payload_data| reading from the |source_path|
@@ -283,11 +296,12 @@ class DeltaPerformerTest : public ::testing::Test {
   // new target file are set to |target_data| before applying the payload.
   // Expect result of performer_.Write() to be |expect_success|.
   // Returns the result of the payload application.
-  brillo::Blob ApplyPayloadToData(const brillo::Blob& payload_data,
+  brillo::Blob ApplyPayloadToData(DeltaPerformer* delta_performer,
+                                  const brillo::Blob& payload_data,
                                   const string& source_path,
                                   const brillo::Blob& target_data,
                                   bool expect_success) {
-    test_utils::ScopedTempFile new_part("Partition-XXXXXX");
+    ScopedTempFile new_part("Partition-XXXXXX");
     EXPECT_TRUE(test_utils::WriteFileVector(new_part.path(), target_data));
 
     payload_.size = payload_data.size();
@@ -303,7 +317,7 @@ class DeltaPerformerTest : public ::testing::Test {
         kPartitionNameKernel, install_plan_.source_slot, "/dev/null");
 
     EXPECT_EQ(expect_success,
-              performer_.Write(payload_data.data(), payload_data.size()));
+              delta_performer->Write(payload_data.data(), payload_data.size()));
     EXPECT_EQ(0, performer_.Close());
 
     brillo::Blob partition_data;
@@ -416,23 +430,6 @@ class DeltaPerformerTest : public ::testing::Test {
     // Check that the parsed metadata size is what's expected. This test
     // implicitly confirms that the metadata signature is valid, if required.
     EXPECT_EQ(payload_.metadata_size, performer_.metadata_size_);
-  }
-
-  // Helper function to pretend that the ECC file descriptor was already opened.
-  // Returns a pointer to the created file descriptor.
-  FakeFileDescriptor* SetFakeECCFile(size_t size) {
-    EXPECT_FALSE(performer_.source_ecc_fd_) << "source_ecc_fd_ already open.";
-    FakeFileDescriptor* ret = new FakeFileDescriptor();
-    fake_ecc_fd_.reset(ret);
-    // Call open to simulate it was already opened.
-    ret->Open("", 0);
-    ret->SetFileSize(size);
-    performer_.source_ecc_fd_ = fake_ecc_fd_;
-    return ret;
-  }
-
-  uint64_t GetSourceEccRecoveredFailures() const {
-    return performer_.source_ecc_recovered_failures_;
   }
 
   FakePrefs prefs_;
@@ -591,7 +588,7 @@ TEST_F(DeltaPerformerTest, SourceCopyOperationTest) {
   EXPECT_TRUE(HashCalculator::RawHashOfData(expected_data, &src_hash));
   aop.op.set_src_sha256_hash(src_hash.data(), src_hash.size());
 
-  test_utils::ScopedTempFile source("Source-XXXXXX");
+  ScopedTempFile source("Source-XXXXXX");
   EXPECT_TRUE(test_utils::WriteFileVector(source.path(), expected_data));
 
   PartitionConfig old_part(kPartitionNameRoot);
@@ -619,7 +616,7 @@ TEST_F(DeltaPerformerTest, PuffdiffOperationTest) {
   EXPECT_TRUE(HashCalculator::RawHashOfData(src, &src_hash));
   aop.op.set_src_sha256_hash(src_hash.data(), src_hash.size());
 
-  test_utils::ScopedTempFile source("Source-XXXXXX");
+  ScopedTempFile source("Source-XXXXXX");
   EXPECT_TRUE(test_utils::WriteFileVector(source.path(), src));
 
   PartitionConfig old_part(kPartitionNameRoot);
@@ -647,7 +644,7 @@ TEST_F(DeltaPerformerTest, SourceHashMismatchTest) {
   EXPECT_TRUE(HashCalculator::RawHashOfData(expected_data, &src_hash));
   aop.op.set_src_sha256_hash(src_hash.data(), src_hash.size());
 
-  test_utils::ScopedTempFile source("Source-XXXXXX");
+  ScopedTempFile source("Source-XXXXXX");
   EXPECT_TRUE(test_utils::WriteFileVector(source.path(), actual_data));
 
   PartitionConfig old_part(kPartitionNameRoot);
@@ -658,95 +655,6 @@ TEST_F(DeltaPerformerTest, SourceHashMismatchTest) {
       GeneratePayload(brillo::Blob(), {aop}, false, &old_part);
 
   EXPECT_EQ(actual_data, ApplyPayload(payload_data, source.path(), false));
-}
-
-// Test that the error-corrected file descriptor is used to read the partition
-// since the source partition doesn't match the operation hash.
-TEST_F(DeltaPerformerTest, ErrorCorrectionSourceCopyFallbackTest) {
-  constexpr size_t kCopyOperationSize = 4 * 4096;
-  test_utils::ScopedTempFile source("Source-XXXXXX");
-  // Write invalid data to the source image, which doesn't match the expected
-  // hash.
-  brillo::Blob invalid_data(kCopyOperationSize, 0x55);
-  EXPECT_TRUE(test_utils::WriteFileVector(source.path(), invalid_data));
-
-  // Setup the fec file descriptor as the fake stream, which matches
-  // |expected_data|.
-  FakeFileDescriptor* fake_fec = SetFakeECCFile(kCopyOperationSize);
-  brillo::Blob expected_data = FakeFileDescriptorData(kCopyOperationSize);
-
-  PartitionConfig old_part(kPartitionNameRoot);
-  old_part.path = source.path();
-  old_part.size = invalid_data.size();
-
-  brillo::Blob payload_data =
-      GenerateSourceCopyPayload(expected_data, true, &old_part);
-  EXPECT_EQ(expected_data, ApplyPayload(payload_data, source.path(), true));
-  // Verify that the fake_fec was actually used.
-  EXPECT_EQ(1U, fake_fec->GetReadOps().size());
-  EXPECT_EQ(1U, GetSourceEccRecoveredFailures());
-}
-
-// Test that the error-corrected file descriptor is used to read a partition
-// when no hash is available for SOURCE_COPY but it falls back to the normal
-// file descriptor when the size of the error corrected one is too small.
-TEST_F(DeltaPerformerTest, ErrorCorrectionSourceCopyWhenNoHashFallbackTest) {
-  constexpr size_t kCopyOperationSize = 4 * 4096;
-  test_utils::ScopedTempFile source("Source-XXXXXX");
-  // Setup the source path with the right expected data.
-  brillo::Blob expected_data = FakeFileDescriptorData(kCopyOperationSize);
-  EXPECT_TRUE(test_utils::WriteFileVector(source.path(), expected_data));
-
-  // Setup the fec file descriptor as the fake stream, with smaller data than
-  // the expected.
-  FakeFileDescriptor* fake_fec = SetFakeECCFile(kCopyOperationSize / 2);
-
-  PartitionConfig old_part(kPartitionNameRoot);
-  old_part.path = source.path();
-  old_part.size = expected_data.size();
-
-  // The payload operation doesn't include an operation hash.
-  brillo::Blob payload_data =
-      GenerateSourceCopyPayload(expected_data, false, &old_part);
-  EXPECT_EQ(expected_data, ApplyPayload(payload_data, source.path(), true));
-  // Verify that the fake_fec was attempted to be used. Since the file
-  // descriptor is shorter it can actually do more than one read to realize it
-  // reached the EOF.
-  EXPECT_LE(1U, fake_fec->GetReadOps().size());
-  // This fallback doesn't count as an error-corrected operation since the
-  // operation hash was not available.
-  EXPECT_EQ(0U, GetSourceEccRecoveredFailures());
-}
-
-TEST_F(DeltaPerformerTest, ChooseSourceFDTest) {
-  constexpr size_t kSourceSize = 4 * 4096;
-  test_utils::ScopedTempFile source("Source-XXXXXX");
-  // Write invalid data to the source image, which doesn't match the expected
-  // hash.
-  brillo::Blob invalid_data(kSourceSize, 0x55);
-  EXPECT_TRUE(test_utils::WriteFileVector(source.path(), invalid_data));
-
-  performer_.source_fd_ = std::make_shared<EintrSafeFileDescriptor>();
-  performer_.source_fd_->Open(source.path().c_str(), O_RDONLY);
-  performer_.block_size_ = 4096;
-
-  // Setup the fec file descriptor as the fake stream, which matches
-  // |expected_data|.
-  FakeFileDescriptor* fake_fec = SetFakeECCFile(kSourceSize);
-  brillo::Blob expected_data = FakeFileDescriptorData(kSourceSize);
-
-  InstallOperation op;
-  *(op.add_src_extents()) = ExtentForRange(0, kSourceSize / 4096);
-  brillo::Blob src_hash;
-  EXPECT_TRUE(HashCalculator::RawHashOfData(expected_data, &src_hash));
-  op.set_src_sha256_hash(src_hash.data(), src_hash.size());
-
-  ErrorCode error = ErrorCode::kSuccess;
-  EXPECT_EQ(performer_.source_ecc_fd_, performer_.ChooseSourceFD(op, &error));
-  EXPECT_EQ(ErrorCode::kSuccess, error);
-  // Verify that the fake_fec was actually used.
-  EXPECT_EQ(1U, fake_fec->GetReadOps().size());
-  EXPECT_EQ(1U, GetSourceEccRecoveredFailures());
 }
 
 TEST_F(DeltaPerformerTest, ExtentsToByteStringTest) {
@@ -1174,6 +1082,119 @@ TEST_F(DeltaPerformerTest, ConfVersionsMatch) {
   EXPECT_TRUE(store.GetString("PAYLOAD_MAJOR_VERSION", &major_version_str));
   EXPECT_TRUE(base::StringToUint64(major_version_str, &major_version));
   EXPECT_EQ(kMaxSupportedMajorPayloadVersion, major_version);
+}
+
+TEST_F(DeltaPerformerTest, FullPayloadCanResumeTest) {
+  payload_.type = InstallPayloadType::kFull;
+  brillo::Blob expected_data =
+      brillo::Blob(std::begin(kRandomString), std::end(kRandomString));
+  expected_data.resize(4096);  // block size
+  vector<AnnotatedOperation> aops;
+  AnnotatedOperation aop;
+  *(aop.op.add_dst_extents()) = ExtentForRange(0, 1);
+  aop.op.set_data_offset(0);
+  aop.op.set_data_length(expected_data.size());
+  aop.op.set_type(InstallOperation::REPLACE);
+  aops.push_back(aop);
+
+  brillo::Blob payload_data = GeneratePayload(expected_data,
+                                              aops,
+                                              false,
+                                              kBrilloMajorPayloadVersion,
+                                              kFullPayloadMinorVersion);
+
+  ASSERT_EQ(expected_data, ApplyPayload(payload_data, "/dev/null", true));
+  performer_.CheckpointUpdateProgress(true);
+  const std::string payload_id = "12345";
+  prefs_.SetString(kPrefsUpdateCheckResponseHash, payload_id);
+  ASSERT_TRUE(DeltaPerformer::CanResumeUpdate(&prefs_, payload_id));
+}
+
+class TestDeltaPerformer : public DeltaPerformer {
+ public:
+  using DeltaPerformer::DeltaPerformer;
+
+  std::unique_ptr<PartitionWriter> CreatePartitionWriter(
+      const PartitionUpdate& partition_update,
+      const InstallPlan::Partition& install_part,
+      DynamicPartitionControlInterface* dynamic_control,
+      size_t block_size,
+      bool is_interactive,
+      bool is_dynamic_partition) {
+    LOG(INFO) << __FUNCTION__ << ": " << install_part.name;
+    auto node = partition_writers_.extract(install_part.name);
+    return std::move(node.mapped());
+  }
+
+  bool ShouldCheckpoint() override { return true; }
+
+  std::map<std::string, std::unique_ptr<MockPartitionWriter>>
+      partition_writers_;
+};
+
+namespace {
+AnnotatedOperation GetSourceCopyOp(uint32_t src_block,
+                                   uint32_t dst_block,
+                                   const void* data,
+                                   size_t length) {
+  AnnotatedOperation aop;
+  *(aop.op.add_src_extents()) = ExtentForRange(0, 1);
+  *(aop.op.add_dst_extents()) = ExtentForRange(0, 1);
+  aop.op.set_type(InstallOperation::SOURCE_COPY);
+  brillo::Blob src_hash;
+  HashCalculator::RawHashOfBytes(data, length, &src_hash);
+  aop.op.set_src_sha256_hash(src_hash.data(), src_hash.size());
+  return aop;
+}
+}  // namespace
+
+TEST_F(DeltaPerformerTest, SetNextOpIndex) {
+  TestDeltaPerformer delta_performer{&prefs_,
+                                     &fake_boot_control_,
+                                     &fake_hardware_,
+                                     &mock_delegate_,
+                                     &install_plan_,
+                                     &payload_,
+                                     false};
+  brillo::Blob expected_data(std::begin(kRandomString),
+                             std::end(kRandomString));
+  expected_data.resize(4096 * 2);  // block size
+  AnnotatedOperation aop;
+
+  ScopedTempFile source("Source-XXXXXX");
+  EXPECT_TRUE(test_utils::WriteFileVector(source.path(), expected_data));
+
+  PartitionConfig old_part(kPartitionNameRoot);
+  old_part.path = source.path();
+  old_part.size = expected_data.size();
+
+  delta_performer.partition_writers_[kPartitionNameRoot] =
+      std::make_unique<MockPartitionWriter>();
+  auto& writer1 = *delta_performer.partition_writers_[kPartitionNameRoot];
+
+  Sequence seq;
+  std::vector<size_t> indices;
+  EXPECT_CALL(writer1, CheckpointUpdateProgress(_))
+      .WillRepeatedly(
+          [&indices](size_t index) mutable { indices.emplace_back(index); });
+  EXPECT_CALL(writer1, Init(_, true, _)).Times(1).WillOnce(Return(true));
+  EXPECT_CALL(writer1, PerformSourceCopyOperation(_, _))
+      .Times(2)
+      .WillRepeatedly(Return(true));
+
+  brillo::Blob payload_data = GeneratePayload(
+      brillo::Blob(),
+      {GetSourceCopyOp(0, 0, expected_data.data(), 4096),
+       GetSourceCopyOp(1, 1, expected_data.data() + 4096, 4096)},
+      false,
+      &old_part);
+
+  ApplyPayloadToData(&delta_performer, payload_data, source.path(), {}, true);
+  ASSERT_TRUE(std::is_sorted(indices.begin(), indices.end()));
+  ASSERT_GT(indices.size(), 0UL);
+
+  // Should be equal to number of operations
+  ASSERT_EQ(indices[indices.size() - 1], 2UL);
 }
 
 }  // namespace chromeos_update_engine

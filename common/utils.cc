@@ -52,7 +52,6 @@
 #include <base/strings/stringprintf.h>
 #include <brillo/data_encoding.h>
 
-#include "update_engine/common/clock_interface.h"
 #include "update_engine/common/constants.h"
 #include "update_engine/common/platform_constants.h"
 #include "update_engine/common/prefs_interface.h"
@@ -111,27 +110,6 @@ bool GetTempName(const string& path, base::FilePath* template_path) {
 }  // namespace
 
 namespace utils {
-
-string ParseECVersion(string input_line) {
-  base::TrimWhitespaceASCII(input_line, base::TRIM_ALL, &input_line);
-
-  // At this point we want to convert the format key=value pair from mosys to
-  // a vector of key value pairs.
-  vector<pair<string, string>> kv_pairs;
-  if (base::SplitStringIntoKeyValuePairs(input_line, '=', ' ', &kv_pairs)) {
-    for (const pair<string, string>& kv_pair : kv_pairs) {
-      // Finally match against the fw_verion which may have quotes.
-      if (kv_pair.first == "fw_version") {
-        string output;
-        // Trim any quotes.
-        base::TrimString(kv_pair.second, "\"", &output);
-        return output;
-      }
-    }
-  }
-  LOG(ERROR) << "Unable to parse fwid from ec info.";
-  return "";
-}
 
 bool WriteFile(const char* path, const void* data, size_t data_len) {
   int fd = HANDLE_EINTR(open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600));
@@ -213,10 +191,10 @@ bool WriteAll(const FileDescriptorPtr& fd, const void* buf, size_t count) {
   return true;
 }
 
-bool PWriteAll(const FileDescriptorPtr& fd,
-               const void* buf,
-               size_t count,
-               off_t offset) {
+bool WriteAll(const FileDescriptorPtr& fd,
+              const void* buf,
+              size_t count,
+              off_t offset) {
   TEST_AND_RETURN_FALSE_ERRNO(fd->Seek(offset, SEEK_SET) !=
                               static_cast<off_t>(-1));
   return WriteAll(fd, buf, count);
@@ -239,11 +217,11 @@ bool PReadAll(
   return true;
 }
 
-bool PReadAll(const FileDescriptorPtr& fd,
-              void* buf,
-              size_t count,
-              off_t offset,
-              ssize_t* out_bytes_read) {
+bool ReadAll(const FileDescriptorPtr& fd,
+             void* buf,
+             size_t count,
+             off_t offset,
+             ssize_t* out_bytes_read) {
   TEST_AND_RETURN_FALSE_ERRNO(fd->Seek(offset, SEEK_SET) !=
                               static_cast<off_t>(-1));
   char* c_buf = static_cast<char*>(buf);
@@ -258,6 +236,31 @@ bool PReadAll(const FileDescriptorPtr& fd,
   }
   *out_bytes_read = bytes_read;
   return true;
+}
+
+bool PReadAll(const FileDescriptorPtr& fd,
+              void* buf,
+              size_t count,
+              off_t offset,
+              ssize_t* out_bytes_read) {
+  auto old_off = fd->Seek(0, SEEK_CUR);
+  TEST_AND_RETURN_FALSE_ERRNO(old_off >= 0);
+
+  auto success = ReadAll(fd, buf, count, offset, out_bytes_read);
+  TEST_AND_RETURN_FALSE_ERRNO(fd->Seek(old_off, SEEK_SET) == old_off);
+  return success;
+}
+
+bool PWriteAll(const FileDescriptorPtr& fd,
+               const void* buf,
+               size_t count,
+               off_t offset) {
+  auto old_off = fd->Seek(0, SEEK_CUR);
+  TEST_AND_RETURN_FALSE_ERRNO(old_off >= 0);
+
+  auto success = WriteAll(fd, buf, count, offset);
+  TEST_AND_RETURN_FALSE_ERRNO(fd->Seek(old_off, SEEK_SET) == old_off);
+  return success;
 }
 
 // Append |nbytes| of content from |buf| to the vector pointed to by either
@@ -908,6 +911,25 @@ bool ReadExtents(const string& path,
   }
   TEST_AND_RETURN_FALSE(out_data_size == bytes_read);
   *out_data = data;
+  return true;
+}
+
+bool GetVpdValue(string key, string* result) {
+  int exit_code = 0;
+  string value, error;
+  vector<string> cmd = {"vpd_get_value", key};
+  if (!chromeos_update_engine::Subprocess::SynchronousExec(
+          cmd, &exit_code, &value, &error) ||
+      exit_code) {
+    LOG(ERROR) << "Failed to get vpd key for " << value
+               << " with exit code: " << exit_code << " and error: " << error;
+    return false;
+  } else if (!error.empty()) {
+    LOG(INFO) << "vpd_get_value succeeded but with following errors: " << error;
+  }
+
+  base::TrimWhitespaceASCII(value, base::TRIM_ALL, &value);
+  *result = value;
   return true;
 }
 

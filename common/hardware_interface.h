@@ -64,14 +64,6 @@ class HardwareInterface {
   // Returns the HWID or an empty string on error.
   virtual std::string GetHardwareClass() const = 0;
 
-  // Returns the firmware version or an empty string if the system is
-  // not running chrome os firmware.
-  virtual std::string GetFirmwareVersion() const = 0;
-
-  // Returns the ec version or an empty string if the system is not
-  // running a custom chrome os ec.
-  virtual std::string GetECVersion() const = 0;
-
   // Returns the OEM device requisition or an empty string if the system does
   // not have a requisition, or if not running Chrome OS.
   virtual std::string GetDeviceRequisition() const = 0;
@@ -144,6 +136,10 @@ class HardwareInterface {
   // If |warm_reset| is true, sets the warm reset to indicate a warm reset is
   // needed on the next reboot. Otherwise, clears the flag.
   virtual void SetWarmReset(bool warm_reset) = 0;
+
+  // If not reset, sets the vbmeta digest of the inactive slot as a sysprop.
+  // Otherwise, clears the sysprop.
+  virtual void SetVbmetaDigestForInactiveSlot(bool reset) = 0;
 
   // Return the version/timestamp for partition `partition_name`.
   // Don't make any assumption about the formatting of returned string.

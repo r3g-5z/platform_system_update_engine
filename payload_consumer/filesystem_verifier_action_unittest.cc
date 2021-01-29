@@ -27,13 +27,22 @@
 #include <brillo/secure_blob.h>
 #include <gtest/gtest.h>
 
+#include "gmock/gmock-actions.h"
 #include "update_engine/common/dynamic_partition_control_stub.h"
 #include "update_engine/common/hash_calculator.h"
+#include "update_engine/common/mock_dynamic_partition_control.h"
 #include "update_engine/common/test_utils.h"
 #include "update_engine/common/utils.h"
+#include "update_engine/payload_consumer/install_plan.h"
 
 using brillo::MessageLoop;
 using std::string;
+using testing::_;
+using testing::AtLeast;
+using testing::DoAll;
+using testing::NiceMock;
+using testing::Return;
+using testing::SetArgPointee;
 
 namespace chromeos_update_engine {
 
@@ -49,6 +58,8 @@ class FilesystemVerifierActionTest : public ::testing::Test {
   bool DoTest(bool terminate_early, bool hash_fail);
 
   void BuildActions(const InstallPlan& install_plan);
+  void BuildActions(const InstallPlan& install_plan,
+                    DynamicPartitionControlInterface* dynamic_control);
 
   brillo::FakeMessageLoop loop_{nullptr};
   ActionProcessor processor_;
@@ -72,7 +83,7 @@ class FilesystemVerifierActionTestDelegate : public ActionProcessorDelegate {
     if (action->Type() == FilesystemVerifierAction::StaticType()) {
       ran_ = true;
       code_ = code;
-      EXPECT_FALSE(static_cast<FilesystemVerifierAction*>(action)->src_stream_);
+      EXPECT_FALSE(static_cast<FilesystemVerifierAction*>(action)->read_fd_);
     } else if (action->Type() ==
                ObjectCollectorAction<InstallPlan>::StaticType()) {
       auto collector_action =
@@ -92,7 +103,7 @@ class FilesystemVerifierActionTestDelegate : public ActionProcessorDelegate {
 
 bool FilesystemVerifierActionTest::DoTest(bool terminate_early,
                                           bool hash_fail) {
-  test_utils::ScopedTempFile a_loop_file("a_loop_file.XXXXXX");
+  ScopedTempFile a_loop_file("a_loop_file.XXXXXX");
 
   // Make random data for a.
   const size_t kLoopFileSize = 10 * 1024 * 1024 + 512;
@@ -188,10 +199,11 @@ bool FilesystemVerifierActionTest::DoTest(bool terminate_early,
 }
 
 void FilesystemVerifierActionTest::BuildActions(
-    const InstallPlan& install_plan) {
+    const InstallPlan& install_plan,
+    DynamicPartitionControlInterface* dynamic_control) {
   auto feeder_action = std::make_unique<ObjectFeederAction<InstallPlan>>();
   auto verifier_action =
-      std::make_unique<FilesystemVerifierAction>(&dynamic_control_stub_);
+      std::make_unique<FilesystemVerifierAction>(dynamic_control);
   auto collector_action =
       std::make_unique<ObjectCollectorAction<InstallPlan>>();
 
@@ -203,6 +215,11 @@ void FilesystemVerifierActionTest::BuildActions(
   processor_.EnqueueAction(std::move(feeder_action));
   processor_.EnqueueAction(std::move(verifier_action));
   processor_.EnqueueAction(std::move(collector_action));
+}
+
+void FilesystemVerifierActionTest::BuildActions(
+    const InstallPlan& install_plan) {
+  BuildActions(install_plan, &dynamic_control_stub_);
 }
 
 class FilesystemVerifierActionTest2Delegate : public ActionProcessorDelegate {
@@ -278,7 +295,7 @@ TEST_F(FilesystemVerifierActionTest, RunAsRootTerminateEarlyTest) {
 
 #ifdef __ANDROID__
 TEST_F(FilesystemVerifierActionTest, RunAsRootWriteVerityTest) {
-  test_utils::ScopedTempFile part_file("part_file.XXXXXX");
+  ScopedTempFile part_file("part_file.XXXXXX");
   constexpr size_t filesystem_size = 200 * 4096;
   constexpr size_t part_size = 256 * 4096;
   brillo::Blob part_data(filesystem_size, 0x1);
@@ -340,7 +357,7 @@ TEST_F(FilesystemVerifierActionTest, RunAsRootWriteVerityTest) {
 #endif  // __ANDROID__
 
 TEST_F(FilesystemVerifierActionTest, RunAsRootSkipWriteVerityTest) {
-  test_utils::ScopedTempFile part_file("part_file.XXXXXX");
+  ScopedTempFile part_file("part_file.XXXXXX");
   constexpr size_t filesystem_size = 200 * 4096;
   constexpr size_t part_size = 256 * 4096;
   brillo::Blob part_data(part_size);
@@ -384,4 +401,52 @@ TEST_F(FilesystemVerifierActionTest, RunAsRootSkipWriteVerityTest) {
   EXPECT_TRUE(delegate.ran());
   EXPECT_EQ(ErrorCode::kSuccess, delegate.code());
 }
+
+TEST_F(FilesystemVerifierActionTest, RunWithVABC) {
+  InstallPlan install_plan;
+  InstallPlan::Partition& part = install_plan.partitions.emplace_back();
+  part.name = "fake_part";
+  part.target_path = "/dev/fake_target_path";
+  part.target_size = 4096 * 4096;
+  part.block_size = 4096;
+  part.source_path = "/dev/fake_source_path";
+
+  NiceMock<MockDynamicPartitionControl> dynamic_control;
+
+  ON_CALL(dynamic_control, GetDynamicPartitionsFeatureFlag())
+      .WillByDefault(Return(FeatureFlag(FeatureFlag::Value::LAUNCH)));
+  ON_CALL(dynamic_control, GetVirtualAbCompressionFeatureFlag())
+      .WillByDefault(Return(FeatureFlag(FeatureFlag::Value::LAUNCH)));
+  ON_CALL(dynamic_control, OpenCowReader(_, _, _))
+      .WillByDefault(Return(nullptr));
+  ON_CALL(dynamic_control, IsDynamicPartition(part.name))
+      .WillByDefault(Return(true));
+
+  EXPECT_CALL(dynamic_control, GetVirtualAbCompressionFeatureFlag())
+      .Times(AtLeast(1));
+  EXPECT_CALL(dynamic_control, OpenCowReader(part.name, {part.source_path}, _))
+      .Times(1);
+  EXPECT_CALL(dynamic_control, ListDynamicPartitionsForSlot(_, _))
+      .WillRepeatedly(
+          DoAll(SetArgPointee<1, std::vector<std::string>>({part.name}),
+                Return(true)));
+
+  BuildActions(install_plan, &dynamic_control);
+
+  FilesystemVerifierActionTestDelegate delegate;
+  processor_.set_delegate(&delegate);
+
+  loop_.PostTask(
+      FROM_HERE,
+      base::Bind(
+          [](ActionProcessor* processor) { processor->StartProcessing(); },
+          base::Unretained(&processor_)));
+  loop_.Run();
+
+  EXPECT_FALSE(processor_.IsRunning());
+  EXPECT_TRUE(delegate.ran());
+  // Filesystem verifier will fail, because we returned nullptr as CowReader
+  EXPECT_EQ(ErrorCode::kFilesystemVerifierError, delegate.code());
+}
+
 }  // namespace chromeos_update_engine

@@ -18,6 +18,10 @@
 // ========================================================
 aidl_interface {
     name: "libupdate_engine_stable",
+
+    // This header library is available to core and product modules.
+    product_available: true,
+
     srcs: [
         "android/os/IUpdateEngineStable.aidl",
         "android/os/IUpdateEngineStableCallback.aidl",
@@ -40,10 +44,10 @@ aidl_interface {
 
 // update_engine_stable_client (type: executable)
 // ========================================================
-// update_engine console client installed to APEXes
+// update_engine console client installed to APEXes.
 cc_binary {
     name: "update_engine_stable_client",
-
+    product_specific: true,
     header_libs: [
         "libupdate_engine_headers",
     ],
@@ -54,7 +58,7 @@ cc_binary {
     ],
     static_libs: [
         "libgflags",
-        "libupdate_engine_stable-ndk_platform",
+        "libupdate_engine_stable-V1-ndk_platform",
     ],
     srcs: [
         "update_engine_stable_client.cc",

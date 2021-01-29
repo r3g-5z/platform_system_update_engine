@@ -34,8 +34,6 @@ namespace chromeos_update_engine {
 
 namespace {
 
-const char kKeySeparator = '/';
-
 void DeleteEmptyDirectories(const base::FilePath& path) {
   base::FileEnumerator path_enum(
       path, false /* recursive */, base::FileEnumerator::DIRECTORIES);
@@ -43,7 +41,11 @@ void DeleteEmptyDirectories(const base::FilePath& path) {
        dir_path = path_enum.Next()) {
     DeleteEmptyDirectories(dir_path);
     if (base::IsDirectoryEmpty(dir_path))
+#if BASE_VER < 800000
       base::DeleteFile(dir_path, false);
+#else
+      base::DeleteFile(dir_path);
+#endif
   }
 }
 
@@ -53,7 +55,7 @@ bool PrefsBase::GetString(const string& key, string* value) const {
   return storage_->GetKey(key, value);
 }
 
-bool PrefsBase::SetString(const string& key, const string& value) {
+bool PrefsBase::SetString(const string& key, std::string_view value) {
   TEST_AND_RETURN_FALSE(storage_->SetKey(key, value));
   const auto observers_for_key = observers_.find(key);
   if (observers_for_key != observers_.end()) {
@@ -110,6 +112,24 @@ bool PrefsBase::Delete(const string& key) {
       observer->OnPrefDeleted(key);
   }
   return true;
+}
+
+bool PrefsBase::Delete(const string& pref_key, const vector<string>& nss) {
+  // Delete pref key for platform.
+  bool success = Delete(pref_key);
+  // Delete pref key in each namespace.
+  for (const auto& ns : nss) {
+    vector<string> namespace_keys;
+    success = GetSubKeys(ns, &namespace_keys) && success;
+    for (const auto& key : namespace_keys) {
+      auto last_key_seperator = key.find_last_of(kKeySeparator);
+      if (last_key_seperator != string::npos &&
+          pref_key == key.substr(last_key_seperator + 1)) {
+        success = Delete(key) && success;
+      }
+    }
+  }
+  return success;
 }
 
 bool PrefsBase::GetSubKeys(const string& ns, vector<string>* keys) const {
@@ -172,7 +192,7 @@ bool Prefs::FileStorage::GetSubKeys(const string& ns,
   return true;
 }
 
-bool Prefs::FileStorage::SetKey(const string& key, const string& value) {
+bool Prefs::FileStorage::SetKey(const string& key, std::string_view value) {
   base::FilePath filename;
   TEST_AND_RETURN_FALSE(GetFileNameForKey(key, &filename));
   if (!base::DirectoryExists(filename.DirName())) {
@@ -194,7 +214,11 @@ bool Prefs::FileStorage::KeyExists(const string& key) const {
 bool Prefs::FileStorage::DeleteKey(const string& key) {
   base::FilePath filename;
   TEST_AND_RETURN_FALSE(GetFileNameForKey(key, &filename));
+#if BASE_VER < 800000
   TEST_AND_RETURN_FALSE(base::DeleteFile(filename, false));
+#else
+  TEST_AND_RETURN_FALSE(base::DeleteFile(filename));
+#endif
   return true;
 }
 
@@ -239,7 +263,7 @@ bool MemoryPrefs::MemoryStorage::GetSubKeys(const string& ns,
 }
 
 bool MemoryPrefs::MemoryStorage::SetKey(const string& key,
-                                        const string& value) {
+                                        std::string_view value) {
   values_[key] = value;
   return true;
 }

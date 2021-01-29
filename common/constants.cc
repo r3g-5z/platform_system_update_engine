@@ -64,11 +64,14 @@ const char kPrefsP2PEnabled[] = "p2p-enabled";
 const char kPrefsP2PFirstAttemptTimestamp[] = "p2p-first-attempt-timestamp";
 const char kPrefsP2PNumAttempts[] = "p2p-num-attempts";
 const char kPrefsPayloadAttemptNumber[] = "payload-attempt-number";
+const char kPrefsTestUpdateCheckIntervalTimeout[] =
+    "test-update-check-interval-timeout";
 // Keep |kPrefsPingActive| in sync with |kDlcMetadataFilePingActive| in
 // dlcservice.
 const char kPrefsPingActive[] = "active";
 const char kPrefsPingLastActive[] = "date_last_active";
 const char kPrefsPingLastRollcall[] = "date_last_rollcall";
+const char kPrefsLastFp[] = "last-fp";
 const char kPrefsPostInstallSucceeded[] = "post-install-succeeded";
 const char kPrefsPreviousVersion[] = "previous-version";
 const char kPrefsResumedUpdateFailures[] = "resumed-update-failures";
