@@ -1223,6 +1223,10 @@ bool OmahaRequestAction::ShouldIgnoreUpdate(ErrorCode* error) const {
     }
   }
 
+  if (!CheckForRepeatedFpValues(error)) {
+    return true;
+  }
+
   if (SystemState::Get()->hardware()->IsOOBEEnabled() &&
       !SystemState::Get()->hardware()->IsOOBEComplete(nullptr) &&
       (response_.deadline.empty() ||
@@ -1254,6 +1258,34 @@ bool OmahaRequestAction::ShouldIgnoreUpdate(ErrorCode* error) const {
   // the side of preventing starvation at the cost of not applying scattering in
   // those cases.
   return false;
+}
+
+bool OmahaRequestAction::CheckForRepeatedFpValues(ErrorCode* error) const {
+  const auto* params = SystemState::Get()->request_params();
+  for (const auto& package : response_.packages) {
+    std::string dlc_id;
+    if (!SystemState::Get()->request_params()->GetDlcId(package.app_id,
+                                                        &dlc_id)) {
+      if (package.fp == SystemState::Get()->request_params()->last_fp()) {
+        LOG(INFO) << "Detected same fingerprint value sent in request for "
+                     "platform ID "
+                  << package.app_id;
+        *error = ErrorCode::kRepeatedFpFromOmahaError;
+        return false;
+      }
+    } else {
+      auto it = params->dlc_apps_params().find(package.app_id);
+      if (it != params->dlc_apps_params().end() &&
+          it->second.last_fp == package.fp) {
+        LOG(INFO)
+            << "Detected same fingerprint value sent in request for Dlc ID "
+            << dlc_id;
+        *error = ErrorCode::kRepeatedFpFromOmahaError;
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 bool OmahaRequestAction::IsUpdateAllowedOverCellularByPrefs() const {

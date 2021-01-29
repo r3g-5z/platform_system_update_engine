@@ -136,6 +136,9 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
               GetInstallDateWhenOOBECompletedWithValidDate);
   FRIEND_TEST(OmahaRequestActionTest,
               GetInstallDateWhenOOBECompletedDateChanges);
+  FRIEND_TEST(OmahaRequestActionTest, OmahaResponseDifferentFp);
+  FRIEND_TEST(OmahaRequestActionTest, OmahaResponseSameDlcFp);
+  FRIEND_TEST(OmahaRequestActionTest, OmahaResponseSamePlatformFp);
   friend class UpdateAttempterTest;
   FRIEND_TEST(UpdateAttempterTest, SessionIdTestEnforceEmptyStrPingOmaha);
   FRIEND_TEST(UpdateAttempterTest, SessionIdTestConsistencyInUpdateFlow);
@@ -257,6 +260,11 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
 
   // Returns true if the current update should be ignored.
   bool ShouldIgnoreUpdate(ErrorCode* error) const;
+
+  // Check to see if the fingerprint returned from Omaha response for the
+  // platform or Dlc updates are the same ones that were sent as part of the
+  // request. Return false and set error if they are duplicates.
+  bool CheckForRepeatedFpValues(ErrorCode* error) const;
 
   // Return true if updates are allowed by user preferences.
   bool IsUpdateAllowedOverCellularByPrefs() const;

@@ -175,6 +175,8 @@ string ErrorCodeToString(ErrorCode code) {
       return "ErrorCode::kPackageExcludedFromUpdate";
     case ErrorCode::kDownloadCancelledPerPolicy:
       return "ErrorCode::kDownloadCancelledPerPolicy";
+    case ErrorCode::kRepeatedFpFromOmahaError:
+      return "ErrorCode::kRepeatedFpFromOmahaError";
       // Don't add a default case to let the compiler warn about newly added
       // error codes which should be added here.
   }

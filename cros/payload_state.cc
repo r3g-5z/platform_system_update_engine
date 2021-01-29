@@ -376,6 +376,7 @@ void PayloadState::UpdateFailed(ErrorCode error) {
     case ErrorCode::kDeviceCorrupted:
     case ErrorCode::kPackageExcludedFromUpdate:
     case ErrorCode::kDownloadCancelledPerPolicy:
+    case ErrorCode::kRepeatedFpFromOmahaError:
       LOG(INFO) << "Not incrementing URL index or failure count for this error";
       break;
 

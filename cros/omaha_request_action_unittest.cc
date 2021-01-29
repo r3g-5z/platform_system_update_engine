@@ -3212,4 +3212,57 @@ TEST_F(OmahaRequestActionTest, OmahaResponseInstallCannotExcludeCheck) {
   EXPECT_FALSE(packages[1].can_exclude);
 }
 
+TEST_F(OmahaRequestActionTest, OmahaResponseDifferentFp) {
+  SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
+
+  // Both fingerprints in the request are different.
+  // Request fps: 1.0, 1.1. Response fps: `fp`, `fp2`.
+  request_params_.set_last_fp("1.0");
+  request_params_.set_dlc_apps_params({{request_params_.GetDlcAppId(kDlcId1),
+                                        {.name = kDlcId1, .last_fp = "1.1"}}});
+  fake_update_response_.dlc_app_update = true;
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+
+  // Use TestUpdateCheck here since operation is successful.
+  EXPECT_CALL(mock_excluder_, IsExcluded(_)).WillRepeatedly(Return(false));
+  ASSERT_TRUE(TestUpdateCheck());
+}
+
+TEST_F(OmahaRequestActionTest, OmahaResponseSameDlcFp) {
+  SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
+  // Set request fingerprints. Same fp in both request and response for Dlc.
+  // Request fps: 1.0, `fp2`. Response fps: `fp`, `fp2`.
+  request_params_.set_last_fp("1.0");
+  request_params_.set_dlc_apps_params(
+      {{request_params_.GetDlcAppId(kDlcId1),
+        {.name = kDlcId1, .last_fp = fake_update_response_.fp2}}});
+  fake_update_response_.dlc_app_update = true;
+
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+  tuc_params_.expected_code = ErrorCode::kRepeatedFpFromOmahaError;
+  tuc_params_.expected_check_result = metrics::CheckResult::kParsingError;
+  tuc_params_.expected_check_reaction = metrics::CheckReaction::kUnset;
+
+  EXPECT_CALL(mock_excluder_, IsExcluded(_)).WillRepeatedly(Return(false));
+  EXPECT_FALSE(TestUpdateCheck());
+}
+
+TEST_F(OmahaRequestActionTest, OmahaResponseSamePlatformFp) {
+  SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
+  // Set request fingerprints. Same fp in both request and response for
+  // platform.  Request fps: `fp`, 1.1. Response fps: `fp`, `fp2`.
+  request_params_.set_last_fp(fake_update_response_.fp);
+  request_params_.set_dlc_apps_params({{request_params_.GetDlcAppId(kDlcId1),
+                                        {.name = kDlcId1, .last_fp = "1.1"}}});
+  fake_update_response_.dlc_app_update = true;
+
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+  tuc_params_.expected_code = ErrorCode::kRepeatedFpFromOmahaError;
+  tuc_params_.expected_check_result = metrics::CheckResult::kParsingError;
+  tuc_params_.expected_check_reaction = metrics::CheckReaction::kUnset;
+
+  EXPECT_CALL(mock_excluder_, IsExcluded(_)).WillRepeatedly(Return(false));
+  EXPECT_FALSE(TestUpdateCheck());
+}
+
 }  // namespace chromeos_update_engine
