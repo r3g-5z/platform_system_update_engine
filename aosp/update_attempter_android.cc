@@ -374,6 +374,9 @@ bool UpdateAttempterAndroid::ResetStatus(brillo::ErrorPtr* error) {
       // Resets the warm reset property since we won't switch the slot.
       hardware_->SetWarmReset(false);
 
+      // Resets the vbmeta digest.
+      hardware_->SetVbmetaDigestForInactiveSlot(true /* reset */);
+
       // Remove update progress for DeltaPerformer and remove snapshots.
       if (!boot_control_->GetDynamicPartitionControl()->ResetUpdate(prefs_))
         ret_value = false;
@@ -733,7 +736,6 @@ void UpdateAttempterAndroid::BuildUpdateActions(HttpFetcher* fetcher) {
       std::make_unique<DownloadAction>(prefs_,
                                        boot_control_,
                                        hardware_,
-                                       nullptr,  // system_state, not used.
                                        fetcher,  // passes ownership
                                        true /* interactive */);
   download_action->set_delegate(this);
@@ -804,7 +806,6 @@ void UpdateAttempterAndroid::CollectAndReportUpdateMetricsOnUpdateFinished(
   TimeDelta duration_uptime = clock_->GetMonotonicTime() - monotonic_time_start;
 
   metrics_reporter_->ReportUpdateAttemptMetrics(
-      nullptr,  // system_state
       static_cast<int>(attempt_number),
       payload_type,
       duration,

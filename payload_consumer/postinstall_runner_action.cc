@@ -53,6 +53,20 @@ namespace chromeos_update_engine {
 using std::string;
 using std::vector;
 
+PostinstallRunnerAction::PostinstallRunnerAction(
+    BootControlInterface* boot_control, HardwareInterface* hardware)
+    : boot_control_(boot_control), hardware_(hardware) {
+#ifdef __ANDROID__
+  fs_mount_dir_ = "/postinstall";
+#else   // __ANDROID__
+  base::FilePath temp_dir;
+  TEST_AND_RETURN(base::CreateNewTempDirectory("au_postint_mount", &temp_dir));
+  fs_mount_dir_ = temp_dir.value();
+#endif  // __ANDROID__
+  CHECK(!fs_mount_dir_.empty());
+  LOG(INFO) << "postinstall mount point: " << fs_mount_dir_;
+}
+
 void PostinstallRunnerAction::PerformAction() {
   CHECK(HasInputObject());
   CHECK(boot_control_);
@@ -135,13 +149,6 @@ void PostinstallRunnerAction::PerformPartitionPostinstall() {
   // Perform post-install for the current_partition_ partition. At this point we
   // need to call CompletePartitionPostinstall to complete the operation and
   // cleanup.
-#ifdef __ANDROID__
-  fs_mount_dir_ = "/postinstall";
-#else   // __ANDROID__
-  base::FilePath temp_dir;
-  TEST_AND_RETURN(base::CreateNewTempDirectory("au_postint_mount", &temp_dir));
-  fs_mount_dir_ = temp_dir.value();
-#endif  // __ANDROID__
 
   if (!utils::FileExists(fs_mount_dir_.c_str())) {
     LOG(ERROR) << "Mount point " << fs_mount_dir_
@@ -302,11 +309,14 @@ void PostinstallRunnerAction::ReportProgress(double frac) {
 void PostinstallRunnerAction::Cleanup() {
   utils::UnmountFilesystem(fs_mount_dir_);
 #ifndef __ANDROID__
-  if (!base::DeleteFile(base::FilePath(fs_mount_dir_), false)) {
+#if BASE_VER < 800000
+  if (!base::DeleteFile(base::FilePath(fs_mount_dir_), true)) {
+#else
+  if (!base::DeleteFile(base::FilePath(fs_mount_dir_))) {
+#endif
     PLOG(WARNING) << "Not removing temporary mountpoint " << fs_mount_dir_;
   }
-#endif  // !__ANDROID__
-  fs_mount_dir_.clear();
+#endif
 
   progress_fd_ = -1;
   progress_controller_.reset();
@@ -364,6 +374,8 @@ void PostinstallRunnerAction::CompletePostinstall(ErrorCode error_code) {
       } else {
         // Schedules warm reset on next reboot, ignores the error.
         hardware_->SetWarmReset(true);
+        // Sets the vbmeta digest for the other slot to boot into.
+        hardware_->SetVbmetaDigestForInactiveSlot(false);
       }
     } else {
       error_code = ErrorCode::kUpdatedButNotActive;

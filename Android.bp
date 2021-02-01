@@ -29,8 +29,6 @@ cc_defaults {
 
     cflags: [
         "-DBASE_VER=576279",
-        "-DUSE_CHROME_NETWORK_PROXY=0",
-        "-DUSE_CHROME_KIOSK_APP=0",
         "-DUSE_HWID_OVERRIDE=0",
         "-D_FILE_OFFSET_BITS=64",
         "-D_POSIX_C_SOURCE=199309L",
@@ -84,6 +82,21 @@ cc_defaults {
 
 // libcow_operation_convert (type: library)
 // ========================================================
+cc_library_static {
+    name: "libpayload_extent_utils",
+    defaults: [
+        "ue_defaults",
+    ],
+    host_supported: true,
+    recovery_available: true,
+    srcs: [
+        "payload_generator/extent_utils.cc",
+    ],
+    static_libs: [
+        "update_metadata-protos",
+    ],
+}
+
 cc_library {
     name: "libcow_operation_convert",
     host_supported: true,
@@ -99,6 +112,7 @@ cc_library {
         "libsnapshot_cow",
         "update_metadata-protos",
         "libpayload_extent_ranges",
+        "libpayload_extent_utils",
         "libbrotli",
         "libz",
     ],
@@ -150,6 +164,7 @@ cc_defaults {
         "libbrotli",
         "libz",
         "libpayload_extent_ranges",
+        "libpayload_extent_utils",
         "libcow_operation_convert",
     ],
     shared_libs: [
@@ -189,7 +204,6 @@ cc_library_static {
         "common/subprocess.cc",
         "common/terminator.cc",
         "common/utils.cc",
-        "download_action.cc",
         "payload_consumer/bzip_extent_writer.cc",
         "payload_consumer/cached_file_descriptor.cc",
         "payload_consumer/certificate_parser_android.cc",
@@ -293,9 +307,12 @@ cc_defaults {
     ],
 
     static_libs: [
+        "libavb",
+        "libavb_user",
         "gkiprops",
         "libpayload_consumer",
         "libupdate_engine_boot_control",
+        "PlatformProperties",
     ],
     shared_libs: [
         "libandroid_net",
@@ -306,7 +323,7 @@ cc_defaults {
         "libbrillo-binder",
         "libcurl",
         "libcutils",
-        "libupdate_engine_stable-cpp",
+        "libupdate_engine_stable-V1-cpp",
         "liblog",
         "libssl",
         "libstatslog",
@@ -332,6 +349,7 @@ cc_library_static {
 
     srcs: [
         ":libupdate_engine_aidl",
+        "common/system_state.cc",
         "aosp/binder_service_android.cc",
         "aosp/binder_service_stable_android.cc",
         "aosp/daemon_android.cc",
@@ -341,6 +359,7 @@ cc_library_static {
         "aosp/network_selector_android.cc",
         "aosp/update_attempter_android.cc",
         "certificate_checker.cc",
+        "download_action.cc",
         "libcurl_http_fetcher.cc",
         "metrics_utils.cc",
         "update_boot_flags_action.cc",
@@ -395,6 +414,8 @@ cc_binary {
         "aosp/update_attempter_android.cc",
         "common/metrics_reporter_stub.cc",
         "common/network_selector_stub.cc",
+        "common/system_state.cc",
+        "download_action.cc",
         "metrics_utils.cc",
         "update_boot_flags_action.cc",
         "update_status_utils.cc",
@@ -496,6 +517,7 @@ cc_defaults {
         "libpuffdiff",
         "libverity_tree",
         "update_metadata-protos",
+        "libpayload_extent_utils",
     ],
     shared_libs: [
         "libbase",
@@ -527,6 +549,8 @@ cc_library_static {
     host_supported: true,
 
     srcs: [
+        "common/system_state.cc",
+        "download_action.cc",
         "payload_generator/ab_generator.cc",
         "payload_generator/annotated_operation.cc",
         "payload_generator/blob_file_writer.cc",
@@ -539,7 +563,6 @@ cc_library_static {
         "payload_generator/delta_diff_utils.cc",
         "payload_generator/ext2_filesystem.cc",
         "payload_generator/extent_ranges.cc",
-        "payload_generator/extent_utils.cc",
         "payload_generator/full_update_generator.cc",
         "payload_generator/mapfile_filesystem.cc",
         "payload_generator/merge_sequence_generator.cc",
@@ -736,6 +759,7 @@ cc_test {
         "payload_consumer/file_descriptor_utils_unittest.cc",
         "payload_consumer/file_writer_unittest.cc",
         "payload_consumer/filesystem_verifier_action_unittest.cc",
+        "payload_consumer/install_plan_unittest.cc",
         "payload_consumer/partition_update_generator_android_unittest.cc",
         "payload_consumer/postinstall_runner_action_unittest.cc",
         "payload_consumer/verity_writer_android_unittest.cc",
@@ -791,10 +815,7 @@ cc_library_headers {
     name: "libupdate_engine_headers",
 
     // This header library is available to core and product modules.
-    // Right now, vendor_available is the only way to specify this.
-    // vendor modules should NOT use this library.
-    // TODO(b/150902910): change this to product_available.
-    vendor_available: true,
+    product_available: true,
 
     export_include_dirs: ["."],
     apex_available: [

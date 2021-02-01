@@ -23,12 +23,12 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "update_engine/common/action.h"
 #include "update_engine/common/boot_control_interface.h"
 #include "update_engine/common/http_fetcher.h"
 #include "update_engine/common/multi_range_http_fetcher.h"
-#include "update_engine/common/system_state.h"
 #include "update_engine/payload_consumer/delta_performer.h"
 #include "update_engine/payload_consumer/install_plan.h"
 
@@ -71,12 +71,11 @@ class DownloadAction : public InstallPlanAction, public HttpFetcherDelegate {
 
   // Takes ownership of the passed in HttpFetcher. Useful for testing.
   // A good calling pattern is:
-  // DownloadAction(prefs, boot_contol, hardware, system_state,
+  // DownloadAction(prefs, boot_contol, hardware,
   //                new WhateverHttpFetcher, false);
   DownloadAction(PrefsInterface* prefs,
                  BootControlInterface* boot_control,
                  HardwareInterface* hardware,
-                 SystemState* system_state,
                  HttpFetcher* http_fetcher,
                  bool interactive);
   ~DownloadAction() override;
@@ -89,7 +88,9 @@ class DownloadAction : public InstallPlanAction, public HttpFetcherDelegate {
   std::string Type() const override { return StaticType(); }
 
   // Testing
-  void SetTestFileWriter(FileWriter* writer) { writer_ = writer; }
+  void SetTestFileWriter(std::unique_ptr<DeltaPerformer> writer) {
+    delta_performer_ = std::move(writer);
+  }
 
   int GetHTTPResponseCode() { return http_fetcher_->http_response_code(); }
 
@@ -108,29 +109,7 @@ class DownloadAction : public InstallPlanAction, public HttpFetcherDelegate {
 
   HttpFetcher* http_fetcher() { return http_fetcher_.get(); }
 
-  // Returns the p2p file id for the file being written or the empty
-  // string if we're not writing to a p2p file.
-  std::string p2p_file_id() { return p2p_file_id_; }
-
  private:
-  // Closes the file descriptor for the p2p file being written and
-  // clears |p2p_file_id_| to indicate that we're no longer sharing
-  // the file. If |delete_p2p_file| is True, also deletes the file.
-  // If there is no p2p file descriptor, this method does nothing.
-  void CloseP2PSharingFd(bool delete_p2p_file);
-
-  // Starts sharing the p2p file. Must be called before
-  // WriteToP2PFile(). Returns True if this worked.
-  bool SetupP2PSharingFd();
-
-  // Writes |length| bytes of payload from |data| into |file_offset|
-  // of the p2p file. Also does validation checks; for example ensures we
-  // don't end up with a file with holes in it.
-  //
-  // This method does nothing if SetupP2PSharingFd() hasn't been
-  // called or if CloseP2PSharingFd() has been called.
-  void WriteToP2PFile(const void* data, size_t length, off_t file_offset);
-
   // Attempt to load cached manifest data from prefs
   // return true on success, false otherwise.
   bool LoadCachedManifest(int64_t manifest_size);
@@ -141,13 +120,10 @@ class DownloadAction : public InstallPlanAction, public HttpFetcherDelegate {
   // Pointer to the current payload in install_plan_.payloads.
   InstallPlan::Payload* payload_{nullptr};
 
-  // SystemState required pointers.
+  // Required pointers.
   PrefsInterface* prefs_;
   BootControlInterface* boot_control_;
   HardwareInterface* hardware_;
-
-  // Global context for the system.
-  SystemState* system_state_;
 
   // Pointer to the MultiRangeHttpFetcher that does the http work.
   std::unique_ptr<MultiRangeHttpFetcher> http_fetcher_;
@@ -156,10 +132,6 @@ class DownloadAction : public InstallPlanAction, public HttpFetcherDelegate {
   // the |delta_performer_| can decide not to use O_DSYNC flag for faster
   // update.
   bool interactive_;
-
-  // The FileWriter that downloaded data should be written to. It will
-  // either point to *decompressing_file_writer_ or *delta_performer_.
-  FileWriter* writer_;
 
   std::unique_ptr<DeltaPerformer> delta_performer_;
 
@@ -173,17 +145,6 @@ class DownloadAction : public InstallPlanAction, public HttpFetcherDelegate {
   uint64_t bytes_received_previous_payloads_{0};
   uint64_t bytes_total_{0};
   bool download_active_{false};
-
-  // The file-id for the file we're sharing or the empty string
-  // if we're not using p2p to share.
-  std::string p2p_file_id_;
-
-  // The file descriptor for the p2p file used for caching the payload or -1
-  // if we're not using p2p to share.
-  int p2p_sharing_fd_;
-
-  // Set to |false| if p2p file is not visible.
-  bool p2p_visible_;
 
   // Loaded from prefs before downloading any payload.
   size_t resume_payload_index_{0};
