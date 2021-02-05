@@ -16,10 +16,15 @@
 
 #include "update_engine/common/system_state.h"
 #include "update_engine/update_manager/default_policy.h"
+// TODO(b/179419726): Remove.
+#include "update_engine/update_manager/update_check_allowed_policy.h"
 
 using chromeos_update_engine::ErrorCode;
 using chromeos_update_engine::InstallPlan;
 using chromeos_update_engine::SystemState;
+using std::string;
+
+namespace chromeos_update_manager {
 
 namespace {
 
@@ -31,12 +36,14 @@ const int kCheckIntervalInSeconds = 15 * 60;
 
 }  // namespace
 
-namespace chromeos_update_manager {
-
-EvalStatus DefaultPolicy::UpdateCheckAllowed(EvaluationContext* ec,
-                                             State* state,
-                                             std::string* error,
-                                             UpdateCheckParams* result) const {
+// TODO(b/179419726): Move to update_check_allowed_policy.cc.
+EvalStatus UpdateCheckAllowedPolicy::EvaluateDefault(
+    EvaluationContext* ec,
+    State* state,
+    string* error,
+    PolicyDataInterface* data) const {
+  UpdateCheckParams* result =
+      UpdateCheckAllowedPolicyData::GetUpdateCheckParams(data);
   result->updates_enabled = true;
   result->target_channel.clear();
   result->lts_tag.clear();

@@ -19,21 +19,21 @@
 
 #include <string>
 
-#include "update_engine/update_manager/policy_utils.h"
+#include "update_engine/update_manager/policy_interface.h"
 
 namespace chromeos_update_manager {
 
 // Unofficial builds should not perform periodic update checks.
-class OnlyUpdateOfficialBuildsPolicyImpl : public PolicyImplBase {
+class OnlyUpdateOfficialBuildsPolicyImpl : public PolicyInterface {
  public:
   OnlyUpdateOfficialBuildsPolicyImpl() = default;
   ~OnlyUpdateOfficialBuildsPolicyImpl() override = default;
 
   // Policy overrides.
-  EvalStatus UpdateCheckAllowed(EvaluationContext* ec,
-                                State* state,
-                                std::string* error,
-                                UpdateCheckParams* result) const override;
+  EvalStatus Evaluate(EvaluationContext* ec,
+                      State* state,
+                      std::string* error,
+                      PolicyDataInterface* data) const override;
 
  protected:
   std::string PolicyName() const override {

@@ -32,10 +32,6 @@ class MockPolicy : public Policy {
   MockPolicy() {
     // We defer to the corresponding DefaultPolicy methods, by default.
     ON_CALL(*this,
-            UpdateCheckAllowed(testing::_, testing::_, testing::_, testing::_))
-        .WillByDefault(testing::Invoke(&default_policy_,
-                                       &DefaultPolicy::UpdateCheckAllowed));
-    ON_CALL(*this,
             UpdateCanBeApplied(
                 testing::_, testing::_, testing::_, testing::_, testing::_))
         .WillByDefault(testing::Invoke(&default_policy_,
@@ -55,11 +51,6 @@ class MockPolicy : public Policy {
                                        &DefaultPolicy::P2PEnabledChanged));
   }
   ~MockPolicy() override {}
-
-  // Policy overrides.
-  MOCK_CONST_METHOD4(
-      UpdateCheckAllowed,
-      EvalStatus(EvaluationContext*, State*, std::string*, UpdateCheckParams*));
 
   MOCK_CONST_METHOD5(UpdateCanBeApplied,
                      EvalStatus(EvaluationContext*,

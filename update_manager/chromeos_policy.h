@@ -17,6 +17,7 @@
 #ifndef UPDATE_ENGINE_UPDATE_MANAGER_CHROMEOS_POLICY_H_
 #define UPDATE_ENGINE_UPDATE_MANAGER_CHROMEOS_POLICY_H_
 
+#include <memory>
 #include <string>
 
 #include <base/time/time.h>
@@ -47,17 +48,10 @@ struct UpdateScatteringResult {
   int check_threshold;
 };
 
-// ChromeOSPolicy implements the policy-related logic used in ChromeOS.
 class ChromeOSPolicy : public Policy {
  public:
-  ChromeOSPolicy() {}
-  ~ChromeOSPolicy() override {}
-
-  // Policy overrides.
-  EvalStatus UpdateCheckAllowed(EvaluationContext* ec,
-                                State* state,
-                                std::string* error,
-                                UpdateCheckParams* result) const override;
+  ChromeOSPolicy() = default;
+  ~ChromeOSPolicy() override = default;
 
   EvalStatus UpdateCanBeApplied(
       EvaluationContext* ec,
@@ -111,8 +105,6 @@ class ChromeOSPolicy : public Policy {
 
   // Auxiliary constant (zero by default).
   const base::TimeDelta kZeroInterval;
-
-  static const NextUpdateCheckPolicyConstants kNextUpdateCheckPolicyConstants;
 
   // Maximum number of times we'll allow using P2P for the same update payload.
   static const int kMaxP2PAttempts;

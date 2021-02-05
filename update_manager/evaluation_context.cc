@@ -212,7 +212,7 @@ bool EvaluationContext::RunOnValueChangeOrTimeout(Closure callback) {
     timeout = expiration;
 
   // Store the reevaluation callback.
-  callback_.reset(new Closure(callback));
+  callback_.reset(new Closure(std::move(callback)));
 
   // Schedule a timeout event, if one is set.
   if (!timeout.is_max()) {

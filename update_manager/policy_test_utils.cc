@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "update_engine/cros/fake_system_state.h"
@@ -40,6 +41,12 @@ void UmPolicyTestBase::SetUp() {
   SetUpDefaultClock();
   eval_ctx_.reset(new EvaluationContext(TimeDelta::FromSeconds(5)));
   SetUpDefaultState();
+
+  evaluator_ = base::MakeRefCounted<PolicyEvaluator>(
+      &fake_state_,
+      std::make_unique<EvaluationContext>(TimeDelta::FromSeconds(5)),
+      std::move(policy_2_),
+      policy_data_);
 }
 
 void UmPolicyTestBase::TearDown() {

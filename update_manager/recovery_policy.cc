@@ -18,10 +18,10 @@
 
 namespace chromeos_update_manager {
 
-EvalStatus RecoveryPolicy::UpdateCheckAllowed(EvaluationContext* ec,
-                                              State* state,
-                                              std::string* error,
-                                              UpdateCheckParams* result) const {
+EvalStatus RecoveryPolicy::Evaluate(EvaluationContext* ec,
+                                    State* state,
+                                    std::string* error,
+                                    PolicyDataInterface* data) const {
   const bool* running_in_minios =
       ec->GetValue(state->updater_provider()->var_running_from_minios());
   if (running_in_minios && (*running_in_minios)) {

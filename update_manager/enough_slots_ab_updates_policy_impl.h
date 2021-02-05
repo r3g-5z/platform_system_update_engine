@@ -19,21 +19,21 @@
 
 #include <string>
 
-#include "update_engine/update_manager/policy_utils.h"
+#include "update_engine/update_manager/policy_interface.h"
 
 namespace chromeos_update_manager {
 
 // Do not perform any updates if booted from removable device.
-class EnoughSlotsAbUpdatesPolicyImpl : public PolicyImplBase {
+class EnoughSlotsAbUpdatesPolicyImpl : public PolicyInterface {
  public:
   EnoughSlotsAbUpdatesPolicyImpl() = default;
   ~EnoughSlotsAbUpdatesPolicyImpl() override = default;
 
-  // Policy overrides.
-  EvalStatus UpdateCheckAllowed(EvaluationContext* ec,
-                                State* state,
-                                std::string* error,
-                                UpdateCheckParams* result) const override;
+  // PolicyInterface overrides.
+  EvalStatus Evaluate(EvaluationContext* ec,
+                      State* state,
+                      std::string* error,
+                      PolicyDataInterface* data) const override;
 
  protected:
   std::string PolicyName() const override {

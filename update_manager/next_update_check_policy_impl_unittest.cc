@@ -39,10 +39,7 @@ const NextUpdateCheckPolicyConstants policy_test_constants = {
 
 class UmNextUpdateCheckTimePolicyImplTest : public UmPolicyTestBase {
  protected:
-  UmNextUpdateCheckTimePolicyImplTest() {
-    policy_ =
-        std::make_unique<NextUpdateCheckTimePolicyImpl>(policy_test_constants);
-  }
+  UmNextUpdateCheckTimePolicyImplTest() = default;
 };
 
 TEST_F(UmNextUpdateCheckTimePolicyImplTest,

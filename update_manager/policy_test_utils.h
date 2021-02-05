@@ -27,6 +27,7 @@
 #include "update_engine/common/fake_clock.h"
 #include "update_engine/update_manager/evaluation_context.h"
 #include "update_engine/update_manager/fake_state.h"
+#include "update_engine/update_manager/policy_evaluator.h"
 #include "update_engine/update_manager/policy_utils.h"
 
 namespace chromeos_update_manager {
@@ -95,6 +96,10 @@ class UmPolicyTestBase : public ::testing::Test {
   FakeState fake_state_;
   std::shared_ptr<EvaluationContext> eval_ctx_;
   std::unique_ptr<Policy> policy_;
+
+  scoped_refptr<PolicyEvaluator> evaluator_;
+  std::unique_ptr<PolicyInterface> policy_2_;
+  std::shared_ptr<PolicyDataInterface> policy_data_;
 };
 
 }  // namespace chromeos_update_manager

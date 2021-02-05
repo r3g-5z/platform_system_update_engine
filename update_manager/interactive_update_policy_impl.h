@@ -21,21 +21,23 @@
 
 #include "update_engine/common/error_code.h"
 #include "update_engine/payload_consumer/install_plan.h"
+#include "update_engine/update_manager/policy_interface.h"
 #include "update_engine/update_manager/policy_utils.h"
 
 namespace chromeos_update_manager {
 
 // Check to see if an interactive update was requested.
-class InteractiveUpdatePolicyImpl : public PolicyImplBase {
+class InteractiveUpdatePolicyImpl : public PolicyImplBase,
+                                    public PolicyInterface {
  public:
   InteractiveUpdatePolicyImpl() = default;
   ~InteractiveUpdatePolicyImpl() override = default;
 
   // Policy overrides.
-  EvalStatus UpdateCheckAllowed(EvaluationContext* ec,
-                                State* state,
-                                std::string* error,
-                                UpdateCheckParams* result) const override;
+  EvalStatus Evaluate(EvaluationContext* ec,
+                      State* state,
+                      std::string* error,
+                      PolicyDataInterface* data) const override;
 
   EvalStatus UpdateCanBeApplied(
       EvaluationContext* ec,

@@ -19,14 +19,12 @@
 
 #include <string>
 
-#include "update_engine/common/error_code.h"
-#include "update_engine/payload_consumer/install_plan.h"
-#include "update_engine/update_manager/policy_utils.h"
+#include "update_engine/update_manager/policy_interface.h"
 
 namespace chromeos_update_manager {
 
 // Skip remaining policy checks if in MiniOs recovery.
-class RecoveryPolicy : public PolicyImplBase {
+class RecoveryPolicy : public PolicyInterface {
  public:
   RecoveryPolicy() = default;
   ~RecoveryPolicy() override = default;
@@ -34,11 +32,11 @@ class RecoveryPolicy : public PolicyImplBase {
   RecoveryPolicy(const RecoveryPolicy&) = delete;
   RecoveryPolicy& operator=(const RecoveryPolicy&) = delete;
 
-  // Policy overrides.
-  EvalStatus UpdateCheckAllowed(EvaluationContext* ec,
-                                State* state,
-                                std::string* error,
-                                UpdateCheckParams* result) const override;
+  // |PolicyInterface| overrides.
+  EvalStatus Evaluate(EvaluationContext* ec,
+                      State* state,
+                      std::string* error,
+                      PolicyDataInterface* data) const override;
 
  protected:
   std::string PolicyName() const override { return "RecoveryPolicy"; }

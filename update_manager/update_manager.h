@@ -25,35 +25,18 @@
 #include <base/time/time.h>
 
 #include "update_engine/common/system_state.h"
+#include "update_engine/update_manager/chromeos_policy.h"
 #include "update_engine/update_manager/default_policy.h"
 #include "update_engine/update_manager/evaluation_context.h"
 #include "update_engine/update_manager/policy.h"
+#include "update_engine/update_manager/policy_evaluator.h"
 #include "update_engine/update_manager/state.h"
 #include "update_engine/update_manager/update_time_restrictions_monitor.h"
 
 namespace chromeos_update_manager {
 
-// Please do not move this class into a new file for simplicity.
-// This pure virtual class is purely created for purpose of testing. The reason
-// was that |UpdateManager|'s member functions are templatized, which does not
-// play nicely when testing (mocking + faking). Whenever a specialized member of
-// |UpdateManager| must be tested, please add a specialized template member
-// function within this class for testing.
-class SpecializedPolicyRequestInterface {
- public:
-  virtual ~SpecializedPolicyRequestInterface() = default;
-
-  virtual void AsyncPolicyRequestUpdateCheckAllowed(
-      base::Callback<void(EvalStatus, const UpdateCheckParams& result)>
-          callback,
-      EvalStatus (Policy::*policy_method)(EvaluationContext*,
-                                          State*,
-                                          std::string*,
-                                          UpdateCheckParams*) const) = 0;
-};
-
 // The main Update Manager singleton class.
-class UpdateManager : public SpecializedPolicyRequestInterface {
+class UpdateManager {
  public:
   // Creates the UpdateManager instance, assuming ownership on the provided
   // |state|.
@@ -100,13 +83,29 @@ class UpdateManager : public SpecializedPolicyRequestInterface {
           EvaluationContext*, State*, std::string*, R*, ExpectedArgs...) const,
       ActualArgs... args);
 
-  void AsyncPolicyRequestUpdateCheckAllowed(
-      base::Callback<void(EvalStatus, const UpdateCheckParams& result)>
-          callback,
-      EvalStatus (Policy::*policy_method)(EvaluationContext*,
-                                          State*,
-                                          std::string*,
-                                          UpdateCheckParams*) const) override;
+  // This function evaluates a given |policy| and returns the result
+  // immediately. |data| is an input/output argument.  When the policy request
+  // succeeds, the |data| is filled and the method returns
+  // |EvalStatus::kSucceeded|, otherwise, the |data| may not be filled. A policy
+  // called with this method should not block (i.e. return
+  // |EvalStatus::kAskMeAgainLater|), which is considered a programming
+  // error. On failure, |EvalStatus::kFailed| is returned.
+  //
+  // TODO(b/179419726): Remove "2" from the name once |PolicyRequest| functions
+  // have been deprecated.
+  EvalStatus PolicyRequest2(std::unique_ptr<PolicyInterface> policy,
+                            std::shared_ptr<PolicyDataInterface> data);
+
+  // Similar to the function above but the results are returned at a later time
+  // using the given |callback| function.
+  // If the policy implementation should block, returning a
+  // |EvalStatus::kAskMeAgainLater| status, the policy will be re-evaluated
+  // until another status is returned. If the policy implementation based
+  // its return value solely on const variables, the callback will be called
+  // with the EvalStatus::kAskMeAgainLater status (which indicates an error).
+  void PolicyRequest2(std::unique_ptr<PolicyInterface> policy,
+                      std::shared_ptr<PolicyDataInterface> data,
+                      base::Callback<void(EvalStatus)> callback);
 
   // Returns instance of update time restrictions monitor if |install_plan|
   // requires one. Otherwise returns nullptr.

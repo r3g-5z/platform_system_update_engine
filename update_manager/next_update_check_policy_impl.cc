@@ -19,6 +19,7 @@
 #include <algorithm>
 
 #include "update_engine/common/utils.h"
+#include "update_engine/update_manager/policy_utils.h"
 
 using base::Time;
 using base::TimeDelta;
@@ -27,15 +28,27 @@ using std::string;
 
 namespace chromeos_update_manager {
 
+const NextUpdateCheckPolicyConstants kNextUpdateCheckPolicyConstants = {
+    .timeout_initial_interval = 7 * 60,
+    .timeout_periodic_interval = 45 * 60,
+    .timeout_max_backoff_interval = 4 * 60 * 60,
+    .timeout_regular_fuzz = 10 * 60,
+    .attempt_backoff_max_interval_in_days = 16,
+    .attempt_backoff_fuzz_in_hours = 12,
+};
+
+NextUpdateCheckTimePolicyImpl::NextUpdateCheckTimePolicyImpl()
+    : NextUpdateCheckTimePolicyImpl(kNextUpdateCheckPolicyConstants) {}
+
 NextUpdateCheckTimePolicyImpl::NextUpdateCheckTimePolicyImpl(
     const NextUpdateCheckPolicyConstants& constants)
     : policy_constants_(constants) {}
 
-EvalStatus NextUpdateCheckTimePolicyImpl::UpdateCheckAllowed(
+EvalStatus NextUpdateCheckTimePolicyImpl::Evaluate(
     EvaluationContext* ec,
     State* state,
     string* error,
-    UpdateCheckParams* result) const {
+    PolicyDataInterface* data) const {
   // Ensure that periodic update checks are timed properly.
   Time next_update_check;
 

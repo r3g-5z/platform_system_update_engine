@@ -20,10 +20,10 @@
 
 namespace chromeos_update_manager {
 
-EvalStatus OobePolicyImpl::UpdateCheckAllowed(EvaluationContext* ec,
-                                              State* state,
-                                              std::string* error,
-                                              UpdateCheckParams* result) const {
+EvalStatus OobePolicyImpl::Evaluate(EvaluationContext* ec,
+                                    State* state,
+                                    std::string* error,
+                                    PolicyDataInterface* data) const {
   SystemProvider* const system_provider = state->system_provider();
 
   // If OOBE is enabled, wait until it is completed.

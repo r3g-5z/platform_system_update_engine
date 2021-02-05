@@ -15,6 +15,9 @@
 //
 
 #include "update_engine/update_manager/update_manager.h"
+
+#include <utility>
+
 #include "update_engine/update_manager/state.h"
 
 namespace chromeos_update_manager {
@@ -36,11 +39,27 @@ UpdateManager::~UpdateManager() {
     ec->RemoveObserversAndTimeout();
 }
 
-void UpdateManager::AsyncPolicyRequestUpdateCheckAllowed(
-    base::Callback<void(EvalStatus, const UpdateCheckParams& result)> callback,
-    EvalStatus (Policy::*policy_method)(
-        EvaluationContext*, State*, std::string*, UpdateCheckParams*) const) {
-  AsyncPolicyRequest(callback, policy_method);
+EvalStatus UpdateManager::PolicyRequest2(
+    std::unique_ptr<PolicyInterface> policy,
+    std::shared_ptr<PolicyDataInterface> data) {
+  return base::MakeRefCounted<PolicyEvaluator>(
+             state_.get(),
+             std::make_unique<EvaluationContext>(evaluation_timeout_),
+             std::move(policy),
+             std::move(data))
+      ->Evaluate();
+}
+
+void UpdateManager::PolicyRequest2(std::unique_ptr<PolicyInterface> policy,
+                                   std::shared_ptr<PolicyDataInterface> data,
+                                   base::Callback<void(EvalStatus)> callback) {
+  auto ec = std::make_unique<EvaluationContext>(
+      evaluation_timeout_,
+      expiration_timeout_,
+      std::unique_ptr<base::Callback<void(EvaluationContext*)>>(nullptr));
+  base::MakeRefCounted<PolicyEvaluator>(
+      state_.get(), std::move(ec), std::move(policy), std::move(data))
+      ->ScheduleEvaluation(std::move(callback));
 }
 
 void UpdateManager::UnregisterEvalContext(EvaluationContext* ec) {

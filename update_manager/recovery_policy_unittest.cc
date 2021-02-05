@@ -20,30 +20,28 @@
 
 #include "update_engine/update_manager/policy_test_utils.h"
 #include "update_engine/update_manager/recovery_policy.h"
+#include "update_engine/update_manager/update_check_allowed_policy_data.h"
 
 namespace chromeos_update_manager {
 
 class UmRecoveryPolicyTest : public UmPolicyTestBase {
  protected:
   UmRecoveryPolicyTest() : UmPolicyTestBase() {
-    policy_ = std::make_unique<RecoveryPolicy>();
+    policy_data_.reset(new UpdateCheckAllowedPolicyData());
+    policy_2_.reset(new RecoveryPolicy());
   }
 };
 
 TEST_F(UmRecoveryPolicyTest, RecoveryMode) {
   fake_state_.updater_provider()->var_running_from_minios()->reset(
       new bool(true));
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kSucceeded, &Policy::UpdateCheckAllowed, &result);
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
 }
 
 TEST_F(UmRecoveryPolicyTest, NotRecoveryMode) {
   fake_state_.updater_provider()->var_running_from_minios()->reset(
       new bool(false));
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kContinue, &Policy::UpdateCheckAllowed, &result);
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
 }
 
 }  // namespace chromeos_update_manager

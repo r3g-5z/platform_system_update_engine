@@ -19,13 +19,13 @@
 
 #include <string>
 
-#include "update_engine/update_manager/policy_utils.h"
+#include "update_engine/update_manager/policy_interface.h"
 
 namespace chromeos_update_manager {
 
 // Check to see if Enterprise-managed (has DevicePolicy) and/or Kiosk-mode.  If
 // so, then defer to those settings.
-class EnterpriseDevicePolicyImpl : public PolicyImplBase {
+class EnterpriseDevicePolicyImpl : public PolicyInterface {
  public:
   EnterpriseDevicePolicyImpl() = default;
   ~EnterpriseDevicePolicyImpl() override = default;
@@ -34,10 +34,10 @@ class EnterpriseDevicePolicyImpl : public PolicyImplBase {
     return "EnterpriseDevicePolicyImpl";
   }
   // Policy overrides.
-  EvalStatus UpdateCheckAllowed(EvaluationContext* ec,
-                                State* state,
-                                std::string* error,
-                                UpdateCheckParams* result) const override;
+  EvalStatus Evaluate(EvaluationContext* ec,
+                      State* state,
+                      std::string* error,
+                      PolicyDataInterface* data) const override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(EnterpriseDevicePolicyImpl);

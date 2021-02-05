@@ -84,6 +84,8 @@ using chromeos_update_manager::CalculateStagingCase;
 using chromeos_update_manager::EvalStatus;
 using chromeos_update_manager::Policy;
 using chromeos_update_manager::StagingCase;
+using chromeos_update_manager::UpdateCheckAllowedPolicy;
+using chromeos_update_manager::UpdateCheckAllowedPolicyData;
 using chromeos_update_manager::UpdateCheckParams;
 using std::map;
 using std::string;
@@ -168,15 +170,14 @@ bool UpdateAttempter::ScheduleUpdates() {
   if (IsBusyOrUpdateScheduled())
     return false;
 
-  chromeos_update_manager::UpdateManager* const update_manager =
-      SystemState::Get()->update_manager();
-  CHECK(update_manager);
-  Callback<void(EvalStatus, const UpdateCheckParams&)> callback =
-      Bind(&UpdateAttempter::OnUpdateScheduled, base::Unretained(this));
   // We limit the async policy request to a reasonably short time, to avoid a
   // starvation due to a transient bug.
-  update_manager->AsyncPolicyRequestUpdateCheckAllowed(
-      callback, &Policy::UpdateCheckAllowed);
+  policy_data_.reset(new UpdateCheckAllowedPolicyData());
+  SystemState::Get()->update_manager()->PolicyRequest2(
+      std::make_unique<UpdateCheckAllowedPolicy>(),
+      policy_data_,  // Do not move because we don't want transfer of ownership.
+      base::Bind(&UpdateAttempter::OnUpdateScheduled, base::Unretained(this)));
+
   waiting_for_scheduled_check_ = true;
   return true;
 }
@@ -1041,8 +1042,8 @@ bool UpdateAttempter::RebootDirectly() {
   return rc == 0;
 }
 
-void UpdateAttempter::OnUpdateScheduled(EvalStatus status,
-                                        const UpdateCheckParams& params) {
+void UpdateAttempter::OnUpdateScheduled(EvalStatus status) {
+  const UpdateCheckParams& params = policy_data_->update_check_params;
   waiting_for_scheduled_check_ = false;
 
   if (status == EvalStatus::kSucceeded) {

@@ -28,6 +28,7 @@
 
 #include "update_engine/common/error_code.h"
 #include "update_engine/common/error_code_utils.h"
+#include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/update_manager/device_policy_provider.h"
 #include "update_engine/update_manager/enough_slots_ab_updates_policy_impl.h"
@@ -40,6 +41,8 @@
 #include "update_engine/update_manager/policy_utils.h"
 #include "update_engine/update_manager/recovery_policy.h"
 #include "update_engine/update_manager/shill_provider.h"
+// TODO(b/179419726): Remove.
+#include "update_engine/update_manager/update_check_allowed_policy.h"
 #include "update_engine/update_manager/update_time_restrictions_policy_impl.h"
 
 using base::Time;
@@ -48,6 +51,7 @@ using chromeos_update_engine::ConnectionTethering;
 using chromeos_update_engine::ConnectionType;
 using chromeos_update_engine::ErrorCode;
 using chromeos_update_engine::InstallPlan;
+using chromeos_update_engine::SystemState;
 using std::get;
 using std::min;
 using std::set;
@@ -202,23 +206,16 @@ unique_ptr<Policy> GetSystemPolicy() {
   return std::make_unique<ChromeOSPolicy>();
 }
 
-const NextUpdateCheckPolicyConstants
-    ChromeOSPolicy::kNextUpdateCheckPolicyConstants = {
-        .timeout_initial_interval = 7 * 60,
-        .timeout_periodic_interval = 45 * 60,
-        .timeout_max_backoff_interval = 4 * 60 * 60,
-        .timeout_regular_fuzz = 10 * 60,
-        .attempt_backoff_max_interval_in_days = 16,
-        .attempt_backoff_fuzz_in_hours = 12,
-};
-
 const int ChromeOSPolicy::kMaxP2PAttempts = 10;
 const int ChromeOSPolicy::kMaxP2PAttemptsPeriodInSeconds = 5 * 24 * 60 * 60;
 
-EvalStatus ChromeOSPolicy::UpdateCheckAllowed(EvaluationContext* ec,
+// TODO(b/179419726): Move to update_check_allowed_policy.cc.
+EvalStatus UpdateCheckAllowedPolicy::Evaluate(EvaluationContext* ec,
                                               State* state,
                                               string* error,
-                                              UpdateCheckParams* result) const {
+                                              PolicyDataInterface* data) const {
+  UpdateCheckParams* result =
+      UpdateCheckAllowedPolicyData::GetUpdateCheckParams(data);
   // Set the default return values.
   result->updates_enabled = true;
   result->target_channel.clear();
@@ -236,10 +233,9 @@ EvalStatus ChromeOSPolicy::UpdateCheckAllowed(EvaluationContext* ec,
   OnlyUpdateOfficialBuildsPolicyImpl only_update_official_builds_policy;
   InteractiveUpdatePolicyImpl interactive_update_policy;
   OobePolicyImpl oobe_policy;
-  NextUpdateCheckTimePolicyImpl next_update_check_time_policy(
-      kNextUpdateCheckPolicyConstants);
+  NextUpdateCheckTimePolicyImpl next_update_check_time_policy;
 
-  vector<Policy const*> policies_to_consult = {
+  vector<PolicyInterface* const> policies_to_consult = {
       // If in recovery mode, always check for update.
       &recovery_policy,
 
@@ -268,19 +264,14 @@ EvalStatus ChromeOSPolicy::UpdateCheckAllowed(EvaluationContext* ec,
   // has been setup, consult the policies. If none of the policies make a
   // definitive decisions about whether or not to check for updates, then allow
   // the update check to happen.
-  EvalStatus status = ConsultPolicies(policies_to_consult,
-                                      &Policy::UpdateCheckAllowed,
-                                      ec,
-                                      state,
-                                      error,
-                                      result);
-  if (EvalStatus::kContinue != status) {
-    return status;
-  } else {
-    // It is time to check for an update.
-    LOG(INFO) << "Allowing update check.";
-    return EvalStatus::kSucceeded;
+  for (auto policy : policies_to_consult) {
+    EvalStatus status = policy->Evaluate(ec, state, error, data);
+    if (status != EvalStatus::kContinue) {
+      return status;
+    }
   }
+  LOG(INFO) << "Allowing update check.";
+  return EvalStatus::kSucceeded;
 }
 
 EvalStatus ChromeOSPolicy::UpdateCanBeApplied(EvaluationContext* ec,
@@ -350,12 +341,13 @@ EvalStatus ChromeOSPolicy::UpdateCanStart(
   result->scatter_check_threshold = update_state.scatter_check_threshold;
 
   // Make sure that we're not due for an update check.
-  UpdateCheckParams check_result;
-  EvalStatus check_status = UpdateCheckAllowed(ec, state, error, &check_result);
+  UpdateCheckAllowedPolicy uca_policy;
+  UpdateCheckAllowedPolicyData uca_data;
+  EvalStatus check_status = uca_policy.Evaluate(ec, state, error, &uca_data);
   if (check_status == EvalStatus::kFailed)
     return EvalStatus::kFailed;
   bool is_check_due = (check_status == EvalStatus::kSucceeded &&
-                       check_result.updates_enabled == true);
+                       uca_data.update_check_params.updates_enabled == true);
 
   // Check whether backoff applies, and if not then which URL can be used for
   // downloading. These require scanning the download error log, and so they are

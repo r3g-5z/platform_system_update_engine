@@ -16,20 +16,24 @@
 
 #include "update_engine/update_manager/interactive_update_policy_impl.h"
 
+#include "update_engine/update_manager/update_check_allowed_policy_data.h"
+
 using chromeos_update_engine::ErrorCode;
 using chromeos_update_engine::InstallPlan;
 
 namespace chromeos_update_manager {
 
 // Check to see if an interactive update was requested.
-EvalStatus InteractiveUpdatePolicyImpl::UpdateCheckAllowed(
+EvalStatus InteractiveUpdatePolicyImpl::Evaluate(
     EvaluationContext* ec,
     State* state,
     std::string* error,
-    UpdateCheckParams* result) const {
+    PolicyDataInterface* data) const {
   bool interactive;
   if (CheckInteractiveUpdateRequested(
           ec, state->updater_provider(), &interactive)) {
+    UpdateCheckParams* result =
+        UpdateCheckAllowedPolicyData::GetUpdateCheckParams(data);
     result->interactive = interactive;
     LOG(INFO) << "Forced update signaled ("
               << (interactive ? "interactive" : "periodic")

@@ -18,9 +18,14 @@
 
 #include <memory>
 #include <set>
+#include <utility>
 
+// TODO(b/179419726): Remove.
+#include "update_engine/update_manager/enterprise_device_policy_impl.h"
 #include "update_engine/update_manager/next_update_check_policy_impl.h"
 #include "update_engine/update_manager/policy_test_utils.h"
+#include "update_engine/update_manager/update_check_allowed_policy.h"
+#include "update_engine/update_manager/update_check_allowed_policy_data.h"
 #include "update_engine/update_manager/weekly_time.h"
 
 using base::Time;
@@ -38,6 +43,11 @@ class UmChromeOSPolicyTest : public UmPolicyTestBase {
  protected:
   UmChromeOSPolicyTest() : UmPolicyTestBase() {
     policy_ = std::make_unique<ChromeOSPolicy>();
+
+    policy_data_.reset(new UpdateCheckAllowedPolicyData());
+    policy_2_.reset(new UpdateCheckAllowedPolicy());
+
+    uca_data_ = static_cast<typeof(uca_data_)>(policy_data_.get());
   }
 
   void SetUp() override {
@@ -101,7 +111,7 @@ class UmChromeOSPolicyTest : public UmPolicyTestBase {
     Time next_update_check;
     CallMethodWithContext(&NextUpdateCheckTimePolicyImpl::NextUpdateCheckTime,
                           &next_update_check,
-                          ChromeOSPolicy::kNextUpdateCheckPolicyConstants);
+                          kNextUpdateCheckPolicyConstants);
     SetUpDefaultState();
     SetUpDefaultDevicePolicy();
     Time curr_time = next_update_check;
@@ -110,6 +120,48 @@ class UmChromeOSPolicyTest : public UmPolicyTestBase {
     else
       curr_time -= TimeDelta::FromSeconds(1);
     fake_clock_->SetWallclockTime(curr_time);
+  }
+
+  // Sets up a test with the given intervals and the current fake wallclock
+  // time.
+  void TestDisallowedTimeIntervals(const WeeklyTimeIntervalVector& intervals,
+                                   const ErrorCode& expected_error_code,
+                                   bool is_rollback,
+                                   bool expected_can_download_be_canceled) {
+    SetUpDefaultTimeProvider();
+    fake_state_.device_policy_provider()
+        ->var_disallowed_time_intervals()
+        ->reset(new WeeklyTimeIntervalVector(intervals));
+
+    // Check that |expected_status| matches the value of |UpdateCanBeApplied|.
+    ErrorCode result;
+    InstallPlan install_plan{.is_rollback = is_rollback};
+    ExpectPolicyStatus(EvalStatus::kSucceeded,
+                       &Policy::UpdateCanBeApplied,
+                       &result,
+                       &install_plan);
+    EXPECT_EQ(result, expected_error_code);
+    EXPECT_EQ(install_plan.can_download_be_canceled,
+              expected_can_download_be_canceled);
+  }
+
+  UpdateCheckAllowedPolicyData* uca_data_;
+};
+
+// TODO(b/179419726): Merge into enterprise_device_policy_impl_unittest.cc.
+class UmEnterprisePolicyTest : public UmPolicyTestBase {
+ protected:
+  UmEnterprisePolicyTest() : UmPolicyTestBase() {
+    policy_data_.reset(new UpdateCheckAllowedPolicyData());
+    policy_2_.reset(new EnterpriseDevicePolicyImpl());
+
+    uca_data_ = static_cast<typeof(uca_data_)>(policy_data_.get());
+  }
+
+  void SetUp() override {
+    UmPolicyTestBase::SetUp();
+    fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
+        new bool(true));
   }
 
   // Sets the policies required for a kiosk app to control Chrome OS version:
@@ -132,10 +184,6 @@ class UmChromeOSPolicyTest : public UmPolicyTestBase {
   // UpdateCheckParams.rollback_allowed.
   bool TestRollbackAllowed(bool set_policy,
                            RollbackToTargetVersion rollback_to_target_version) {
-    // Update check is allowed, response includes attributes for use in the
-    // request.
-    SetUpdateCheckAllowed(true);
-
     if (set_policy) {
       // Override RollbackToTargetVersion device policy attribute.
       fake_state_.device_policy_provider()
@@ -143,34 +191,11 @@ class UmChromeOSPolicyTest : public UmPolicyTestBase {
           ->reset(new RollbackToTargetVersion(rollback_to_target_version));
     }
 
-    UpdateCheckParams result;
-    ExpectPolicyStatus(
-        EvalStatus::kSucceeded, &Policy::UpdateCheckAllowed, &result);
-    return result.rollback_allowed;
+    EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+    return uca_data_->update_check_params.rollback_allowed;
   }
 
-  // Sets up a test with the given intervals and the current fake wallclock
-  // time.
-  void TestDisallowedTimeIntervals(const WeeklyTimeIntervalVector& intervals,
-                                   const ErrorCode& expected_error_code,
-                                   bool is_rollback,
-                                   bool expected_can_download_be_canceled) {
-    SetUpDefaultTimeProvider();
-    fake_state_.device_policy_provider()
-        ->var_disallowed_time_intervals()
-        ->reset(new WeeklyTimeIntervalVector(intervals));
-
-    // Check that |expected_status| matches the value of UpdateCanBeApplied.
-    ErrorCode result;
-    InstallPlan install_plan{.is_rollback = is_rollback};
-    ExpectPolicyStatus(EvalStatus::kSucceeded,
-                       &Policy::UpdateCanBeApplied,
-                       &result,
-                       &install_plan);
-    EXPECT_EQ(result, expected_error_code);
-    EXPECT_EQ(install_plan.can_download_be_canceled,
-              expected_can_download_be_canceled);
-  }
+  UpdateCheckAllowedPolicyData* uca_data_;
 };
 
 TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWaitsForTheTimeout) {
@@ -185,9 +210,7 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWaitsForTheTimeout) {
       new Time(last_checked_time));
   CallMethodWithContext(&NextUpdateCheckTimePolicyImpl::NextUpdateCheckTime,
                         &next_update_check,
-                        ChromeOSPolicy::kNextUpdateCheckPolicyConstants);
-
-  UpdateCheckParams result;
+                        kNextUpdateCheckPolicyConstants);
 
   // Check that the policy blocks until the next_update_check is reached.
   SetUpDefaultClock();
@@ -195,18 +218,17 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWaitsForTheTimeout) {
   fake_state_.updater_provider()->var_last_checked_time()->reset(
       new Time(last_checked_time));
   fake_clock_->SetWallclockTime(next_update_check - TimeDelta::FromSeconds(1));
-  ExpectPolicyStatus(
-      EvalStatus::kAskMeAgainLater, &Policy::UpdateCheckAllowed, &result);
+
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 
   SetUpDefaultClock();
   SetUpDefaultState();
   fake_state_.updater_provider()->var_last_checked_time()->reset(
       new Time(last_checked_time));
   fake_clock_->SetWallclockTime(next_update_check + TimeDelta::FromSeconds(1));
-  ExpectPolicyStatus(
-      EvalStatus::kSucceeded, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_TRUE(result.updates_enabled);
-  EXPECT_FALSE(result.interactive);
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
+  EXPECT_FALSE(uca_data_->update_check_params.interactive);
 }
 
 TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWaitsForOOBE) {
@@ -221,7 +243,7 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWaitsForOOBE) {
       new Time(last_checked_time));
   CallMethodWithContext(&NextUpdateCheckTimePolicyImpl::NextUpdateCheckTime,
                         &next_update_check,
-                        ChromeOSPolicy::kNextUpdateCheckPolicyConstants);
+                        kNextUpdateCheckPolicyConstants);
 
   SetUpDefaultClock();
   SetUpDefaultState();
@@ -230,9 +252,7 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWaitsForOOBE) {
   fake_clock_->SetWallclockTime(next_update_check + TimeDelta::FromSeconds(1));
   fake_state_.system_provider()->var_is_oobe_complete()->reset(new bool(false));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kAskMeAgainLater, &Policy::UpdateCheckAllowed, &result);
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 
   // Now check that it is allowed if OOBE is completed.
   SetUpDefaultClock();
@@ -240,10 +260,10 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWaitsForOOBE) {
   fake_state_.updater_provider()->var_last_checked_time()->reset(
       new Time(last_checked_time));
   fake_clock_->SetWallclockTime(next_update_check + TimeDelta::FromSeconds(1));
-  ExpectPolicyStatus(
-      EvalStatus::kSucceeded, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_TRUE(result.updates_enabled);
-  EXPECT_FALSE(result.interactive);
+
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
+  EXPECT_FALSE(uca_data_->update_check_params.interactive);
 }
 
 TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWithAttributes) {
@@ -266,64 +286,62 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWithAttributes) {
   fake_state_.device_policy_provider()->var_quick_fix_build_token()->reset(
       new string("foo-token"));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kSucceeded, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_TRUE(result.updates_enabled);
-  EXPECT_EQ("1.2", result.target_version_prefix);
-  EXPECT_EQ(5, result.rollback_allowed_milestones);
-  EXPECT_EQ("foo-channel", result.target_channel);
-  EXPECT_EQ("foo-hint", result.lts_tag);
-  EXPECT_EQ("foo-token", result.quick_fix_build_token);
-  EXPECT_FALSE(result.interactive);
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
+  EXPECT_EQ("1.2", uca_data_->update_check_params.target_version_prefix);
+  EXPECT_EQ(5, uca_data_->update_check_params.rollback_allowed_milestones);
+  EXPECT_EQ("foo-channel", uca_data_->update_check_params.target_channel);
+  EXPECT_EQ("foo-hint", uca_data_->update_check_params.lts_tag);
+  EXPECT_EQ("foo-token", uca_data_->update_check_params.quick_fix_build_token);
+  EXPECT_FALSE(uca_data_->update_check_params.interactive);
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedRollbackAndPowerwash) {
+TEST_F(UmEnterprisePolicyTest, UpdateCheckAllowedRollbackAndPowerwash) {
   EXPECT_TRUE(TestRollbackAllowed(
       true, RollbackToTargetVersion::kRollbackAndPowerwash));
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedRollbackAndRestoreIfPossible) {
+TEST_F(UmEnterprisePolicyTest, UpdateCheckAllowedRollbackAndRestoreIfPossible) {
   // We're doing rollback even if we don't support data save and restore.
   EXPECT_TRUE(TestRollbackAllowed(
       true, RollbackToTargetVersion::kRollbackAndRestoreIfPossible));
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedRollbackDisabled) {
+TEST_F(UmEnterprisePolicyTest, UpdateCheckAllowedRollbackDisabled) {
   EXPECT_FALSE(TestRollbackAllowed(true, RollbackToTargetVersion::kDisabled));
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedRollbackUnspecified) {
+TEST_F(UmEnterprisePolicyTest, UpdateCheckAllowedRollbackUnspecified) {
   EXPECT_FALSE(
       TestRollbackAllowed(true, RollbackToTargetVersion::kUnspecified));
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedRollbackNotSet) {
+TEST_F(UmEnterprisePolicyTest, UpdateCheckAllowedRollbackNotSet) {
   EXPECT_FALSE(
       TestRollbackAllowed(false, RollbackToTargetVersion::kUnspecified));
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedKioskRollbackAllowed) {
+TEST_F(UmEnterprisePolicyTest, UpdateCheckAllowedKioskRollbackAllowed) {
   SetKioskAppControlsChromeOsVersion();
 
   EXPECT_TRUE(TestRollbackAllowed(
       true, RollbackToTargetVersion::kRollbackAndPowerwash));
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedKioskRollbackDisabled) {
+TEST_F(UmEnterprisePolicyTest, UpdateCheckAllowedKioskRollbackDisabled) {
   SetKioskAppControlsChromeOsVersion();
 
   EXPECT_FALSE(TestRollbackAllowed(true, RollbackToTargetVersion::kDisabled));
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedKioskRollbackUnspecified) {
+TEST_F(UmEnterprisePolicyTest, UpdateCheckAllowedKioskRollbackUnspecified) {
   SetKioskAppControlsChromeOsVersion();
 
   EXPECT_FALSE(
       TestRollbackAllowed(true, RollbackToTargetVersion::kUnspecified));
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedKioskRollbackNotSet) {
+TEST_F(UmEnterprisePolicyTest, UpdateCheckAllowedKioskRollbackNotSet) {
   SetKioskAppControlsChromeOsVersion();
 
   EXPECT_FALSE(
@@ -338,9 +356,7 @@ TEST_F(UmChromeOSPolicyTest,
   fake_state_.system_provider()->var_is_official_build()->reset(
       new bool(false));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kAskMeAgainLater, &Policy::UpdateCheckAllowed, &result);
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 }
 
 TEST_F(UmChromeOSPolicyTest, TestUpdateCheckIntervalTimeout) {
@@ -351,16 +367,13 @@ TEST_F(UmChromeOSPolicyTest, TestUpdateCheckIntervalTimeout) {
       new bool(false));
 
   // The first time, update should not be allowed.
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kAskMeAgainLater, &Policy::UpdateCheckAllowed, &result);
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 
   // After moving the time forward more than the update check interval, it
   // should now allow for update.
   fake_clock_->SetWallclockTime(fake_clock_->GetWallclockTime() +
                                 TimeDelta::FromSeconds(11));
-  ExpectPolicyStatus(
-      EvalStatus::kSucceeded, &Policy::UpdateCheckAllowed, &result);
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
 }
 
 TEST_F(UmChromeOSPolicyTest,
@@ -371,10 +384,8 @@ TEST_F(UmChromeOSPolicyTest,
   // NOLINTNEXTLINE(readability/casting)
   fake_state_.system_provider()->var_num_slots()->reset(new unsigned int(1));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kSucceeded, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_FALSE(result.updates_enabled);
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_FALSE(uca_data_->update_check_params.updates_enabled);
 }
 
 TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedUpdatesDisabledByPolicy) {
@@ -385,9 +396,7 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedUpdatesDisabledByPolicy) {
   fake_state_.device_policy_provider()->var_update_disabled()->reset(
       new bool(true));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kAskMeAgainLater, &Policy::UpdateCheckAllowed, &result);
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 }
 
 TEST_F(UmChromeOSPolicyTest,
@@ -399,11 +408,9 @@ TEST_F(UmChromeOSPolicyTest,
   fake_state_.updater_provider()->var_forced_update_requested()->reset(
       new UpdateRequestStatus(UpdateRequestStatus::kInteractive));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kSucceeded, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_TRUE(result.updates_enabled);
-  EXPECT_TRUE(result.interactive);
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
+  EXPECT_TRUE(uca_data_->update_check_params.interactive);
 }
 
 TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedForcedUpdateRequestedPeriodic) {
@@ -414,31 +421,21 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedForcedUpdateRequestedPeriodic) {
   fake_state_.updater_provider()->var_forced_update_requested()->reset(
       new UpdateRequestStatus(UpdateRequestStatus::kPeriodic));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kSucceeded, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_TRUE(result.updates_enabled);
-  EXPECT_FALSE(result.interactive);
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
+  EXPECT_FALSE(uca_data_->update_check_params.interactive);
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedKioskPin) {
-  // Update check is allowed.
-  SetUpdateCheckAllowed(true);
-
+TEST_F(UmEnterprisePolicyTest, UpdateCheckAllowedKioskPin) {
   SetKioskAppControlsChromeOsVersion();
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kSucceeded, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_TRUE(result.updates_enabled);
-  EXPECT_EQ("1234.", result.target_version_prefix);
-  EXPECT_FALSE(result.interactive);
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+  EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
+  EXPECT_EQ("1234.", uca_data_->update_check_params.target_version_prefix);
+  EXPECT_FALSE(uca_data_->update_check_params.interactive);
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedDisabledWhenNoKioskPin) {
-  // Update check is allowed.
-  SetUpdateCheckAllowed(true);
-
+TEST_F(UmEnterprisePolicyTest, UpdateCheckAllowedDisabledWhenNoKioskPin) {
   // Disable AU policy is set but kiosk pin policy is set to false. Update is
   // disabled in such case.
   fake_state_.device_policy_provider()->var_update_disabled()->reset(
@@ -447,15 +444,11 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedDisabledWhenNoKioskPin) {
       ->var_allow_kiosk_app_control_chrome_version()
       ->reset(new bool(false));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kAskMeAgainLater, &Policy::UpdateCheckAllowed, &result);
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedKioskPinWithNoRequiredVersion) {
-  // Update check is allowed.
-  SetUpdateCheckAllowed(true);
-
+TEST_F(UmEnterprisePolicyTest,
+       UpdateCheckAllowedKioskPinWithNoRequiredVersion) {
   // AU disabled, allow kiosk to pin but there is no kiosk required platform
   // version (i.e. app does not provide the info). Update to latest in such
   // case.
@@ -467,15 +460,13 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedKioskPinWithNoRequiredVersion) {
   fake_state_.system_provider()->var_kiosk_required_platform_version()->reset(
       new string());
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kSucceeded, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_TRUE(result.updates_enabled);
-  EXPECT_TRUE(result.target_version_prefix.empty());
-  EXPECT_FALSE(result.interactive);
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+  EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
+  EXPECT_TRUE(uca_data_->update_check_params.target_version_prefix.empty());
+  EXPECT_FALSE(uca_data_->update_check_params.interactive);
 }
 
-TEST_F(UmChromeOSPolicyTest,
+TEST_F(UmEnterprisePolicyTest,
        UpdateCheckAllowedKioskPinWithFailedGetRequiredVersionCall) {
   // AU disabled, allow kiosk to pin but D-Bus call to get required platform
   // version failed. Defer update check in this case.
@@ -487,9 +478,7 @@ TEST_F(UmChromeOSPolicyTest,
   fake_state_.system_provider()->var_kiosk_required_platform_version()->reset(
       nullptr);
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kAskMeAgainLater, &Policy::UpdateCheckAllowed, &result);
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 }
 
 TEST_F(UmChromeOSPolicyTest, UpdateCanStartFailsCheckAllowedError) {

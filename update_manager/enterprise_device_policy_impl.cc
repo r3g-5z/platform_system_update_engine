@@ -18,19 +18,23 @@
 
 #include "update_engine/common/utils.h"
 
+#include "update_engine/update_manager/update_check_allowed_policy_data.h"
+
 using std::string;
 
 namespace chromeos_update_manager {
 
 // Check to see if Enterprise-managed (has DevicePolicy) and/or Kiosk-mode.  If
 // so, then defer to those settings.
-EvalStatus EnterpriseDevicePolicyImpl::UpdateCheckAllowed(
+EvalStatus EnterpriseDevicePolicyImpl::Evaluate(
     EvaluationContext* ec,
     State* state,
     string* error,
-    UpdateCheckParams* result) const {
+    PolicyDataInterface* data) const {
   DevicePolicyProvider* const dp_provider = state->device_policy_provider();
   SystemProvider* const system_provider = state->system_provider();
+  UpdateCheckParams* result =
+      UpdateCheckAllowedPolicyData::GetUpdateCheckParams(data);
 
   const bool* device_policy_is_loaded_p =
       ec->GetValue(dp_provider->var_device_policy_is_loaded());

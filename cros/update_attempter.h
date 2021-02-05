@@ -47,6 +47,7 @@
 #include "update_engine/payload_consumer/postinstall_runner_action.h"
 #include "update_engine/update_manager/policy.h"
 #include "update_engine/update_manager/staging_utils.h"
+#include "update_engine/update_manager/update_check_allowed_policy.h"
 #include "update_engine/update_manager/update_manager.h"
 
 namespace policy {
@@ -413,12 +414,11 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // success.
   bool RebootDirectly();
 
-  // Callback for the async UpdateCheckAllowed policy request. If |status| is
+  // Callback for the async update check allowed policy request. If |status| is
   // |EvalStatus::kSucceeded|, either runs or suppresses periodic update checks,
-  // based on the content of |params|. Otherwise, retries the policy request.
-  void OnUpdateScheduled(
-      chromeos_update_manager::EvalStatus status,
-      const chromeos_update_manager::UpdateCheckParams& params);
+  // based on the content of |policy_data_|. Otherwise, retries the policy
+  // request.
+  void OnUpdateScheduled(chromeos_update_manager::EvalStatus status);
 
   // Updates the time an update was last attempted to the current time.
   void UpdateLastCheckedTime();
@@ -576,6 +576,10 @@ class UpdateAttempter : public ActionProcessorDelegate,
 
   // Interface for excluder.
   std::unique_ptr<ExcluderInterface> excluder_;
+
+  // Data used by the update check allowed policies.
+  std::shared_ptr<chromeos_update_manager::UpdateCheckAllowedPolicyData>
+      policy_data_;
 
   DISALLOW_COPY_AND_ASSIGN(UpdateAttempter);
 };

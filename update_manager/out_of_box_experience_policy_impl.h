@@ -19,12 +19,12 @@
 
 #include <string>
 
-#include "update_engine/update_manager/policy_utils.h"
+#include "update_engine/update_manager/policy_interface.h"
 
 namespace chromeos_update_manager {
 
 // If OOBE is enabled, wait until it is completed.
-class OobePolicyImpl : public PolicyImplBase {
+class OobePolicyImpl : public PolicyInterface {
  public:
   OobePolicyImpl() = default;
   ~OobePolicyImpl() override = default;
@@ -32,10 +32,10 @@ class OobePolicyImpl : public PolicyImplBase {
   std::string PolicyName() const override { return "OobePolicyImpl"; }
 
   // Policy overrides.
-  EvalStatus UpdateCheckAllowed(EvaluationContext* ec,
-                                State* state,
-                                std::string* error,
-                                UpdateCheckParams* result) const override;
+  EvalStatus Evaluate(EvaluationContext* ec,
+                      State* state,
+                      std::string* error,
+                      PolicyDataInterface* data) const override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(OobePolicyImpl);

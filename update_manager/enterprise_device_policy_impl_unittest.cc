@@ -17,15 +17,20 @@
 #include "update_engine/update_manager/enterprise_device_policy_impl.h"
 
 #include <memory>
+#include <utility>
 
 #include "update_engine/update_manager/policy_test_utils.h"
+#include "update_engine/update_manager/update_check_allowed_policy_data.h"
 
 namespace chromeos_update_manager {
 
 class UmEnterpriseDevicePolicyImplTest : public UmPolicyTestBase {
  protected:
   UmEnterpriseDevicePolicyImplTest() : UmPolicyTestBase() {
-    policy_ = std::make_unique<EnterpriseDevicePolicyImpl>();
+    policy_data_.reset(new UpdateCheckAllowedPolicyData());
+    policy_2_.reset(new EnterpriseDevicePolicyImpl);
+
+    uca_data_ = static_cast<typeof(uca_data_)>(policy_data_.get());
   }
 
   void SetUpDefaultState() override {
@@ -34,6 +39,8 @@ class UmEnterpriseDevicePolicyImplTest : public UmPolicyTestBase {
     fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
         new bool(true));
   }
+
+  UpdateCheckAllowedPolicyData* uca_data_;
 };
 
 TEST_F(UmEnterpriseDevicePolicyImplTest, KioskAppVersionSet) {
@@ -46,10 +53,8 @@ TEST_F(UmEnterpriseDevicePolicyImplTest, KioskAppVersionSet) {
   fake_state_.system_provider()->var_kiosk_required_platform_version()->reset(
       new std::string("1234.5.6"));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kContinue, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_EQ(result.target_version_prefix, "1234.5.6");
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+  EXPECT_EQ(uca_data_->update_check_params.target_version_prefix, "1234.5.6");
 }
 
 TEST_F(UmEnterpriseDevicePolicyImplTest, KioskAppVersionUnreadableNoUpdate) {
@@ -62,9 +67,7 @@ TEST_F(UmEnterpriseDevicePolicyImplTest, KioskAppVersionUnreadableNoUpdate) {
   fake_state_.system_provider()->var_kiosk_required_platform_version()->reset(
       nullptr);
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kAskMeAgainLater, &Policy::UpdateCheckAllowed, &result);
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 }
 
 TEST_F(UmEnterpriseDevicePolicyImplTest, KioskAppVersionUnreadableUpdate) {
@@ -79,10 +82,8 @@ TEST_F(UmEnterpriseDevicePolicyImplTest, KioskAppVersionUnreadableUpdate) {
   fake_state_.system_provider()->var_kiosk_required_platform_version()->reset(
       new std::string(""));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kContinue, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_EQ(result.target_version_prefix, "");
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+  EXPECT_EQ(uca_data_->update_check_params.target_version_prefix, "");
 }
 
 TEST_F(UmEnterpriseDevicePolicyImplTest,
@@ -103,10 +104,8 @@ TEST_F(UmEnterpriseDevicePolicyImplTest,
   fake_state_.system_provider()->var_chromeos_version()->reset(
       new base::Version("1.0.0"));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kContinue, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_EQ(result.target_version_prefix, "");
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+  EXPECT_EQ(uca_data_->update_check_params.target_version_prefix, "");
 }
 
 TEST_F(UmEnterpriseDevicePolicyImplTest,
@@ -127,9 +126,7 @@ TEST_F(UmEnterpriseDevicePolicyImplTest,
   fake_state_.system_provider()->var_chromeos_version()->reset(
       new base::Version("2.0.0"));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kAskMeAgainLater, &Policy::UpdateCheckAllowed, &result);
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 }
 
 TEST_F(UmEnterpriseDevicePolicyImplTest, ChannelDowngradeBehaviorNoRollback) {
@@ -138,10 +135,8 @@ TEST_F(UmEnterpriseDevicePolicyImplTest, ChannelDowngradeBehaviorNoRollback) {
   fake_state_.device_policy_provider()->var_release_channel()->reset(
       new std::string("stable-channel"));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kContinue, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_FALSE(result.rollback_on_channel_downgrade);
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+  EXPECT_FALSE(uca_data_->update_check_params.rollback_on_channel_downgrade);
 }
 
 TEST_F(UmEnterpriseDevicePolicyImplTest, ChannelDowngradeBehaviorRollback) {
@@ -152,19 +147,15 @@ TEST_F(UmEnterpriseDevicePolicyImplTest, ChannelDowngradeBehaviorRollback) {
   fake_state_.device_policy_provider()->var_channel_downgrade_behavior()->reset(
       new ChannelDowngradeBehavior(ChannelDowngradeBehavior::kRollback));
 
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kContinue, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_TRUE(result.rollback_on_channel_downgrade);
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+  EXPECT_TRUE(uca_data_->update_check_params.rollback_on_channel_downgrade);
 }
 
 TEST_F(UmEnterpriseDevicePolicyImplTest, QuickFixBuildToken) {
   fake_state_.device_policy_provider()->var_quick_fix_build_token()->reset(
       new std::string("token"));
-  UpdateCheckParams result;
-  ExpectPolicyStatus(
-      EvalStatus::kContinue, &Policy::UpdateCheckAllowed, &result);
-  EXPECT_EQ(result.quick_fix_build_token, "token");
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+  EXPECT_EQ(uca_data_->update_check_params.quick_fix_build_token, "token");
 }
 
 }  // namespace chromeos_update_manager

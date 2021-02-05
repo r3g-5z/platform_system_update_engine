@@ -226,6 +226,7 @@ static_library("libupdate_engine") {
     "update_manager/official_build_check_policy_impl.cc",
     "update_manager/out_of_box_experience_policy_impl.cc",
     "update_manager/policy.cc",
+    "update_manager/policy_evaluator.cc",
     "update_manager/policy_test_utils.cc",
     "update_manager/real_config_provider.cc",
     "update_manager/real_device_policy_provider.cc",
@@ -393,6 +394,7 @@ if (use.test || use.fuzzer) {
       "cros/fake_system_state.cc",
       "payload_consumer/fake_file_descriptor.cc",
       "payload_generator/fake_filesystem.cc",
+      "testrunner.cc",
       "update_manager/umtest_utils.cc",
     ]
 
@@ -523,7 +525,6 @@ if (use.test) {
       "payload_generator/payload_signer_unittest.cc",
       "payload_generator/squashfs_filesystem_unittest.cc",
       "payload_generator/zip_unittest.cc",
-      "testrunner.cc",
       "update_boot_flags_action_unittest.cc",
       "update_manager/boxed_value_unittest.cc",
       "update_manager/chromeos_policy_unittest.cc",
@@ -532,6 +533,7 @@ if (use.test) {
       "update_manager/evaluation_context_unittest.cc",
       "update_manager/generic_variables_unittest.cc",
       "update_manager/minimum_version_policy_impl_unittest.cc",
+      "update_manager/next_update_check_policy_impl_unittest.cc",
       "update_manager/prng_unittest.cc",
       "update_manager/real_device_policy_provider_unittest.cc",
       "update_manager/real_random_provider_unittest.cc",

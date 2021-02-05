@@ -21,7 +21,7 @@
 
 #include <base/time/time.h>
 
-#include "update_engine/update_manager/policy_utils.h"
+#include "update_engine/update_manager/policy_interface.h"
 #include "update_engine/update_manager/prng.h"
 
 namespace chromeos_update_manager {
@@ -41,17 +41,20 @@ struct NextUpdateCheckPolicyConstants {
   int attempt_backoff_fuzz_in_hours;
 };
 
+extern const NextUpdateCheckPolicyConstants kNextUpdateCheckPolicyConstants;
+
 // Ensure that periodic update checks are timed properly.
-class NextUpdateCheckTimePolicyImpl : public PolicyImplBase {
+class NextUpdateCheckTimePolicyImpl : public PolicyInterface {
  public:
-  explicit NextUpdateCheckTimePolicyImpl(
+  NextUpdateCheckTimePolicyImpl();
+  NextUpdateCheckTimePolicyImpl(
       const NextUpdateCheckPolicyConstants& constants);
 
   // Policy overrides.
-  EvalStatus UpdateCheckAllowed(EvaluationContext* ec,
-                                State* state,
-                                std::string* error,
-                                UpdateCheckParams* result) const override;
+  EvalStatus Evaluate(EvaluationContext* ec,
+                      State* state,
+                      std::string* error,
+                      PolicyDataInterface* data) const override;
 
   // A private policy implementation returning the wallclock timestamp when
   // the next update check should happen.

@@ -56,13 +56,12 @@
 #include "update_engine/payload_consumer/payload_constants.h"
 #include "update_engine/payload_consumer/postinstall_runner_action.h"
 #include "update_engine/update_boot_flags_action.h"
-#include "update_engine/update_manager/mock_update_manager.h"
 
 using base::Time;
 using base::TimeDelta;
 using chromeos_update_manager::EvalStatus;
-using chromeos_update_manager::MockUpdateManager;
 using chromeos_update_manager::StagingSchedule;
+using chromeos_update_manager::UpdateCheckAllowedPolicyData;
 using chromeos_update_manager::UpdateCheckParams;
 using policy::DevicePolicy;
 using std::map;
@@ -225,7 +224,6 @@ class UpdateAttempterTest : public ::testing::Test {
     FakeSystemState::Get()->set_connection_manager(&mock_connection_manager);
     FakeSystemState::Get()->set_update_attempter(&attempter_);
     FakeSystemState::Get()->set_dlcservice(&mock_dlcservice_);
-    FakeSystemState::Get()->set_update_manager(&mock_update_manager_);
     loop_.SetAsCurrent();
 
     prefs_ = FakeSystemState::Get()->fake_prefs();
@@ -316,7 +314,6 @@ class UpdateAttempterTest : public ::testing::Test {
   OpenSSLWrapper openssl_wrapper_;
   std::unique_ptr<CertificateChecker> certificate_checker_;
   MockDlcService mock_dlcservice_;
-  MockUpdateManager mock_update_manager_;
 
   NiceMock<MockActionProcessor>* processor_;
   NiceMock<MockConnectionManager> mock_connection_manager;
@@ -1753,27 +1750,28 @@ TEST_F(UpdateAttempterTest, UpdateIsNotRunningWhenUpdateAvailable) {
   EXPECT_TRUE(attempter_.IsBusyOrUpdateScheduled());
 }
 
+// TODO(ahassani): Refactor these to not use the |policy_data_| of |attempter_|
+// directly.
 TEST_F(UpdateAttempterTest, UpdateAttemptFlagsCachedAtUpdateStart) {
   attempter_.SetUpdateAttemptFlags(UpdateAttemptFlags::kFlagRestrictDownload);
-
-  UpdateCheckParams params = {.updates_enabled = true};
-  attempter_.OnUpdateScheduled(EvalStatus::kSucceeded, params);
-
+  attempter_.policy_data_.reset(
+      new UpdateCheckAllowedPolicyData({.updates_enabled = true}));
+  attempter_.OnUpdateScheduled(EvalStatus::kSucceeded);
   EXPECT_EQ(UpdateAttemptFlags::kFlagRestrictDownload,
             attempter_.GetCurrentUpdateAttemptFlags());
 }
 
 TEST_F(UpdateAttempterTest, RollbackNotAllowed) {
-  UpdateCheckParams params = {.updates_enabled = true,
-                              .rollback_allowed = false};
-  attempter_.OnUpdateScheduled(EvalStatus::kSucceeded, params);
+  attempter_.policy_data_.reset(new UpdateCheckAllowedPolicyData(
+      {.updates_enabled = true, .rollback_allowed = false}));
+  attempter_.OnUpdateScheduled(EvalStatus::kSucceeded);
   EXPECT_FALSE(FakeSystemState::Get()->request_params()->rollback_allowed());
 }
 
 TEST_F(UpdateAttempterTest, RollbackAllowed) {
-  UpdateCheckParams params = {.updates_enabled = true,
-                              .rollback_allowed = true};
-  attempter_.OnUpdateScheduled(EvalStatus::kSucceeded, params);
+  attempter_.policy_data_.reset(new UpdateCheckAllowedPolicyData(
+      {.updates_enabled = true, .rollback_allowed = true}));
+  attempter_.OnUpdateScheduled(EvalStatus::kSucceeded);
   EXPECT_TRUE(FakeSystemState::Get()->request_params()->rollback_allowed());
 }
 
@@ -2143,8 +2141,6 @@ TEST_F(UpdateAttempterTest, QuickFixTokenWhenDeviceIsEnterpriseEnrolled) {
 }
 
 TEST_F(UpdateAttempterTest, ScheduleUpdateSpamHandlerTest) {
-  EXPECT_CALL(mock_update_manager_, AsyncPolicyRequestUpdateCheckAllowed(_, _))
-      .Times(1);
   EXPECT_TRUE(attempter_.ScheduleUpdates());
   // Now there is an update scheduled which means that all subsequent
   // |ScheduleUpdates()| should fail.
@@ -2165,7 +2161,9 @@ void UpdateAttempterTest::TestOnUpdateScheduled() {
   attempter_.DisableScheduleUpdates();
 
   // Invocation
-  attempter_.OnUpdateScheduled(ous_params_.status, ous_params_.params);
+  attempter_.policy_data_.reset(
+      new UpdateCheckAllowedPolicyData(ous_params_.params));
+  attempter_.OnUpdateScheduled(ous_params_.status);
 
   // Verify
   EXPECT_EQ(ous_params_.exit_status, attempter_.status());

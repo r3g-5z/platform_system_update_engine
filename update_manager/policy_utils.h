@@ -67,14 +67,6 @@ EvalStatus ConsultPolicies(const std::vector<Policy const*> policies,
 // instead of using pure-virtual methods on that class.
 class PolicyImplBase : public Policy {
  public:
-  // Policy overrides.
-  EvalStatus UpdateCheckAllowed(EvaluationContext* ec,
-                                State* state,
-                                std::string* error,
-                                UpdateCheckParams* result) const override {
-    return EvalStatus::kContinue;
-  };
-
   EvalStatus UpdateCanBeApplied(
       EvaluationContext* ec,
       State* state,

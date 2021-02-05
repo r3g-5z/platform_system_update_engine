@@ -64,6 +64,7 @@ class UmRealShillProviderTest : public ::testing::Test {
  protected:
   // Initialize the RealShillProvider under test.
   void SetUp() override {
+    FakeSystemState::CreateInstance();
     FakeSystemState::Get()->fake_clock()->SetWallclockTime(InitTime());
     loop_.SetAsCurrent();
     fake_shill_proxy_ = new chromeos_update_engine::FakeShillProxy();

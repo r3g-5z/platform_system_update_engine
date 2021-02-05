@@ -19,11 +19,11 @@
 namespace chromeos_update_manager {
 
 // Unofficial builds should not perform periodic update checks.
-EvalStatus OnlyUpdateOfficialBuildsPolicyImpl::UpdateCheckAllowed(
+EvalStatus OnlyUpdateOfficialBuildsPolicyImpl::Evaluate(
     EvaluationContext* ec,
     State* state,
     std::string* error,
-    UpdateCheckParams* result) const {
+    PolicyDataInterface* data) const {
   const bool* is_official_build_p =
       ec->GetValue(state->system_provider()->var_is_official_build());
   if (is_official_build_p != nullptr && !(*is_official_build_p)) {

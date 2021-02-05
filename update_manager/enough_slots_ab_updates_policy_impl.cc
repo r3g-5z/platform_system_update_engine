@@ -16,15 +16,19 @@
 
 #include "update_engine/update_manager/enough_slots_ab_updates_policy_impl.h"
 
+#include "update_engine/update_manager/update_check_allowed_policy_data.h"
+
 namespace chromeos_update_manager {
 
 // Do not perform any updates if booted from removable device. This decision
 // is final.
-EvalStatus EnoughSlotsAbUpdatesPolicyImpl::UpdateCheckAllowed(
+EvalStatus EnoughSlotsAbUpdatesPolicyImpl::Evaluate(
     EvaluationContext* ec,
     State* state,
     std::string* error,
-    UpdateCheckParams* result) const {
+    PolicyDataInterface* data) const {
+  UpdateCheckParams* result =
+      UpdateCheckAllowedPolicyData::GetUpdateCheckParams(data);
   const auto* num_slots_p =
       ec->GetValue(state->system_provider()->var_num_slots());
   if (num_slots_p == nullptr || *num_slots_p < 2) {
