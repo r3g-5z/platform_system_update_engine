@@ -41,14 +41,6 @@ class MockPolicy : public Policy {
                 testing::_, testing::_, testing::_, testing::_, testing::_))
         .WillByDefault(
             testing::Invoke(&default_policy_, &DefaultPolicy::UpdateCanStart));
-    ON_CALL(*this, P2PEnabled(testing::_, testing::_, testing::_, testing::_))
-        .WillByDefault(
-            testing::Invoke(&default_policy_, &DefaultPolicy::P2PEnabled));
-    ON_CALL(*this,
-            P2PEnabledChanged(
-                testing::_, testing::_, testing::_, testing::_, testing::_))
-        .WillByDefault(testing::Invoke(&default_policy_,
-                                       &DefaultPolicy::P2PEnabledChanged));
   }
   ~MockPolicy() override {}
 
@@ -69,13 +61,6 @@ class MockPolicy : public Policy {
   MOCK_CONST_METHOD4(
       UpdateDownloadAllowed,
       EvalStatus(EvaluationContext*, State*, std::string*, bool*));
-
-  MOCK_CONST_METHOD4(
-      P2PEnabled, EvalStatus(EvaluationContext*, State*, std::string*, bool*));
-
-  MOCK_CONST_METHOD5(
-      P2PEnabledChanged,
-      EvalStatus(EvaluationContext*, State*, std::string*, bool*, bool));
 
  protected:
   // Policy override.

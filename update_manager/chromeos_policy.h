@@ -66,17 +66,6 @@ class ChromeOSPolicy : public Policy {
                             UpdateDownloadParams* result,
                             UpdateState update_state) const override;
 
-  EvalStatus P2PEnabled(EvaluationContext* ec,
-                        State* state,
-                        std::string* error,
-                        bool* result) const override;
-
-  EvalStatus P2PEnabledChanged(EvaluationContext* ec,
-                               State* state,
-                               std::string* error,
-                               bool* result,
-                               bool prev_result) const override;
-
  protected:
   // Policy override.
   std::string PolicyName() const override { return "ChromeOSPolicy"; }
@@ -105,11 +94,6 @@ class ChromeOSPolicy : public Policy {
 
   // Auxiliary constant (zero by default).
   const base::TimeDelta kZeroInterval;
-
-  // Maximum number of times we'll allow using P2P for the same update payload.
-  static const int kMaxP2PAttempts;
-  // Maximum period of time allowed for download a payload via P2P, in seconds.
-  static const int kMaxP2PAttemptsPeriodInSeconds;
 
   // A private policy for determining backoff and the download URL to use.
   // Within |update_state|, |backoff_expiry| and |is_backoff_disabled| are used

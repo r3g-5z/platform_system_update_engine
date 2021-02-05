@@ -38,6 +38,8 @@
 #include "update_engine/update_manager/minimum_version_policy_impl.h"
 #include "update_engine/update_manager/official_build_check_policy_impl.h"
 #include "update_engine/update_manager/out_of_box_experience_policy_impl.h"
+// TODO(b/179419726): Remove.
+#include "update_engine/update_manager/p2p_enabled_policy.h"
 #include "update_engine/update_manager/policy_utils.h"
 #include "update_engine/update_manager/recovery_policy.h"
 #include "update_engine/update_manager/shill_provider.h"
@@ -206,8 +208,9 @@ unique_ptr<Policy> GetSystemPolicy() {
   return std::make_unique<ChromeOSPolicy>();
 }
 
-const int ChromeOSPolicy::kMaxP2PAttempts = 10;
-const int ChromeOSPolicy::kMaxP2PAttemptsPeriodInSeconds = 5 * 24 * 60 * 60;
+// TODO(b/179419726): Move to p2p_enabled_policy.cc.
+const int kMaxP2PAttempts = 10;
+const int kMaxP2PAttemptsPeriodInSeconds = 5 * 24 * 60 * 60;
 
 // TODO(b/179419726): Move to update_check_allowed_policy.cc.
 EvalStatus UpdateCheckAllowedPolicy::Evaluate(EvaluationContext* ec,
@@ -413,13 +416,15 @@ EvalStatus ChromeOSPolicy::UpdateCanStart(
   }
 
   // Find out whether P2P is globally enabled.
-  bool p2p_enabled;
-  EvalStatus p2p_enabled_status = P2PEnabled(ec, state, error, &p2p_enabled);
+  P2PEnabledPolicy p2p_enabled_policy;
+  P2PEnabledPolicyData p2p_enabled_data;
+  EvalStatus p2p_enabled_status =
+      p2p_enabled_policy.Evaluate(ec, state, error, &p2p_enabled_data);
   if (p2p_enabled_status != EvalStatus::kSucceeded)
     return EvalStatus::kFailed;
 
   // Is P2P is enabled, consider allowing it for downloading and/or sharing.
-  if (p2p_enabled) {
+  if (p2p_enabled_data.enabled()) {
     // Sharing via P2P is allowed if not disabled by Omaha.
     if (update_state.p2p_sharing_disabled) {
       LOG(INFO) << "Blocked P2P sharing because it is disabled by Omaha.";
@@ -476,10 +481,11 @@ EvalStatus ChromeOSPolicy::UpdateCanStart(
   return EvalStatus::kSucceeded;
 }
 
-EvalStatus ChromeOSPolicy::P2PEnabled(EvaluationContext* ec,
+// TODO(b/179419726): Move to p2p_enabled_policy.cc.
+EvalStatus P2PEnabledPolicy::Evaluate(EvaluationContext* ec,
                                       State* state,
                                       string* error,
-                                      bool* result) const {
+                                      PolicyDataInterface* data) const {
   bool enabled = false;
 
   // Determine whether use of P2P is allowed by policy. Even if P2P is not
@@ -509,17 +515,20 @@ EvalStatus ChromeOSPolicy::P2PEnabled(EvaluationContext* ec,
     enabled = updater_p2p_enabled_p && *updater_p2p_enabled_p;
   }
 
-  *result = enabled;
+  static_cast<P2PEnabledPolicyData*>(data)->set_enabled(enabled);
   return EvalStatus::kSucceeded;
 }
 
-EvalStatus ChromeOSPolicy::P2PEnabledChanged(EvaluationContext* ec,
+// TODO(b/179419726): Move to p2p_enabled_policy.cc.
+EvalStatus P2PEnabledChangedPolicy::Evaluate(EvaluationContext* ec,
                                              State* state,
                                              string* error,
-                                             bool* result,
-                                             bool prev_result) const {
-  EvalStatus status = P2PEnabled(ec, state, error, result);
-  if (status == EvalStatus::kSucceeded && *result == prev_result)
+                                             PolicyDataInterface* data) const {
+  P2PEnabledPolicy policy;
+  EvalStatus status = policy.Evaluate(ec, state, error, data);
+  auto p2p_data = static_cast<P2PEnabledPolicyData*>(data);
+  if (status == EvalStatus::kSucceeded &&
+      p2p_data->enabled() == p2p_data->prev_enabled())
     return EvalStatus::kAskMeAgainLater;
   return status;
 }

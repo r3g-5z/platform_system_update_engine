@@ -23,6 +23,8 @@
 // TODO(b/179419726): Remove.
 #include "update_engine/update_manager/enterprise_device_policy_impl.h"
 #include "update_engine/update_manager/next_update_check_policy_impl.h"
+// TODO(b/179419726): Remove.
+#include "update_engine/update_manager/p2p_enabled_policy.h"
 #include "update_engine/update_manager/policy_test_utils.h"
 #include "update_engine/update_manager/update_check_allowed_policy.h"
 #include "update_engine/update_manager/update_check_allowed_policy_data.h"
@@ -1105,7 +1107,7 @@ TEST_F(UmChromeOSPolicyTest,
 
   // Check that the UpdateCanStart returns true.
   UpdateState update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
-  update_state.p2p_num_attempts = ChromeOSPolicy::kMaxP2PAttempts;
+  update_state.p2p_num_attempts = kMaxP2PAttempts;
   UpdateDownloadParams result;
   ExpectPolicyStatus(
       EvalStatus::kSucceeded, &Policy::UpdateCanStart, &result, update_state);
@@ -1133,8 +1135,7 @@ TEST_F(UmChromeOSPolicyTest,
   update_state.p2p_num_attempts = 1;
   update_state.p2p_first_attempted =
       fake_clock_->GetWallclockTime() -
-      TimeDelta::FromSeconds(ChromeOSPolicy::kMaxP2PAttemptsPeriodInSeconds +
-                             1);
+      TimeDelta::FromSeconds(kMaxP2PAttemptsPeriodInSeconds + 1);
   UpdateDownloadParams result;
   ExpectPolicyStatus(
       EvalStatus::kSucceeded, &Policy::UpdateCanStart, &result, update_state);
@@ -1457,44 +1458,6 @@ TEST_F(UmChromeOSPolicyTest, UpdateCanStartAllowedBackoffSupressedDueToP2P) {
   EXPECT_LT(curr_time, result.backoff_expiry);
 }
 
-TEST_F(UmChromeOSPolicyTest, P2PEnabledNotAllowed) {
-  bool result;
-  ExpectPolicyStatus(EvalStatus::kSucceeded, &Policy::P2PEnabled, &result);
-  EXPECT_FALSE(result);
-}
-
-TEST_F(UmChromeOSPolicyTest, P2PEnabledAllowedByDevicePolicy) {
-  fake_state_.device_policy_provider()->var_au_p2p_enabled()->reset(
-      new bool(true));
-
-  bool result;
-  ExpectPolicyStatus(EvalStatus::kSucceeded, &Policy::P2PEnabled, &result);
-  EXPECT_TRUE(result);
-}
-
-TEST_F(UmChromeOSPolicyTest, P2PEnabledAllowedByUpdater) {
-  fake_state_.updater_provider()->var_p2p_enabled()->reset(new bool(true));
-
-  bool result;
-  ExpectPolicyStatus(EvalStatus::kSucceeded, &Policy::P2PEnabled, &result);
-  EXPECT_TRUE(result);
-}
-
-TEST_F(UmChromeOSPolicyTest, P2PEnabledAllowedDeviceEnterpriseEnrolled) {
-  fake_state_.device_policy_provider()->var_au_p2p_enabled()->reset(nullptr);
-  fake_state_.device_policy_provider()->var_has_owner()->reset(new bool(false));
-
-  bool result;
-  ExpectPolicyStatus(EvalStatus::kSucceeded, &Policy::P2PEnabled, &result);
-  EXPECT_TRUE(result);
-}
-
-TEST_F(UmChromeOSPolicyTest, P2PEnabledChangedBlocks) {
-  bool result;
-  ExpectPolicyStatus(
-      EvalStatus::kAskMeAgainLater, &Policy::P2PEnabledChanged, &result, false);
-}
-
 TEST_F(UmChromeOSPolicyTest,
        UpdateCanBeAppliedForcedUpdatesDisablesTimeRestrictions) {
   Time curr_time = fake_clock_->GetWallclockTime();
@@ -1507,6 +1470,66 @@ TEST_F(UmChromeOSPolicyTest,
       ErrorCode::kSuccess,
       /*is_rollback=*/false,
       /*expected_can_download_be_canceled=*/false);
+}
+
+class UmP2PEnabledPolicyTest : public UmPolicyTestBase {
+ protected:
+  UmP2PEnabledPolicyTest() : UmPolicyTestBase() {
+    policy_data_.reset(new P2PEnabledPolicyData());
+    policy_2_.reset(new P2PEnabledPolicy());
+
+    p2p_data_ = static_cast<typeof(p2p_data_)>(policy_data_.get());
+  }
+
+  void SetUp() override {
+    UmPolicyTestBase::SetUp();
+    fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
+        new bool(true));
+    fake_state_.device_policy_provider()->var_has_owner()->reset(
+        new bool(true));
+  }
+
+  P2PEnabledPolicyData* p2p_data_;
+};
+
+TEST_F(UmP2PEnabledPolicyTest, NotAllowed) {
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_FALSE(p2p_data_->enabled());
+}
+
+TEST_F(UmP2PEnabledPolicyTest, AllowedByDevicePolicy) {
+  fake_state_.device_policy_provider()->var_au_p2p_enabled()->reset(
+      new bool(true));
+
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_TRUE(p2p_data_->enabled());
+}
+
+TEST_F(UmP2PEnabledPolicyTest, AllowedByUpdater) {
+  fake_state_.updater_provider()->var_p2p_enabled()->reset(new bool(true));
+
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_TRUE(p2p_data_->enabled());
+}
+
+TEST_F(UmP2PEnabledPolicyTest, DeviceEnterpriseEnrolled) {
+  fake_state_.device_policy_provider()->var_au_p2p_enabled()->reset(nullptr);
+  fake_state_.device_policy_provider()->var_has_owner()->reset(new bool(false));
+
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_TRUE(p2p_data_->enabled());
+}
+
+class UmP2PEnabledChangedPolicyTest : public UmPolicyTestBase {
+ protected:
+  UmP2PEnabledChangedPolicyTest() : UmPolicyTestBase() {
+    policy_data_.reset(new P2PEnabledPolicyData());
+    policy_2_.reset(new P2PEnabledChangedPolicy());
+  }
+};
+
+TEST_F(UmP2PEnabledChangedPolicyTest, Blocks) {
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 }
 
 TEST_F(UmChromeOSPolicyTest,

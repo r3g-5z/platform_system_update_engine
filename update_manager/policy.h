@@ -193,12 +193,6 @@ class Policy {
     if (reinterpret_cast<typeof(&Policy::UpdateCanStart)>(policy_method) ==
         &Policy::UpdateCanStart)
       return class_name + "UpdateCanStart";
-    if (reinterpret_cast<typeof(&Policy::P2PEnabled)>(policy_method) ==
-        &Policy::P2PEnabled)
-      return class_name + "P2PEnabled";
-    if (reinterpret_cast<typeof(&Policy::P2PEnabledChanged)>(policy_method) ==
-        &Policy::P2PEnabledChanged)
-      return class_name + "P2PEnabledChanged";
 
     NOTREACHED();
     return class_name + "(unknown)";
@@ -233,24 +227,6 @@ class Policy {
                                     std::string* error,
                                     UpdateDownloadParams* result,
                                     UpdateState update_state) const = 0;
-
-  // Checks whether P2P is enabled. This may consult device policy and other
-  // global settings.
-  virtual EvalStatus P2PEnabled(EvaluationContext* ec,
-                                State* state,
-                                std::string* error,
-                                bool* result) const = 0;
-
-  // Checks whether P2P is enabled, but blocks (returns
-  // |EvalStatus::kAskMeAgainLater|) until it is different from |prev_result|.
-  // If the P2P enabled status is not expected to change, will return
-  // immediately with |EvalStatus::kSucceeded|. This internally uses the
-  // P2PEnabled() policy above.
-  virtual EvalStatus P2PEnabledChanged(EvaluationContext* ec,
-                                       State* state,
-                                       std::string* error,
-                                       bool* result,
-                                       bool prev_result) const = 0;
 
  protected:
   Policy() {}

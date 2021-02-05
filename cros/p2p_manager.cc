@@ -53,6 +53,7 @@
 #include "update_engine/common/subprocess.h"
 #include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
+#include "update_engine/update_manager/p2p_enabled_policy.h"
 #include "update_engine/update_manager/policy.h"
 #include "update_engine/update_manager/update_manager.h"
 
@@ -64,6 +65,9 @@ using base::Time;
 using base::TimeDelta;
 using brillo::MessageLoop;
 using chromeos_update_manager::EvalStatus;
+using chromeos_update_manager::P2PEnabledChangedPolicy;
+using chromeos_update_manager::P2PEnabledPolicy;
+using chromeos_update_manager::P2PEnabledPolicyData;
 using chromeos_update_manager::Policy;
 using chromeos_update_manager::UpdateManager;
 using std::pair;
@@ -162,7 +166,7 @@ class P2PManagerImpl : public P2PManager {
   void ScheduleEnabledStatusChange();
 
   // An async callback used by the above.
-  void OnEnabledStatusChange(EvalStatus status, const bool& result);
+  void OnEnabledStatusChange(EvalStatus status);
 
   // The device policy being used or null if no policy is being used.
   const policy::DevicePolicy* device_policy_ = nullptr;
@@ -197,7 +201,8 @@ class P2PManagerImpl : public P2PManager {
 
   // The current known enabled status of the P2P feature (initialized lazily),
   // and whether an async status check has been scheduled.
-  bool is_enabled_;
+  std::shared_ptr<P2PEnabledPolicyData> policy_data_;
+
   bool waiting_for_enabled_status_change_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(P2PManagerImpl);
@@ -215,7 +220,8 @@ P2PManagerImpl::P2PManagerImpl(Configuration* configuration,
     : update_manager_(update_manager),
       file_extension_(file_extension),
       num_files_to_keep_(num_files_to_keep),
-      max_file_age_(max_file_age) {
+      max_file_age_(max_file_age),
+      policy_data_(std::make_shared<P2PEnabledPolicyData>()) {
   configuration_.reset(configuration != nullptr ? configuration
                                                 : new ConfigurationImpl());
 }
@@ -228,17 +234,20 @@ void P2PManagerImpl::SetDevicePolicy(
 bool P2PManagerImpl::IsP2PEnabled() {
   if (!waiting_for_enabled_status_change_) {
     // Get and store an initial value.
-    if (update_manager_->PolicyRequest(&Policy::P2PEnabled, &is_enabled_) ==
-        EvalStatus::kFailed) {
-      is_enabled_ = false;
+
+    auto eval_status = update_manager_->PolicyRequest2(
+        std::make_unique<P2PEnabledPolicy>(), policy_data_);
+    if (eval_status == EvalStatus::kFailed) {
+      policy_data_->set_enabled(false);
       LOG(ERROR) << "Querying P2P enabled status failed, disabling.";
     }
 
+    policy_data_->set_prev_enabled(policy_data_->enabled());
     // Track future changes (async).
     ScheduleEnabledStatusChange();
   }
 
-  return is_enabled_;
+  return policy_data_->enabled();
 }
 
 bool P2PManagerImpl::EnsureP2P(bool should_be_running) {
@@ -684,29 +693,27 @@ void P2PManagerImpl::ScheduleEnabledStatusChange() {
   if (waiting_for_enabled_status_change_)
     return;
 
-  Callback<void(EvalStatus, const bool&)> callback =
-      Bind(&P2PManagerImpl::OnEnabledStatusChange, base::Unretained(this));
-  update_manager_->AsyncPolicyRequest(
-      callback, &Policy::P2PEnabledChanged, is_enabled_);
+  policy_data_->set_prev_enabled(policy_data_->enabled());
+  update_manager_->PolicyRequest2(
+      std::make_unique<P2PEnabledChangedPolicy>(),
+      policy_data_,
+      Bind(&P2PManagerImpl::OnEnabledStatusChange, base::Unretained(this)));
   waiting_for_enabled_status_change_ = true;
 }
 
-void P2PManagerImpl::OnEnabledStatusChange(EvalStatus status,
-                                           const bool& result) {
+void P2PManagerImpl::OnEnabledStatusChange(EvalStatus status) {
   waiting_for_enabled_status_change_ = false;
 
   if (status == EvalStatus::kSucceeded) {
-    if (result == is_enabled_) {
+    if (policy_data_->prev_enabled() == policy_data_->enabled()) {
       LOG(WARNING) << "P2P enabled status did not change, which means that it "
                       "is permanent; not scheduling further checks.";
       waiting_for_enabled_status_change_ = true;
       return;
     }
 
-    is_enabled_ = result;
-
     // If P2P is running but shouldn't be, make sure it isn't.
-    if (may_be_running_ && !is_enabled_ && !EnsureP2PNotRunning()) {
+    if (may_be_running_ && !policy_data_->enabled() && !EnsureP2PNotRunning()) {
       LOG(WARNING) << "Failed to stop P2P service.";
     }
   } else {

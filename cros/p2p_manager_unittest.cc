@@ -27,9 +27,11 @@
 #include <string>
 #include <vector>
 
+#include <base/test/simple_test_clock.h>
 #include <base/bind.h>
 #include <base/callback.h>
 #include <base/files/file_util.h>
+#include <brillo/message_loops/fake_message_loop.h>
 #if BASE_VER < 780000  // Android
 #include <base/message_loop/message_loop.h>
 #endif  // BASE_VER < 780000
@@ -53,7 +55,6 @@
 #include "update_engine/cros/fake_p2p_manager_configuration.h"
 #include "update_engine/cros/fake_system_state.h"
 #include "update_engine/update_manager/fake_update_manager.h"
-#include "update_engine/update_manager/mock_policy.h"
 
 using base::TimeDelta;
 using brillo::MessageLoop;
@@ -67,10 +68,59 @@ using testing::SetArgPointee;
 
 namespace chromeos_update_engine {
 
+class P2PManagerSimpleTest : public testing::Test {
+ protected:
+  P2PManagerSimpleTest() = default;
+  ~P2PManagerSimpleTest() override = default;
+
+  // Derived from testing::Test.
+  void SetUp() override {
+    FakeSystemState::CreateInstance();
+    test_conf_ = new FakeP2PManagerConfiguration();
+    fake_um_ = FakeSystemState::Get()->fake_update_manager();
+
+    // Construct the P2P manager under test.
+    manager_.reset(P2PManager::Construct(
+        test_conf_, fake_um_, "cros_au", 3, TimeDelta::FromDays(5)));
+  }
+
+  base::SimpleTestClock test_clock_;
+  brillo::FakeMessageLoop fake_loop_{&test_clock_};
+
+  // The P2PManager::Configuration instance used for testing.
+  FakeP2PManagerConfiguration* test_conf_;
+
+  chromeos_update_manager::FakeUpdateManager* fake_um_;
+
+  unique_ptr<P2PManager> manager_;
+};
+
+// Check that |IsP2PEnabled()| polls the policy correctly, with the value not
+// changing between calls.
+TEST_F(P2PManagerSimpleTest, P2PEnabledInitAndNotChangedAndChanged) {
+  fake_loop_.SetAsCurrent();
+
+  EXPECT_FALSE(manager_->IsP2PEnabled());
+  brillo::MessageLoopRunMaxIterations(MessageLoop::current(), 100);
+  EXPECT_FALSE(manager_->IsP2PEnabled());
+  brillo::MessageLoopRunMaxIterations(MessageLoop::current(), 100);
+
+  // Move clock a few minutes so the timeout causes the policy be re-evaluated.
+  test_clock_.Advance(TimeDelta::FromMinutes(6));
+
+  fake_um_->state()->updater_provider()->var_p2p_enabled()->reset(
+      new bool(true));
+  brillo::MessageLoopRunMaxIterations(MessageLoop::current(), 1);
+  EXPECT_TRUE(manager_->IsP2PEnabled());
+  // This is not a duplicate test. We need to make sure the value is not changed
+  // between consecutive calls.
+  EXPECT_TRUE(manager_->IsP2PEnabled());
+}
+
 // Test fixture that sets up a testing configuration (with e.g. a
 // temporary p2p dir) for P2PManager and cleans up when the test is
 // done.
-class P2PManagerTest : public testing::Test {
+class P2PManagerTest : public P2PManagerSimpleTest {
  protected:
   P2PManagerTest() = default;
   ~P2PManagerTest() override = default;
@@ -78,23 +128,9 @@ class P2PManagerTest : public testing::Test {
   // Derived from testing::Test.
   void SetUp() override {
     loop_.SetAsCurrent();
-    FakeSystemState::CreateInstance();
+    P2PManagerSimpleTest::SetUp();
     async_signal_handler_.Init();
     subprocess_.Init(&async_signal_handler_);
-    test_conf_ = new FakeP2PManagerConfiguration();
-
-    // Allocate and install a mock policy implementation in the fake Update
-    // Manager.  Note that the FakeUpdateManager takes ownership of the policy
-    // object.
-    mock_policy_ = new chromeos_update_manager::MockPolicy();
-    fake_um_.set_policy(mock_policy_);
-
-    // Construct the P2P manager under test.
-    manager_.reset(P2PManager::Construct(test_conf_,
-                                         &fake_um_,
-                                         "cros_au",
-                                         3,
-                                         TimeDelta::FromDays(5)));
   }
 
 #if BASE_VER < 780000  // Android
@@ -106,40 +142,7 @@ class P2PManagerTest : public testing::Test {
 #endif  // BASE_VER < 780000
   brillo::AsynchronousSignalHandler async_signal_handler_;
   Subprocess subprocess_;
-
-  // The P2PManager::Configuration instance used for testing.
-  FakeP2PManagerConfiguration* test_conf_;
-
-  chromeos_update_manager::MockPolicy* mock_policy_ = nullptr;
-  chromeos_update_manager::FakeUpdateManager fake_um_;
-
-  unique_ptr<P2PManager> manager_;
 };
-
-// Check that IsP2PEnabled() polls the policy correctly, with the value not
-// changing between calls.
-TEST_F(P2PManagerTest, P2PEnabledInitAndNotChanged) {
-  EXPECT_CALL(*mock_policy_, P2PEnabled(_, _, _, _));
-  EXPECT_CALL(*mock_policy_, P2PEnabledChanged(_, _, _, _, false));
-
-  EXPECT_FALSE(manager_->IsP2PEnabled());
-  brillo::MessageLoopRunMaxIterations(MessageLoop::current(), 100);
-  EXPECT_FALSE(manager_->IsP2PEnabled());
-}
-
-// Check that IsP2PEnabled() polls the policy correctly, with the value changing
-// between calls.
-TEST_F(P2PManagerTest, P2PEnabledInitAndChanged) {
-  EXPECT_CALL(*mock_policy_, P2PEnabled(_, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(true),
-                      Return(chromeos_update_manager::EvalStatus::kSucceeded)));
-  EXPECT_CALL(*mock_policy_, P2PEnabledChanged(_, _, _, _, true));
-  EXPECT_CALL(*mock_policy_, P2PEnabledChanged(_, _, _, _, false));
-
-  EXPECT_TRUE(manager_->IsP2PEnabled());
-  brillo::MessageLoopRunMaxIterations(MessageLoop::current(), 100);
-  EXPECT_FALSE(manager_->IsP2PEnabled());
-}
 
 // Check that we keep the $N newest files with the .$EXT.p2p extension.
 TEST_F(P2PManagerTest, HousekeepingCountLimit) {
@@ -147,11 +150,8 @@ TEST_F(P2PManagerTest, HousekeepingCountLimit) {
   // we need to reallocate the test_conf_ member, whose currently aliased object
   // will be freed.
   test_conf_ = new FakeP2PManagerConfiguration();
-  manager_.reset(P2PManager::Construct(test_conf_,
-                                       &fake_um_,
-                                       "cros_au",
-                                       3,
-                                       TimeDelta() /* max_file_age */));
+  manager_.reset(P2PManager::Construct(
+      test_conf_, fake_um_, "cros_au", 3, /*max_file_age=*/TimeDelta()));
   EXPECT_EQ(manager_->CountSharedFiles(), 0);
 
   base::Time start_time = base::Time::FromDoubleT(1246996800.);
@@ -212,11 +212,8 @@ TEST_F(P2PManagerTest, HousekeepingAgeLimit) {
   // Note that we need to reallocate the test_conf_ member, whose currently
   // aliased object will be freed.
   test_conf_ = new FakeP2PManagerConfiguration();
-  manager_.reset(P2PManager::Construct(test_conf_,
-                                       &fake_um_,
-                                       "cros_au",
-                                       0 /* num_files_to_keep */,
-                                       age_limit));
+  manager_.reset(P2PManager::Construct(
+      test_conf_, fake_um_, "cros_au", /*num_files_to_keep=*/0, age_limit));
   EXPECT_EQ(manager_->CountSharedFiles(), 0);
 
   // Generate files with different timestamps matching our pattern and generate

@@ -83,21 +83,6 @@ class PolicyImplBase : public Policy {
                             UpdateState update_state) const override {
     return EvalStatus::kContinue;
   };
-
-  EvalStatus P2PEnabled(EvaluationContext* ec,
-                        State* state,
-                        std::string* error,
-                        bool* result) const override {
-    return EvalStatus::kContinue;
-  };
-
-  EvalStatus P2PEnabledChanged(EvaluationContext* ec,
-                               State* state,
-                               std::string* error,
-                               bool* result,
-                               bool prev_result) const override {
-    return EvalStatus::kContinue;
-  };
 };
 
 }  // namespace chromeos_update_manager
