@@ -54,7 +54,6 @@
 #include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/update_manager/p2p_enabled_policy.h"
-#include "update_engine/update_manager/policy.h"
 #include "update_engine/update_manager/update_manager.h"
 
 using base::Bind;
@@ -68,7 +67,6 @@ using chromeos_update_manager::EvalStatus;
 using chromeos_update_manager::P2PEnabledChangedPolicy;
 using chromeos_update_manager::P2PEnabledPolicy;
 using chromeos_update_manager::P2PEnabledPolicyData;
-using chromeos_update_manager::Policy;
 using chromeos_update_manager::UpdateManager;
 using std::pair;
 using std::string;

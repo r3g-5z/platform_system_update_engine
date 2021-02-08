@@ -19,7 +19,6 @@
 
 #include "update_engine/update_manager/update_manager.h"
 
-#include "update_engine/update_manager/default_policy.h"
 #include "update_engine/update_manager/fake_state.h"
 
 namespace chromeos_update_manager {
@@ -29,13 +28,7 @@ class FakeUpdateManager : public UpdateManager {
   FakeUpdateManager()
       : UpdateManager(base::TimeDelta::FromSeconds(5),
                       base::TimeDelta::FromHours(1),
-                      new FakeState()) {
-    // The FakeUpdateManager uses a DefaultPolicy.
-    set_policy(new DefaultPolicy());
-  }
-
-  // UpdateManager overrides.
-  using UpdateManager::set_policy;
+                      new FakeState()) {}
 
   FakeState* state() {
     return reinterpret_cast<FakeState*>(UpdateManager::state());

@@ -68,8 +68,6 @@
 #include "update_engine/payload_consumer/filesystem_verifier_action.h"
 #include "update_engine/payload_consumer/postinstall_runner_action.h"
 #include "update_engine/update_boot_flags_action.h"
-#include "update_engine/update_manager/policy.h"
-#include "update_engine/update_manager/policy_utils.h"
 #include "update_engine/update_manager/update_manager.h"
 #include "update_engine/update_status_utils.h"
 
@@ -82,7 +80,6 @@ using base::TimeTicks;
 using brillo::MessageLoop;
 using chromeos_update_manager::CalculateStagingCase;
 using chromeos_update_manager::EvalStatus;
-using chromeos_update_manager::Policy;
 using chromeos_update_manager::StagingCase;
 using chromeos_update_manager::UpdateCheckAllowedPolicy;
 using chromeos_update_manager::UpdateCheckAllowedPolicyData;

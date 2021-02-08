@@ -23,7 +23,7 @@
 #include <base/time/time.h>
 #include <gtest/gtest.h>
 
-#include "update_engine/update_manager/policy.h"
+#include "update_engine/update_manager/policy_interface.h"
 #include "update_engine/update_manager/variable.h"
 
 namespace chromeos_update_manager {

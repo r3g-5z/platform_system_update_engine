@@ -35,9 +35,7 @@
 #include <gtest/gtest.h>
 
 #include "update_engine/cros/fake_system_state.h"
-#include "update_engine/update_manager/default_policy.h"
 #include "update_engine/update_manager/fake_state.h"
-#include "update_engine/update_manager/mock_policy.h"
 #include "update_engine/update_manager/umtest_utils.h"
 
 using base::Bind;
@@ -61,22 +59,6 @@ class FakeUpdateTimeRestrictionsMonitorDelegate
     : public chromeos_update_manager::UpdateTimeRestrictionsMonitor::Delegate {
   void OnRestrictedIntervalStarts() override {}
 };
-
-// Generates a fixed timestamp for use in faking the current time.
-Time FixedTime() {
-  Time::Exploded now_exp;
-  now_exp.year = 2014;
-  now_exp.month = 3;
-  now_exp.day_of_week = 2;
-  now_exp.day_of_month = 18;
-  now_exp.hour = 8;
-  now_exp.minute = 5;
-  now_exp.second = 33;
-  now_exp.millisecond = 675;
-  Time time;
-  ignore_result(Time::FromLocalExploded(now_exp, &time));
-  return time;
-}
 
 }  // namespace
 
@@ -206,37 +188,6 @@ TEST_F(UmUpdateManagerTest, PolicyRequestCallUpdateCheckAllowed) {
   EXPECT_EQ(EvalStatus::kSucceeded,
             umut_->PolicyRequest2(std::make_unique<SimplePolicy>(),
                                   std::make_shared<PolicyDataInterface>()));
-}
-
-TEST_F(UmUpdateManagerTest, PolicyRequestCallUpdateCanStart) {
-  UpdateState update_state = UpdateState();
-  update_state.interactive = true;
-  update_state.is_delta_payload = false;
-  update_state.first_seen = FixedTime();
-  update_state.num_checks = 1;
-  update_state.num_failures = 0;
-  update_state.failures_last_updated = Time();
-  update_state.download_urls = vector<string>{"http://fake/url/"};
-  update_state.download_errors_max = 10;
-  update_state.p2p_downloading_disabled = false;
-  update_state.p2p_sharing_disabled = false;
-  update_state.p2p_num_attempts = 0;
-  update_state.p2p_first_attempted = Time();
-  update_state.last_download_url_idx = -1;
-  update_state.last_download_url_num_errors = 0;
-  update_state.download_errors = vector<tuple<int, ErrorCode, Time>>();
-  update_state.backoff_expiry = Time();
-  update_state.is_backoff_disabled = false;
-  update_state.scatter_wait_period = TimeDelta::FromSeconds(15);
-  update_state.scatter_check_threshold = 4;
-  update_state.scatter_wait_period_max = TimeDelta::FromSeconds(60);
-  update_state.scatter_check_threshold_min = 2;
-  update_state.scatter_check_threshold_max = 8;
-
-  UpdateDownloadParams result;
-  EXPECT_EQ(
-      EvalStatus::kSucceeded,
-      umut_->PolicyRequest(&Policy::UpdateCanStart, &result, update_state));
 }
 
 TEST_F(UmUpdateManagerTest, PolicyRequestCallsDefaultOnError) {

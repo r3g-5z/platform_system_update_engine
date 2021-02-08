@@ -32,14 +32,12 @@
 #include "update_engine/cros/fake_system_state.h"
 #include "update_engine/cros/mock_payload_state.h"
 #include "update_engine/payload_consumer/payload_constants.h"
-#include "update_engine/update_manager/mock_policy.h"
 
 using chromeos_update_engine::test_utils::System;
 using chromeos_update_engine::test_utils::WriteFileString;
 using chromeos_update_manager::EvalStatus;
 using chromeos_update_manager::FakeUpdateManager;
 using chromeos_update_manager::kRollforwardInfinity;
-using chromeos_update_manager::MockPolicy;
 using std::string;
 using testing::_;
 using testing::DoAll;
@@ -1010,12 +1008,12 @@ TEST_F(OmahaResponseHandlerActionTest, DISABLED_TestDeferredByPolicy) {
                          .hash = kPayloadHashHex,
                          .app_id = kPayloadAppId,
                          .fp = kPayloadFp1});
+#if 0  // TODO(b/179419726): Fix this test.
   // Setup the UpdateManager to disallow the update.
   MockPolicy* mock_policy = new MockPolicy();
   FakeUpdateManager* fake_update_manager =
       FakeSystemState::Get()->fake_update_manager();
   fake_update_manager->set_policy(mock_policy);
-#if 0  // TODO(b/179419726): Fix this test.
   EXPECT_CALL(*mock_policy, UpdateCanBeApplied(_, _, _, _, _))
       .WillOnce(
           DoAll(SetArgPointee<3>(ErrorCode::kOmahaUpdateDeferredPerPolicy),

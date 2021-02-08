@@ -18,9 +18,8 @@
 #define UPDATE_ENGINE_UPDATE_MANAGER_POLICY_UTILS_H_
 
 #include <string>
-#include <vector>
 
-#include "update_engine/update_manager/policy.h"
+#include "update_engine/update_manager/policy_interface.h"
 
 // Checks that the passed pointer value is not null, returning kFailed on the
 // current context and setting the *error description when it is null. The
@@ -40,20 +39,7 @@
 
 namespace chromeos_update_manager {
 
-// Base class implementation that returns |EvalStatus::kContinue| for all
-// decisions, to be used as a base-class for various Policy facets that only
-// pertain to certain situations. This might be better folded into Policy
-// instead of using pure-virtual methods on that class.
-class PolicyImplBase : public Policy {
- public:
-  EvalStatus UpdateCanStart(EvaluationContext* ec,
-                            State* state,
-                            std::string* error,
-                            UpdateDownloadParams* result,
-                            UpdateState update_state) const override {
-    return EvalStatus::kContinue;
-  };
-};
+std::string ToString(EvalStatus status);
 
 }  // namespace chromeos_update_manager
 

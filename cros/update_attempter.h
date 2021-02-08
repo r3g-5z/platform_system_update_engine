@@ -45,7 +45,6 @@
 #include "update_engine/cros/omaha_request_params.h"
 #include "update_engine/cros/omaha_response_handler_action.h"
 #include "update_engine/payload_consumer/postinstall_runner_action.h"
-#include "update_engine/update_manager/policy.h"
 #include "update_engine/update_manager/staging_utils.h"
 #include "update_engine/update_manager/update_check_allowed_policy.h"
 #include "update_engine/update_manager/update_manager.h"

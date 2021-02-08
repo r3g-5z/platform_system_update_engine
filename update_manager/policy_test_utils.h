@@ -50,9 +50,6 @@ class UmPolicyTestBase : public ::testing::Test {
   // items, but only after calling this class's implementation.
   virtual void SetUpDefaultState();
 
-  // Returns a default UpdateState structure:
-  virtual UpdateState GetDefaultUpdateState(base::TimeDelta first_seen_period);
-
   // Runs the passed |method| after resetting the EvaluationContext and expects
   // it to return the |expected| return value.
   template <typename T, typename R, typename... Args>
@@ -75,27 +72,10 @@ class UmPolicyTestBase : public ::testing::Test {
     return (*method)(eval_ctx_.get(), &fake_state_, &error, result, args...);
   }
 
-  // Runs the passed |policy_method| on the framework policy and expects it to
-  // return the |expected| return value.
-  template <typename T, typename R, typename... Args>
-  void ExpectPolicyStatus(EvalStatus expected,
-                          T policy_method,
-                          R* result,
-                          Args... args) {
-    std::string error = "<None>";
-    eval_ctx_->ResetEvaluation();
-    EXPECT_EQ(expected,
-              (policy_.get()->*policy_method)(
-                  eval_ctx_.get(), &fake_state_, &error, result, args...))
-        << "Returned error: " << error
-        << "\nEvaluation context: " << eval_ctx_->DumpContext();
-  }
-
   brillo::FakeMessageLoop loop_{nullptr};
   chromeos_update_engine::FakeClock* fake_clock_;
   FakeState fake_state_;
   std::shared_ptr<EvaluationContext> eval_ctx_;
-  std::unique_ptr<Policy> policy_;
 
   scoped_refptr<PolicyEvaluator> evaluator_;
   std::unique_ptr<PolicyInterface> policy_2_;

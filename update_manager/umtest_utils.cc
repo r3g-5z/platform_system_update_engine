@@ -16,7 +16,7 @@
 
 #include "update_engine/update_manager/umtest_utils.h"
 
-#include <base/time/time.h>
+#include "update_engine/update_manager/policy_utils.h"
 
 namespace chromeos_update_manager {
 

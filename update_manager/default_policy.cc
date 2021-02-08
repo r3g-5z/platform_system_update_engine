@@ -15,12 +15,12 @@
 //
 
 #include "update_engine/common/system_state.h"
-#include "update_engine/update_manager/default_policy.h"
 // TODO(b/179419726): Remove.
 #include "update_engine/update_manager/p2p_enabled_policy.h"
 // TODO(b/179419726): Remove.
 #include "update_engine/update_manager/update_can_be_applied_policy.h"
 #include "update_engine/update_manager/update_can_be_applied_policy_data.h"
+#include "update_engine/update_manager/update_can_start_policy.h"
 #include "update_engine/update_manager/update_check_allowed_policy.h"
 
 using chromeos_update_engine::ErrorCode;
@@ -82,11 +82,13 @@ EvalStatus UpdateCanBeAppliedPolicy::EvaluateDefault(
   return EvalStatus::kSucceeded;
 }
 
-EvalStatus DefaultPolicy::UpdateCanStart(EvaluationContext* ec,
-                                         State* state,
-                                         std::string* error,
-                                         UpdateDownloadParams* result,
-                                         const UpdateState update_state) const {
+EvalStatus UpdateCanStartPolicy::EvaluateDefault(
+    EvaluationContext* ec,
+    State* state,
+    std::string* error,
+    PolicyDataInterface* data) const {
+  UpdateDownloadParams* result =
+      &(static_cast<UpdateCanStartPolicyData*>(data)->result);
   result->update_can_start = true;
   result->cannot_start_reason = UpdateCannotStartReason::kUndefined;
   result->download_url_idx = 0;

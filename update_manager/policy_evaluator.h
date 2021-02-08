@@ -22,7 +22,6 @@
 #include <base/memory/ref_counted.h>
 
 #include "update_engine/update_manager/evaluation_context.h"
-#include "update_engine/update_manager/policy.h"
 #include "update_engine/update_manager/policy_interface.h"
 #include "update_engine/update_manager/state.h"
 

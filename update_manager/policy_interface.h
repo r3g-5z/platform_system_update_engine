@@ -20,10 +20,17 @@
 #include <string>
 
 #include "update_engine/update_manager/evaluation_context.h"
-#include "update_engine/update_manager/policy.h"
 #include "update_engine/update_manager/state.h"
 
 namespace chromeos_update_manager {
+
+// The three different results of a policy request.
+enum class EvalStatus {
+  kFailed,
+  kSucceeded,
+  kAskMeAgainLater,
+  kContinue,
+};
 
 class PolicyDataInterface {};
 

@@ -18,8 +18,6 @@
 
 #include <string>
 
-#include <base/time/time.h>
-
 #include "update_engine/update_manager/policy_interface.h"
 
 namespace chromeos_update_manager {

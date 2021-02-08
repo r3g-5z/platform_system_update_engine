@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#include "update_engine/update_manager/policy.h"
+#include "update_engine/update_manager/policy_utils.h"
 
 #include <string>
 

@@ -17,9 +17,7 @@
 #include "update_engine/update_manager/policy_test_utils.h"
 
 #include <memory>
-#include <tuple>
 #include <utility>
-#include <vector>
 
 #include "update_engine/cros/fake_system_state.h"
 #include "update_engine/update_manager/next_update_check_policy_impl.h"
@@ -28,9 +26,6 @@ using base::Time;
 using base::TimeDelta;
 using chromeos_update_engine::ErrorCode;
 using chromeos_update_engine::FakeSystemState;
-using std::string;
-using std::tuple;
-using std::vector;
 
 namespace chromeos_update_manager {
 
@@ -84,50 +79,6 @@ void UmPolicyTestBase::SetUpDefaultState() {
 
   // Chosen by fair dice roll.  Guaranteed to be random.
   fake_state_.random_provider()->var_seed()->reset(new uint64_t(4));
-}
-
-// Returns a default UpdateState structure:
-UpdateState UmPolicyTestBase::GetDefaultUpdateState(
-    TimeDelta first_seen_period) {
-  Time first_seen_time =
-      FakeSystemState::Get()->clock()->GetWallclockTime() - first_seen_period;
-  UpdateState update_state = UpdateState();
-
-  // This is a non-interactive check returning a delta payload, seen for the
-  // first time (|first_seen_period| ago). Clearly, there were no failed
-  // attempts so far.
-  update_state.interactive = false;
-  update_state.is_delta_payload = false;
-  update_state.first_seen = first_seen_time;
-  update_state.num_checks = 1;
-  update_state.num_failures = 0;
-  update_state.failures_last_updated = Time();  // Needs to be zero.
-  // There's a single HTTP download URL with a maximum of 10 retries.
-  update_state.download_urls = vector<string>{"http://fake/url/"};
-  update_state.download_errors_max = 10;
-  // Download was never attempted.
-  update_state.last_download_url_idx = -1;
-  update_state.last_download_url_num_errors = 0;
-  // There were no download errors.
-  update_state.download_errors = vector<tuple<int, ErrorCode, Time>>();
-  // P2P is not disabled by Omaha.
-  update_state.p2p_downloading_disabled = false;
-  update_state.p2p_sharing_disabled = false;
-  // P2P was not attempted.
-  update_state.p2p_num_attempts = 0;
-  update_state.p2p_first_attempted = Time();
-  // No active backoff period, backoff is not disabled by Omaha.
-  update_state.backoff_expiry = Time();
-  update_state.is_backoff_disabled = false;
-  // There is no active scattering wait period (max 7 days allowed) nor check
-  // threshold (none allowed).
-  update_state.scatter_wait_period = TimeDelta();
-  update_state.scatter_check_threshold = 0;
-  update_state.scatter_wait_period_max = TimeDelta::FromDays(7);
-  update_state.scatter_check_threshold_min = 0;
-  update_state.scatter_check_threshold_max = 0;
-
-  return update_state;
 }
 
 }  // namespace chromeos_update_manager

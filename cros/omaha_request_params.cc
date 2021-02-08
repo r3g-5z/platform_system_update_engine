@@ -37,7 +37,6 @@
 #include "update_engine/common/platform_constants.h"
 #include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
-#include "update_engine/update_manager/policy.h"
 
 #define CALL_MEMBER_FN(object, member) ((object).*(member))
 

@@ -31,7 +31,6 @@
 #include "update_engine/common/platform_constants.h"
 #include "update_engine/common/prefs.h"
 #include "update_engine/cros/image_properties.h"
-#include "update_engine/update_manager/policy.h"
 #include "update_engine/update_manager/update_check_allowed_policy.h"
 
 // This gathers local system information and prepares info used by the

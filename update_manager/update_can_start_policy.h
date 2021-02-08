@@ -30,16 +30,6 @@
 
 namespace chromeos_update_manager {
 
-// The three different results of a policy request.
-enum class EvalStatus {
-  kFailed,
-  kSucceeded,
-  kAskMeAgainLater,
-  kContinue,
-};
-
-std::string ToString(EvalStatus status);
-
 // Input arguments to UpdateCanStart.
 //
 // A snapshot of the state of the current update process. This includes
@@ -169,38 +159,26 @@ struct UpdateDownloadParams {
   int scatter_check_threshold;
 };
 
+class UpdateCanStartPolicyData : public PolicyDataInterface {
+ public:
+  UpdateState update_state;
+
+  UpdateDownloadParams result;
+};
+
 // The Policy class is an interface to the ensemble of policy requests that the
 // client can make. A derived class includes the policy implementations of
 // these.
 //
 // When compile-time selection of the policy is required due to missing or extra
 // parts in a given platform, a different Policy subclass can be used.
-class Policy {
+class UpdateCanStartPolicy : public PolicyInterface {
  public:
-  virtual ~Policy() {}
+  UpdateCanStartPolicy() = default;
+  virtual ~UpdateCanStartPolicy() = default;
 
-  // Returns the name of a public policy request.
-  // IMPORTANT: Be sure to add a conditional for each new public policy that is
-  // being added to this class in the future.
-  template <typename R, typename... Args>
-  std::string PolicyRequestName(EvalStatus (Policy::*policy_method)(
-      EvaluationContext*, State*, std::string*, R*, Args...) const) const {
-    std::string class_name = PolicyName() + "::";
-
-    if (reinterpret_cast<typeof(&Policy::UpdateCanStart)>(policy_method) ==
-        &Policy::UpdateCanStart)
-      return class_name + "UpdateCanStart";
-
-    NOTREACHED();
-    return class_name + "(unknown)";
-  }
-
-  // List of policy requests. A policy request takes an EvaluationContext as the
-  // first argument, a State instance, a returned error message, a returned
-  // value and optionally followed by one or more arbitrary constant arguments.
-  //
-  // When the implementation fails, the method returns EvalStatus::kFailed and
-  // sets the |error| string.
+  UpdateCanStartPolicy(const UpdateCanStartPolicy&) = delete;
+  UpdateCanStartPolicy& operator=(const UpdateCanStartPolicy&) = delete;
 
   // Returns EvalStatus::kSucceeded if either an update can start being
   // processed, or the attempt needs to be aborted. In cases where the update
@@ -208,24 +186,19 @@ class Policy {
   // that need to be persisted has changed, returns
   // EvalStatus::kAskMeAgainLater. Arguments include an |update_state| that
   // encapsulates data pertaining to the current ongoing update process.
-  virtual EvalStatus UpdateCanStart(EvaluationContext* ec,
-                                    State* state,
-                                    std::string* error,
-                                    UpdateDownloadParams* result,
-                                    UpdateState update_state) const = 0;
+  EvalStatus Evaluate(EvaluationContext* ec,
+                      State* state,
+                      std::string* error,
+                      PolicyDataInterface* data) const override;
+
+  EvalStatus EvaluateDefault(EvaluationContext* ec,
+                             State* state,
+                             std::string* error,
+                             PolicyDataInterface* data) const override;
 
  protected:
-  Policy() {}
-
-  // Returns the name of the actual policy class.
-  virtual std::string PolicyName() const = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Policy);
+  std::string PolicyName() const override { return "UpdateCanStartPolicy"; }
 };
-
-// Get system dependent policy implementation.
-std::unique_ptr<Policy> GetSystemPolicy();
 
 }  // namespace chromeos_update_manager
 

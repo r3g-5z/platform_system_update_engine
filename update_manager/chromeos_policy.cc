@@ -46,6 +46,7 @@
 // TODO(b/179419726): Remove.
 #include "update_engine/update_manager/update_can_be_applied_policy.h"
 #include "update_engine/update_manager/update_can_be_applied_policy_data.h"
+#include "update_engine/update_manager/update_can_start_policy.h"
 #include "update_engine/update_manager/update_check_allowed_policy.h"
 #include "update_engine/update_manager/update_time_restrictions_policy_impl.h"
 
@@ -202,13 +203,12 @@ bool IsUrlUsable(const string& url, bool http_allowed) {
              url, "http://", base::CompareCase::INSENSITIVE_ASCII);
 }
 
+// Auxiliary constant (zero by default).
+const base::TimeDelta kZeroInterval;
+
 }  // namespace
 
 namespace chromeos_update_manager {
-
-unique_ptr<Policy> GetSystemPolicy() {
-  return std::make_unique<ChromeOSPolicy>();
-}
 
 // TODO(b/179419726): Move to p2p_enabled_policy.cc.
 const int kMaxP2PAttempts = 10;
@@ -316,12 +316,13 @@ EvalStatus UpdateCanBeAppliedPolicy::Evaluate(EvaluationContext* ec,
   return EvalStatus::kSucceeded;
 }
 
-EvalStatus ChromeOSPolicy::UpdateCanStart(
-    EvaluationContext* ec,
-    State* state,
-    string* error,
-    UpdateDownloadParams* result,
-    const UpdateState update_state) const {
+EvalStatus UpdateCanStartPolicy::Evaluate(EvaluationContext* ec,
+                                          State* state,
+                                          string* error,
+                                          PolicyDataInterface* data) const {
+  auto policy_data = static_cast<UpdateCanStartPolicyData*>(data);
+  UpdateDownloadParams* result = &policy_data->result;
+  const UpdateState& update_state = policy_data->update_state;
   // Set the default return values. Note that we set persisted values (backoff,
   // scattering) to the same values presented in the update state. The reason is
   // that preemptive returns, such as the case where an update check is due,
@@ -338,15 +339,6 @@ EvalStatus ChromeOSPolicy::UpdateCanStart(
   result->backoff_expiry = update_state.backoff_expiry;
   result->scatter_wait_period = update_state.scatter_wait_period;
   result->scatter_check_threshold = update_state.scatter_check_threshold;
-
-  // Make sure that we're not due for an update check.
-  UpdateCheckAllowedPolicy uca_policy;
-  UpdateCheckAllowedPolicyData uca_data;
-  EvalStatus check_status = uca_policy.Evaluate(ec, state, error, &uca_data);
-  if (check_status == EvalStatus::kFailed)
-    return EvalStatus::kFailed;
-  bool is_check_due = (check_status == EvalStatus::kSucceeded &&
-                       uca_data.update_check_params.updates_enabled == true);
 
   // Check whether backoff applies, and if not then which URL can be used for
   // downloading. These require scanning the download error log, and so they are
@@ -455,10 +447,6 @@ EvalStatus ChromeOSPolicy::UpdateCanStart(
   }
 
   // Check for various deterrents.
-  if (is_check_due) {
-    result->cannot_start_reason = UpdateCannotStartReason::kCheckDue;
-    return EvalStatus::kSucceeded;
-  }
   if (is_backoff_active) {
     result->cannot_start_reason = UpdateCannotStartReason::kBackoff;
     return backoff_url_status;
@@ -529,12 +517,12 @@ EvalStatus P2PEnabledChangedPolicy::Evaluate(EvaluationContext* ec,
   return status;
 }
 
-EvalStatus ChromeOSPolicy::UpdateBackoffAndDownloadUrl(
+EvalStatus UpdateBackoffAndDownloadUrl(
     EvaluationContext* ec,
     State* state,
     string* error,
     UpdateBackoffAndDownloadUrlResult* result,
-    const UpdateState& update_state) const {
+    const UpdateState& update_state) {
   DCHECK_GE(update_state.download_errors_max, 0);
 
   // Set default result values.
@@ -722,12 +710,11 @@ EvalStatus ChromeOSPolicy::UpdateBackoffAndDownloadUrl(
   return EvalStatus::kSucceeded;
 }
 
-EvalStatus ChromeOSPolicy::UpdateScattering(
-    EvaluationContext* ec,
-    State* state,
-    string* error,
-    UpdateScatteringResult* result,
-    const UpdateState& update_state) const {
+EvalStatus UpdateScattering(EvaluationContext* ec,
+                            State* state,
+                            string* error,
+                            UpdateScatteringResult* result,
+                            const UpdateState& update_state) {
   // Preconditions. These stem from the postconditions and usage contract.
   DCHECK(update_state.scatter_wait_period >= kZeroInterval);
   DCHECK_GE(update_state.scatter_check_threshold, 0);

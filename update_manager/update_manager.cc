@@ -25,19 +25,11 @@ namespace chromeos_update_manager {
 UpdateManager::UpdateManager(base::TimeDelta evaluation_timeout,
                              base::TimeDelta expiration_timeout,
                              State* state)
-    : policy_(GetSystemPolicy()),
-      state_(state),
+    : state_(state),
       evaluation_timeout_(evaluation_timeout),
-      expiration_timeout_(expiration_timeout),
-      weak_ptr_factory_(this) {}
+      expiration_timeout_(expiration_timeout) {}
 
-UpdateManager::~UpdateManager() {
-  // Remove pending main loop events associated with any of the outstanding
-  // evaluation contexts. This will prevent dangling pending events, causing
-  // these contexts to be destructed once the repo itself is destructed.
-  for (auto& ec : ec_repo_)
-    ec->RemoveObserversAndTimeout();
-}
+UpdateManager::~UpdateManager() {}
 
 EvalStatus UpdateManager::PolicyRequest2(
     std::unique_ptr<PolicyInterface> policy,
@@ -60,16 +52,6 @@ void UpdateManager::PolicyRequest2(std::unique_ptr<PolicyInterface> policy,
   base::MakeRefCounted<PolicyEvaluator>(
       state_.get(), std::move(ec), std::move(policy), std::move(data))
       ->ScheduleEvaluation(std::move(callback));
-}
-
-void UpdateManager::UnregisterEvalContext(EvaluationContext* ec) {
-  // Since |ec_repo_|'s compare function is based on the value of the raw
-  // pointer |ec|, we can just create a |shared_ptr| here and pass it along to
-  // be erased.
-  if (!ec_repo_.erase(
-          std::shared_ptr<EvaluationContext>(ec, [](EvaluationContext*) {}))) {
-    LOG(ERROR) << "Unregistering an unknown evaluation context, this is a bug.";
-  }
 }
 
 std::unique_ptr<UpdateTimeRestrictionsMonitor>
