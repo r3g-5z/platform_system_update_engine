@@ -19,19 +19,15 @@
 
 #include <string>
 
-#include "update_engine/common/error_code.h"
-#include "update_engine/payload_consumer/install_plan.h"
 #include "update_engine/update_manager/policy_interface.h"
-#include "update_engine/update_manager/policy_utils.h"
 
 namespace chromeos_update_manager {
 
 // Check to see if an interactive update was requested.
-class InteractiveUpdatePolicyImpl : public PolicyImplBase,
-                                    public PolicyInterface {
+class InteractiveUpdateCheckAllowedPolicyImpl : public PolicyInterface {
  public:
-  InteractiveUpdatePolicyImpl() = default;
-  ~InteractiveUpdatePolicyImpl() override = default;
+  InteractiveUpdateCheckAllowedPolicyImpl() = default;
+  ~InteractiveUpdateCheckAllowedPolicyImpl() override = default;
 
   // Policy overrides.
   EvalStatus Evaluate(EvaluationContext* ec,
@@ -39,16 +35,9 @@ class InteractiveUpdatePolicyImpl : public PolicyImplBase,
                       std::string* error,
                       PolicyDataInterface* data) const override;
 
-  EvalStatus UpdateCanBeApplied(
-      EvaluationContext* ec,
-      State* state,
-      std::string* error,
-      chromeos_update_engine::ErrorCode* result,
-      chromeos_update_engine::InstallPlan* install_plan) const override;
-
  protected:
   std::string PolicyName() const override {
-    return "InteractiveUpdatePolicyImpl";
+    return "CUAInteractiveUpdatePolicy";
   }
 
  private:
@@ -60,7 +49,27 @@ class InteractiveUpdatePolicyImpl : public PolicyImplBase,
                                        UpdaterProvider* const updater_provider,
                                        bool* interactive_out) const;
 
-  DISALLOW_COPY_AND_ASSIGN(InteractiveUpdatePolicyImpl);
+  DISALLOW_COPY_AND_ASSIGN(InteractiveUpdateCheckAllowedPolicyImpl);
+};
+
+// Check to see if an interactive update was requested.
+class InteractiveUpdateCanBeAppliedPolicyImpl : public PolicyInterface {
+ public:
+  InteractiveUpdateCanBeAppliedPolicyImpl() = default;
+  ~InteractiveUpdateCanBeAppliedPolicyImpl() override = default;
+
+  // Policy overrides.
+  EvalStatus Evaluate(EvaluationContext* ec,
+                      State* state,
+                      std::string* error,
+                      PolicyDataInterface* data) const override;
+
+ protected:
+  std::string PolicyName() const override {
+    return "InteractiveUpdateCanBeAppliedPolicyImpl";
+  }
+
+  DISALLOW_COPY_AND_ASSIGN(InteractiveUpdateCanBeAppliedPolicyImpl);
 };
 
 }  // namespace chromeos_update_manager

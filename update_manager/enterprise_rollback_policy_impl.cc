@@ -16,22 +16,24 @@
 
 #include "update_engine/update_manager/enterprise_rollback_policy_impl.h"
 
+#include "update_engine/update_manager/update_can_be_applied_policy_data.h"
+
 using chromeos_update_engine::ErrorCode;
 using chromeos_update_engine::InstallPlan;
 using std::string;
 
 namespace chromeos_update_manager {
 
-EvalStatus EnterpriseRollbackPolicyImpl::UpdateCanBeApplied(
+EvalStatus EnterpriseRollbackPolicyImpl::Evaluate(
     EvaluationContext* ec,
     State* state,
     string* error,
-    ErrorCode* result,
-    InstallPlan* install_plan) const {
-  if (install_plan && install_plan->is_rollback) {
+    PolicyDataInterface* data) const {
+  auto policy_data = static_cast<UpdateCanBeAppliedPolicyData*>(data);
+  if (policy_data->install_plan()->is_rollback) {
     LOG(INFO)
         << "Update is enterprise rollback, allowing update to be applied.";
-    *result = ErrorCode::kSuccess;
+    policy_data->set_error_code(ErrorCode::kSuccess);
     return EvalStatus::kSucceeded;
   }
   return EvalStatus::kContinue;

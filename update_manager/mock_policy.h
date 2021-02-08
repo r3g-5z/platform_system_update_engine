@@ -32,24 +32,12 @@ class MockPolicy : public Policy {
   MockPolicy() {
     // We defer to the corresponding DefaultPolicy methods, by default.
     ON_CALL(*this,
-            UpdateCanBeApplied(
-                testing::_, testing::_, testing::_, testing::_, testing::_))
-        .WillByDefault(testing::Invoke(&default_policy_,
-                                       &DefaultPolicy::UpdateCanBeApplied));
-    ON_CALL(*this,
             UpdateCanStart(
                 testing::_, testing::_, testing::_, testing::_, testing::_))
         .WillByDefault(
             testing::Invoke(&default_policy_, &DefaultPolicy::UpdateCanStart));
   }
   ~MockPolicy() override {}
-
-  MOCK_CONST_METHOD5(UpdateCanBeApplied,
-                     EvalStatus(EvaluationContext*,
-                                State*,
-                                std::string*,
-                                chromeos_update_engine::ErrorCode*,
-                                chromeos_update_engine::InstallPlan*));
 
   MOCK_CONST_METHOD5(UpdateCanStart,
                      EvalStatus(EvaluationContext*,

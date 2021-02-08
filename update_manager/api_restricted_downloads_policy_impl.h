@@ -19,23 +19,21 @@
 
 #include <string>
 
-#include "update_engine/update_manager/policy_utils.h"
+#include "update_engine/update_manager/policy_interface.h"
 
 namespace chromeos_update_manager {
 
 // Allow the API to restrict the downloading of updates.
-class ApiRestrictedDownloadsPolicyImpl : public PolicyImplBase {
+class ApiRestrictedDownloadsPolicyImpl : public PolicyInterface {
  public:
   ApiRestrictedDownloadsPolicyImpl() = default;
   ~ApiRestrictedDownloadsPolicyImpl() override = default;
 
   // Policy overrides.
-  EvalStatus UpdateCanBeApplied(
-      EvaluationContext* ec,
-      State* state,
-      std::string* error,
-      chromeos_update_engine::ErrorCode* result,
-      chromeos_update_engine::InstallPlan* install_plan) const override;
+  EvalStatus Evaluate(EvaluationContext* ec,
+                      State* state,
+                      std::string* error,
+                      PolicyInterfaceData* data) const override;
 
  protected:
   std::string PolicyName() const override {

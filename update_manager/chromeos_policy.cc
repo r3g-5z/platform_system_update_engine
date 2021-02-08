@@ -44,6 +44,8 @@
 #include "update_engine/update_manager/recovery_policy.h"
 #include "update_engine/update_manager/shill_provider.h"
 // TODO(b/179419726): Remove.
+#include "update_engine/update_manager/update_can_be_applied_policy.h"
+#include "update_engine/update_manager/update_can_be_applied_policy_data.h"
 #include "update_engine/update_manager/update_check_allowed_policy.h"
 #include "update_engine/update_manager/update_time_restrictions_policy_impl.h"
 
@@ -234,7 +236,7 @@ EvalStatus UpdateCheckAllowedPolicy::Evaluate(EvaluationContext* ec,
   EnoughSlotsAbUpdatesPolicyImpl enough_slots_ab_updates_policy;
   EnterpriseDevicePolicyImpl enterprise_device_policy;
   OnlyUpdateOfficialBuildsPolicyImpl only_update_official_builds_policy;
-  InteractiveUpdatePolicyImpl interactive_update_policy;
+  InteractiveUpdateCheckAllowedPolicyImpl interactive_update_policy;
   OobePolicyImpl oobe_policy;
   NextUpdateCheckTimePolicyImpl next_update_check_time_policy;
 
@@ -277,17 +279,16 @@ EvalStatus UpdateCheckAllowedPolicy::Evaluate(EvaluationContext* ec,
   return EvalStatus::kSucceeded;
 }
 
-EvalStatus ChromeOSPolicy::UpdateCanBeApplied(EvaluationContext* ec,
+EvalStatus UpdateCanBeAppliedPolicy::Evaluate(EvaluationContext* ec,
                                               State* state,
                                               std::string* error,
-                                              ErrorCode* result,
-                                              InstallPlan* install_plan) const {
-  InteractiveUpdatePolicyImpl interactive_update_policy;
+                                              PolicyDataInterface* data) const {
+  InteractiveUpdateCanBeAppliedPolicyImpl interactive_update_policy;
   EnterpriseRollbackPolicyImpl enterprise_rollback_policy;
   MinimumVersionPolicyImpl minimum_version_policy;
   UpdateTimeRestrictionsPolicyImpl update_time_restrictions_policy;
 
-  vector<Policy const*> policies_to_consult = {
+  vector<PolicyInterface const*> policies_to_consult = {
       // Check to see if an interactive update has been requested.
       &interactive_update_policy,
 
@@ -303,21 +304,16 @@ EvalStatus ChromeOSPolicy::UpdateCanBeApplied(EvaluationContext* ec,
       &update_time_restrictions_policy,
   };
 
-  EvalStatus status = ConsultPolicies(policies_to_consult,
-                                      &Policy::UpdateCanBeApplied,
-                                      ec,
-                                      state,
-                                      error,
-                                      result,
-                                      install_plan);
-  if (EvalStatus::kContinue != status) {
-    return status;
-  } else {
-    // The update can proceed.
-    LOG(INFO) << "Allowing update to be applied.";
-    *result = ErrorCode::kSuccess;
-    return EvalStatus::kSucceeded;
+  for (auto policy : policies_to_consult) {
+    EvalStatus status = policy->Evaluate(ec, state, error, data);
+    if (status != EvalStatus::kContinue) {
+      return status;
+    }
   }
+  LOG(INFO) << "Allowing update to be applied.";
+  static_cast<UpdateCanBeAppliedPolicyData*>(data)->set_error_code(
+      ErrorCode::kSuccess);
+  return EvalStatus::kSucceeded;
 }
 
 EvalStatus ChromeOSPolicy::UpdateCanStart(

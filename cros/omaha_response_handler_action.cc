@@ -17,6 +17,7 @@
 #include "update_engine/cros/omaha_response_handler_action.h"
 
 #include <limits>
+#include <memory>
 #include <string>
 
 #include <base/logging.h>
@@ -34,11 +35,13 @@
 #include "update_engine/cros/payload_state_interface.h"
 #include "update_engine/cros/update_attempter.h"
 #include "update_engine/payload_consumer/delta_performer.h"
-#include "update_engine/update_manager/policy.h"
+#include "update_engine/update_manager/update_can_be_applied_policy.h"
+#include "update_engine/update_manager/update_can_be_applied_policy_data.h"
 #include "update_engine/update_manager/update_manager.h"
 
 using chromeos_update_manager::kRollforwardInfinity;
-using chromeos_update_manager::Policy;
+using chromeos_update_manager::UpdateCanBeAppliedPolicy;
+using chromeos_update_manager::UpdateCanBeAppliedPolicyData;
 using chromeos_update_manager::UpdateManager;
 using std::numeric_limits;
 using std::string;
@@ -254,12 +257,11 @@ void OmahaResponseHandlerAction::PerformAction() {
 
   // Check the generated install-plan with the Policy to confirm that
   // it can be applied at this time (or at all).
-  UpdateManager* const update_manager = SystemState::Get()->update_manager();
-  CHECK(update_manager);
-  auto ec = ErrorCode::kSuccess;
-  update_manager->PolicyRequest(
-      &Policy::UpdateCanBeApplied, &ec, &install_plan_);
-  completer.set_code(ec);
+  auto policy_data =
+      std::make_shared<UpdateCanBeAppliedPolicyData>(&install_plan_);
+  SystemState::Get()->update_manager()->PolicyRequest2(
+      std::make_unique<UpdateCanBeAppliedPolicy>(), policy_data);
+  completer.set_code(policy_data->error_code());
 
   // Set the |InstallPlan| in the pipe after evaluating
   // |Policy::UpdateCanBeApplied| as it can set

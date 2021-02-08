@@ -19,27 +19,23 @@
 
 #include <string>
 
-#include "update_engine/common/error_code.h"
-#include "update_engine/payload_consumer/install_plan.h"
-#include "update_engine/update_manager/policy_utils.h"
+#include "update_engine/update_manager/policy_interface.h"
 
 namespace chromeos_update_manager {
 
 // Check to see if an update happens from a version less than the minimum
 // required one.
-class MinimumVersionPolicyImpl : public PolicyImplBase {
+class MinimumVersionPolicyImpl : public PolicyInterface {
  public:
   MinimumVersionPolicyImpl() = default;
   ~MinimumVersionPolicyImpl() override = default;
 
   // If current version is less than the minimum required one, then this should
   // not block the update to be applied.
-  EvalStatus UpdateCanBeApplied(
-      EvaluationContext* ec,
-      State* state,
-      std::string* error,
-      chromeos_update_engine::ErrorCode* result,
-      chromeos_update_engine::InstallPlan* install_plan) const override;
+  EvalStatus Evaluate(EvaluationContext* ec,
+                      State* state,
+                      std::string* error,
+                      PolicyDataInterface* data) const override;
 
  protected:
   std::string PolicyName() const override { return "MinimumVersionPolicyImpl"; }

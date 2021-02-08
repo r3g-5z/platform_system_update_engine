@@ -21,23 +21,21 @@
 
 #include "update_engine/update_manager/device_policy_provider.h"
 #include "update_engine/update_manager/system_provider.h"
+#include "update_engine/update_manager/update_can_be_applied_policy_data.h"
 #include "update_engine/update_manager/weekly_time.h"
 
 using base::Time;
 using base::TimeDelta;
-using std::string;
-
 using chromeos_update_engine::ErrorCode;
-using chromeos_update_engine::InstallPlan;
+using std::string;
 
 namespace chromeos_update_manager {
 
-EvalStatus UpdateTimeRestrictionsPolicyImpl::UpdateCanBeApplied(
+EvalStatus UpdateTimeRestrictionsPolicyImpl::Evaluate(
     EvaluationContext* ec,
     State* state,
     string* error,
-    ErrorCode* result,
-    InstallPlan* install_plan) const {
+    PolicyDataInterface* data) const {
   DevicePolicyProvider* const dp_provider = state->device_policy_provider();
 
   const string* quick_fix_build_token_p =
@@ -47,9 +45,11 @@ EvalStatus UpdateTimeRestrictionsPolicyImpl::UpdateCanBeApplied(
     return EvalStatus::kContinue;
   }
 
+  auto policy_data = static_cast<UpdateCanBeAppliedPolicyData*>(data);
+
   // Set to true even if currently there are no restricted intervals. It may
   // change later and nothing else prevents download cancellation.
-  install_plan->can_download_be_canceled = true;
+  policy_data->install_plan()->can_download_be_canceled = true;
 
   TimeProvider* const time_provider = state->time_provider();
   const Time* curr_date = ec->GetValue(time_provider->var_curr_date());
@@ -71,7 +71,7 @@ EvalStatus UpdateTimeRestrictionsPolicyImpl::UpdateCanBeApplied(
   }
   for (const auto& interval : *intervals) {
     if (interval.InRange(now)) {
-      *result = ErrorCode::kOmahaUpdateDeferredPerPolicy;
+      policy_data->set_error_code(ErrorCode::kOmahaUpdateDeferredPerPolicy);
       return EvalStatus::kSucceeded;
     }
   }

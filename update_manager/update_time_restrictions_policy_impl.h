@@ -20,9 +20,7 @@
 
 #include <base/time/time.h>
 
-#include "update_engine/common/error_code.h"
-#include "update_engine/payload_consumer/install_plan.h"
-#include "update_engine/update_manager/policy_utils.h"
+#include "update_engine/update_manager/policy_interface.h"
 
 namespace chromeos_update_manager {
 
@@ -31,7 +29,7 @@ namespace chromeos_update_manager {
 // the current time falls in the range spanned by the time intervals. If the
 // current time falls in one of the intervals then the update check is
 // blocked by this policy.
-class UpdateTimeRestrictionsPolicyImpl : public PolicyImplBase {
+class UpdateTimeRestrictionsPolicyImpl : public PolicyInterface {
  public:
   UpdateTimeRestrictionsPolicyImpl() = default;
   ~UpdateTimeRestrictionsPolicyImpl() override = default;
@@ -40,12 +38,10 @@ class UpdateTimeRestrictionsPolicyImpl : public PolicyImplBase {
   // kSucceeded and sets |result| to kOmahaUpdateDeferredPerPolicy. If the
   // current time is not inside any intervals returns kContinue. In case of
   // errors, i.e. cannot access intervals or time, return kContinue.
-  EvalStatus UpdateCanBeApplied(
-      EvaluationContext* ec,
-      State* state,
-      std::string* error,
-      chromeos_update_engine::ErrorCode* result,
-      chromeos_update_engine::InstallPlan* install_plan) const override;
+  EvalStatus Evaluate(EvaluationContext* ec,
+                      State* state,
+                      std::string* error,
+                      PolicyDataInterface*) const override;
 
  protected:
   std::string PolicyName() const override {

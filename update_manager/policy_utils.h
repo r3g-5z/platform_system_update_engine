@@ -40,42 +40,12 @@
 
 namespace chromeos_update_manager {
 
-// Call the passed-in Policy method on a series of Policy implementations, until
-// one of them renders a decision by returning a value other than
-// |EvalStatus::kContinue|.
-template <typename T, typename R, typename... Args>
-EvalStatus ConsultPolicies(const std::vector<Policy const*> policies,
-                           T policy_method,
-                           EvaluationContext* ec,
-                           State* state,
-                           std::string* error,
-                           R* result,
-                           Args... args) {
-  for (auto policy : policies) {
-    EvalStatus status =
-        (policy->*policy_method)(ec, state, error, result, args...);
-    if (status != EvalStatus::kContinue) {
-      return status;
-    }
-  }
-  return EvalStatus::kContinue;
-}
-
 // Base class implementation that returns |EvalStatus::kContinue| for all
 // decisions, to be used as a base-class for various Policy facets that only
 // pertain to certain situations. This might be better folded into Policy
 // instead of using pure-virtual methods on that class.
 class PolicyImplBase : public Policy {
  public:
-  EvalStatus UpdateCanBeApplied(
-      EvaluationContext* ec,
-      State* state,
-      std::string* error,
-      chromeos_update_engine::ErrorCode* result,
-      chromeos_update_engine::InstallPlan* install_plan) const override {
-    return EvalStatus::kContinue;
-  };
-
   EvalStatus UpdateCanStart(EvaluationContext* ec,
                             State* state,
                             std::string* error,

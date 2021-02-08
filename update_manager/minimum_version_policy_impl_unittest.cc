@@ -18,6 +18,7 @@
 
 #include "update_engine/update_manager/minimum_version_policy_impl.h"
 #include "update_engine/update_manager/policy_test_utils.h"
+#include "update_engine/update_manager/update_can_be_applied_policy_data.h"
 
 using chromeos_update_engine::ErrorCode;
 using chromeos_update_engine::InstallPlan;
@@ -35,7 +36,10 @@ namespace chromeos_update_manager {
 class UmMinimumVersionPolicyImplTest : public UmPolicyTestBase {
  protected:
   UmMinimumVersionPolicyImplTest() {
-    policy_ = std::make_unique<MinimumVersionPolicyImpl>();
+    policy_data_.reset(new UpdateCanBeAppliedPolicyData(&install_plan_));
+    policy_2_.reset(new MinimumVersionPolicyImpl());
+
+    ucba_data_ = static_cast<typeof(ucba_data_)>(policy_data_.get());
   }
 
   void SetCurrentVersion(const std::string& version) {
@@ -49,13 +53,13 @@ class UmMinimumVersionPolicyImplTest : public UmPolicyTestBase {
   }
 
   void TestPolicy(const EvalStatus& expected_status) {
-    InstallPlan install_plan;
-    ErrorCode result;
-    ExpectPolicyStatus(
-        expected_status, &Policy::UpdateCanBeApplied, &result, &install_plan);
-    if (expected_status == EvalStatus::kSucceeded)
-      EXPECT_EQ(result, ErrorCode::kSuccess);
+    EvalStatus status = evaluator_->Evaluate();
+    if (status == EvalStatus::kSucceeded)
+      EXPECT_EQ(ucba_data_->error_code(), ErrorCode::kSuccess);
   }
+
+  InstallPlan install_plan_;
+  UpdateCanBeAppliedPolicyData* ucba_data_;
 };
 
 TEST_F(UmMinimumVersionPolicyImplTest, ContinueWhenCurrentVersionIsNotSet) {

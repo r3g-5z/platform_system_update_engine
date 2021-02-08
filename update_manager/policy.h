@@ -187,9 +187,6 @@ class Policy {
       EvaluationContext*, State*, std::string*, R*, Args...) const) const {
     std::string class_name = PolicyName() + "::";
 
-    if (reinterpret_cast<typeof(&Policy::UpdateCanBeApplied)>(policy_method) ==
-        &Policy::UpdateCanBeApplied)
-      return class_name + "UpdateCanBeApplied";
     if (reinterpret_cast<typeof(&Policy::UpdateCanStart)>(policy_method) ==
         &Policy::UpdateCanStart)
       return class_name + "UpdateCanStart";
@@ -204,17 +201,6 @@ class Policy {
   //
   // When the implementation fails, the method returns EvalStatus::kFailed and
   // sets the |error| string.
-
-  // UpdateCanBeApplied returns whether the given |install_plan| can be acted
-  // on at this time.  The reason for not applying is returned in |result|.
-  // The Policy may modify the passed-in |install_plan|, based on the
-  // implementation in the Policy and values provided by the EvaluationContext.
-  virtual EvalStatus UpdateCanBeApplied(
-      EvaluationContext* ec,
-      State* state,
-      std::string* error,
-      chromeos_update_engine::ErrorCode* result,
-      chromeos_update_engine::InstallPlan* install_plan) const = 0;
 
   // Returns EvalStatus::kSucceeded if either an update can start being
   // processed, or the attempt needs to be aborted. In cases where the update

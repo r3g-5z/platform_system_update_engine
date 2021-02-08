@@ -18,6 +18,7 @@
 
 #include "update_engine/update_manager/enterprise_rollback_policy_impl.h"
 #include "update_engine/update_manager/policy_test_utils.h"
+#include "update_engine/update_manager/update_can_be_applied_policy_data.h"
 #include "update_engine/update_manager/weekly_time.h"
 
 using chromeos_update_engine::ErrorCode;
@@ -28,29 +29,29 @@ namespace chromeos_update_manager {
 class UmEnterpriseRollbackPolicyImplTest : public UmPolicyTestBase {
  protected:
   UmEnterpriseRollbackPolicyImplTest() {
-    policy_ = std::make_unique<EnterpriseRollbackPolicyImpl>();
+    policy_data_.reset(new UpdateCanBeAppliedPolicyData(&install_plan_));
+    policy_2_.reset(new EnterpriseRollbackPolicyImpl());
+
+    ucba_data_ = static_cast<typeof(ucba_data_)>(policy_data_.get());
   }
+
+  InstallPlan install_plan_;
+  UpdateCanBeAppliedPolicyData* ucba_data_;
 };
 
 TEST_F(UmEnterpriseRollbackPolicyImplTest,
        ContinueWhenUpdateIsNotEnterpriseRollback) {
-  InstallPlan install_plan{.is_rollback = false};
-  ErrorCode result;
-  ExpectPolicyStatus(EvalStatus::kContinue,
-                     &Policy::UpdateCanBeApplied,
-                     &result,
-                     &install_plan);
+  install_plan_.is_rollback = false;
+
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
 }
 
 TEST_F(UmEnterpriseRollbackPolicyImplTest,
        SuccessWhenUpdateIsEnterpriseRollback) {
-  InstallPlan install_plan{.is_rollback = true};
-  ErrorCode result;
-  ExpectPolicyStatus(EvalStatus::kSucceeded,
-                     &Policy::UpdateCanBeApplied,
-                     &result,
-                     &install_plan);
-  EXPECT_EQ(result, ErrorCode::kSuccess);
+  install_plan_.is_rollback = true;
+
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_EQ(ucba_data_->error_code(), ErrorCode::kSuccess);
 }
 
 }  // namespace chromeos_update_manager

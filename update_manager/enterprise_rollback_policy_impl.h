@@ -19,26 +19,22 @@
 
 #include <string>
 
-#include "update_engine/common/error_code.h"
-#include "update_engine/payload_consumer/install_plan.h"
-#include "update_engine/update_manager/policy_utils.h"
+#include "update_engine/update_manager/policy_interface.h"
 
 namespace chromeos_update_manager {
 
 // If the update is an enterprise rollback, this should not block the update
 // to be applied.
-class EnterpriseRollbackPolicyImpl : public PolicyImplBase {
+class EnterpriseRollbackPolicyImpl : public PolicyInterface {
  public:
   EnterpriseRollbackPolicyImpl() = default;
   ~EnterpriseRollbackPolicyImpl() override = default;
 
   // Policy overrides.
-  EvalStatus UpdateCanBeApplied(
-      EvaluationContext* ec,
-      State* state,
-      std::string* error,
-      chromeos_update_engine::ErrorCode* result,
-      chromeos_update_engine::InstallPlan* install_plan) const override;
+  EvalStatus Evaluate(EvaluationContext* ec,
+                      State* state,
+                      std::string* error,
+                      PolicyDataInterface* data) const override;
 
  protected:
   std::string PolicyName() const override {

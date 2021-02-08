@@ -18,18 +18,18 @@
 
 #include <base/version.h>
 
+#include "update_engine/update_manager/update_can_be_applied_policy_data.h"
+
 using chromeos_update_engine::ErrorCode;
 using chromeos_update_engine::InstallPlan;
 using std::string;
 
 namespace chromeos_update_manager {
 
-EvalStatus MinimumVersionPolicyImpl::UpdateCanBeApplied(
-    EvaluationContext* ec,
-    State* state,
-    string* error,
-    ErrorCode* result,
-    InstallPlan* install_plan) const {
+EvalStatus MinimumVersionPolicyImpl::Evaluate(EvaluationContext* ec,
+                                              State* state,
+                                              string* error,
+                                              PolicyDataInterface* data) const {
   const base::Version* current_version(
       ec->GetValue(state->system_provider()->var_chromeos_version()));
   if (current_version == nullptr || !current_version->IsValid()) {
@@ -47,7 +47,8 @@ EvalStatus MinimumVersionPolicyImpl::UpdateCanBeApplied(
   if (*current_version < *minimum_version) {
     LOG(INFO) << "Updating from version less than minimum required"
                  ", allowing update to be applied.";
-    *result = ErrorCode::kSuccess;
+    static_cast<UpdateCanBeAppliedPolicyData*>(data)->set_error_code(
+        ErrorCode::kSuccess);
     return EvalStatus::kSucceeded;
   }
 

@@ -16,15 +16,15 @@
 
 #include "update_engine/update_manager/interactive_update_policy_impl.h"
 
+#include "update_engine/update_manager/update_can_be_applied_policy_data.h"
 #include "update_engine/update_manager/update_check_allowed_policy_data.h"
 
 using chromeos_update_engine::ErrorCode;
-using chromeos_update_engine::InstallPlan;
 
 namespace chromeos_update_manager {
 
 // Check to see if an interactive update was requested.
-EvalStatus InteractiveUpdatePolicyImpl::Evaluate(
+EvalStatus InteractiveUpdateCheckAllowedPolicyImpl::Evaluate(
     EvaluationContext* ec,
     State* state,
     std::string* error,
@@ -43,25 +43,24 @@ EvalStatus InteractiveUpdatePolicyImpl::Evaluate(
   return EvalStatus::kContinue;
 }
 
-EvalStatus InteractiveUpdatePolicyImpl::UpdateCanBeApplied(
+// TODO(b/179419726): Move after the next function to keep order better.
+EvalStatus InteractiveUpdateCanBeAppliedPolicyImpl::Evaluate(
     EvaluationContext* ec,
     State* state,
     std::string* error,
-    ErrorCode* result,
-    InstallPlan* install_plan) const {
-  bool interactive;
-  if (CheckInteractiveUpdateRequested(
-          ec, state->updater_provider(), &interactive)) {
-    LOG(INFO) << "Forced update signaled ("
-              << (interactive ? "interactive" : "periodic")
-              << "), allowing update to be applied.";
-    *result = ErrorCode::kSuccess;
+    PolicyDataInterface* data) const {
+  UpdateCheckAllowedPolicyData uca_data;
+  InteractiveUpdateCheckAllowedPolicyImpl uca_policy;
+  if (uca_policy.Evaluate(ec, state, error, &uca_data) ==
+      EvalStatus::kSucceeded) {
+    static_cast<UpdateCanBeAppliedPolicyData*>(data)->set_error_code(
+        ErrorCode::kSuccess);
     return EvalStatus::kSucceeded;
   }
   return EvalStatus::kContinue;
 }
 
-bool InteractiveUpdatePolicyImpl::CheckInteractiveUpdateRequested(
+bool InteractiveUpdateCheckAllowedPolicyImpl::CheckInteractiveUpdateRequested(
     EvaluationContext* ec,
     UpdaterProvider* const updater_provider,
     bool* interactive_out) const {

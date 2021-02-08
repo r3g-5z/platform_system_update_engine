@@ -21,6 +21,7 @@
 #include <base/time/time.h>
 
 #include "update_engine/update_manager/policy_test_utils.h"
+#include "update_engine/update_manager/update_can_be_applied_policy_data.h"
 #include "update_engine/update_manager/weekly_time.h"
 
 using base::Time;
@@ -46,7 +47,10 @@ const WeeklyTimeIntervalVector kTestIntervals{
 class UmUpdateTimeRestrictionsPolicyImplTest : public UmPolicyTestBase {
  protected:
   UmUpdateTimeRestrictionsPolicyImplTest() {
-    policy_ = std::make_unique<UpdateTimeRestrictionsPolicyImpl>();
+    policy_data_.reset(new UpdateCanBeAppliedPolicyData(&install_plan_));
+    policy_2_.reset(new UpdateTimeRestrictionsPolicyImpl());
+
+    ucba_data_ = static_cast<typeof(ucba_data_)>(policy_data_.get());
   }
 
   void TestPolicy(const Time& current_time,
@@ -58,15 +62,17 @@ class UmUpdateTimeRestrictionsPolicyImplTest : public UmPolicyTestBase {
     fake_state_.device_policy_provider()
         ->var_disallowed_time_intervals()
         ->reset(new WeeklyTimeIntervalVector(test_intervals));
-    ErrorCode result;
-    InstallPlan install_plan;
-    ExpectPolicyStatus(
-        expected_value, &Policy::UpdateCanBeApplied, &result, &install_plan);
-    EXPECT_EQ(install_plan.can_download_be_canceled,
+
+    EXPECT_EQ(expected_value, evaluator_->Evaluate());
+    EXPECT_EQ(install_plan_.can_download_be_canceled,
               expected_can_download_be_canceled);
     if (expected_value == EvalStatus::kSucceeded)
-      EXPECT_EQ(result, ErrorCode::kOmahaUpdateDeferredPerPolicy);
+      EXPECT_EQ(ucba_data_->error_code(),
+                ErrorCode::kOmahaUpdateDeferredPerPolicy);
   }
+
+  InstallPlan install_plan_;
+  UpdateCanBeAppliedPolicyData* ucba_data_;
 };
 
 // If there are no intervals, then the policy should always return |kContinue|.

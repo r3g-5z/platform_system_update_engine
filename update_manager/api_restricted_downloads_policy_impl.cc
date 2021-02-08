@@ -23,18 +23,18 @@ using std::vector;
 namespace chromeos_update_manager {
 
 // Allow the API to restrict the downloading of updates.
-EvalStatus ApiRestrictedDownloadsPolicyImpl::UpdateCanBeApplied(
+EvalStatus ApiRestrictedDownloadsPolicyImpl::Evaluate(
     EvaluationContext* ec,
     State* state,
     std::string* error,
-    ErrorCode* result,
-    chromeos_update_engine::InstallPlan* install_plan) const {
+    PolicyDataInterface* data) const {
   // Next, check to see if updates can be applied (in general).
   const UpdateRestrictions* update_restrictions_p =
       ec->GetValue(state->updater_provider()->var_update_restrictions());
   if (update_restrictions_p) {
     if (*update_restrictions_p & UpdateRestrictions::kRestrictDownloading) {
-      *result = ErrorCode::kOmahaUpdateDeferredPerPolicy;
+      static_cast<UpdateCanBeAppliedPolicyData*>(data)->set_error_code(
+          ErrorCode::kOmahaUpdateDeferredPerPolicy);
       return EvalStatus::kSucceeded;
     }
   }

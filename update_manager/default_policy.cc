@@ -19,10 +19,11 @@
 // TODO(b/179419726): Remove.
 #include "update_engine/update_manager/p2p_enabled_policy.h"
 // TODO(b/179419726): Remove.
+#include "update_engine/update_manager/update_can_be_applied_policy.h"
+#include "update_engine/update_manager/update_can_be_applied_policy_data.h"
 #include "update_engine/update_manager/update_check_allowed_policy.h"
 
 using chromeos_update_engine::ErrorCode;
-using chromeos_update_engine::InstallPlan;
 using chromeos_update_engine::SystemState;
 using std::string;
 
@@ -70,12 +71,14 @@ EvalStatus UpdateCheckAllowedPolicy::EvaluateDefault(
   return EvalStatus::kAskMeAgainLater;
 }
 
-EvalStatus DefaultPolicy::UpdateCanBeApplied(EvaluationContext* ec,
-                                             State* state,
-                                             std::string* error,
-                                             ErrorCode* result,
-                                             InstallPlan* install_plan) const {
-  *result = ErrorCode::kSuccess;
+// TODO(b/179419726): Move to update_can_be_applied.cc.
+EvalStatus UpdateCanBeAppliedPolicy::EvaluateDefault(
+    EvaluationContext* ec,
+    State* state,
+    std::string* error,
+    PolicyDataInterface* data) const {
+  static_cast<UpdateCanBeAppliedPolicyData*>(data)->set_error_code(
+      ErrorCode::kSuccess);
   return EvalStatus::kSucceeded;
 }
 
