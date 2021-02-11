@@ -29,10 +29,9 @@ import io
 import itertools
 import os
 import unittest
+from unittest import mock  # pylint: disable=import-error
 
 from six.moves import zip
-
-import mock  # pylint: disable=import-error
 
 from update_payload import checker
 from update_payload import common

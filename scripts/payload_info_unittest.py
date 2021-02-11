@@ -25,12 +25,11 @@ from __future__ import print_function
 
 import sys
 import unittest
+from unittest import mock
 
 from contextlib import contextmanager
 
 from six.moves import StringIO
-
-import mock  # pylint: disable=import-error
 
 import payload_info
 import update_payload
