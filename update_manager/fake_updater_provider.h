@@ -79,6 +79,10 @@ class FakeUpdaterProvider : public UpdaterProvider {
     return &var_forced_update_requested_;
   }
 
+  FakeVariable<bool>* var_running_from_minios() override {
+    return &var_running_from_minios_;
+  }
+
   FakeVariable<UpdateRestrictions>* var_update_restrictions() override {
     return &var_update_restrictions_;
   }
@@ -110,6 +114,8 @@ class FakeUpdaterProvider : public UpdaterProvider {
       "server_dictated_poll_interval", kVariableModePoll};
   FakeVariable<UpdateRequestStatus> var_forced_update_requested_{
       "forced_update_requested", kVariableModeAsync};
+  FakeVariable<bool> var_running_from_minios_{"running_from_minios",
+                                              kVariableModeConst};
   FakeVariable<UpdateRestrictions> var_update_restrictions_{
       "update_restrictions", kVariableModePoll};
   FakeVariable<int64_t> var_test_update_check_interval_timeout_{

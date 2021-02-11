@@ -38,6 +38,7 @@
 #include "update_engine/update_manager/official_build_check_policy_impl.h"
 #include "update_engine/update_manager/out_of_box_experience_policy_impl.h"
 #include "update_engine/update_manager/policy_utils.h"
+#include "update_engine/update_manager/recovery_policy.h"
 #include "update_engine/update_manager/shill_provider.h"
 #include "update_engine/update_manager/update_time_restrictions_policy_impl.h"
 
@@ -229,6 +230,7 @@ EvalStatus ChromeOSPolicy::UpdateCheckAllowed(EvaluationContext* ec,
   result->interactive = false;
   result->quick_fix_build_token.clear();
 
+  RecoveryPolicy recovery_policy;
   EnoughSlotsAbUpdatesPolicyImpl enough_slots_ab_updates_policy;
   EnterpriseDevicePolicyImpl enterprise_device_policy;
   OnlyUpdateOfficialBuildsPolicyImpl only_update_official_builds_policy;
@@ -238,6 +240,9 @@ EvalStatus ChromeOSPolicy::UpdateCheckAllowed(EvaluationContext* ec,
       kNextUpdateCheckPolicyConstants);
 
   vector<Policy const*> policies_to_consult = {
+      // If in recovery mode, always check for update.
+      &recovery_policy,
+
       // Do not perform any updates if there are not enough slots to do A/B
       // updates.
       &enough_slots_ab_updates_policy,
