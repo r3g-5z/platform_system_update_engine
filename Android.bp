@@ -15,6 +15,23 @@
 //
 
 // AIDL interface between libupdate_engine and framework.jar
+package {
+    default_applicable_licenses: ["system_update_engine_license"],
+}
+
+// Added automatically by a large-scale-change
+// See: http://go/android-license-faq
+license {
+    name: "system_update_engine_license",
+    visibility: [":__subpackages__"],
+    license_kinds: [
+        "SPDX-license-identifier-Apache-2.0",
+    ],
+    license_text: [
+        "NOTICE",
+    ],
+}
+
 filegroup {
     name: "libupdate_engine_aidl",
     srcs: [
@@ -315,6 +332,7 @@ cc_defaults {
         "PlatformProperties",
     ],
     shared_libs: [
+        "apex_aidl_interface-cpp",
         "libandroid_net",
         "libbase",
         "libbinder",
@@ -350,6 +368,7 @@ cc_library_static {
     srcs: [
         ":libupdate_engine_aidl",
         "common/system_state.cc",
+        "aosp/apex_handler_android.cc",
         "aosp/binder_service_android.cc",
         "aosp/binder_service_stable_android.cc",
         "aosp/daemon_android.cc",
@@ -723,6 +742,7 @@ cc_test {
     test_suites: ["device-tests"],
 
     srcs: [
+        "aosp/apex_handler_android_unittest.cc",
         "aosp/dynamic_partition_control_android_unittest.cc",
         "aosp/update_attempter_android_unittest.cc",
         "certificate_checker_unittest.cc",
