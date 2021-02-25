@@ -580,6 +580,8 @@ class UpdateAttempter : public ActionProcessorDelegate,
   std::shared_ptr<chromeos_update_manager::UpdateCheckAllowedPolicyData>
       policy_data_;
 
+  base::WeakPtrFactory<UpdateAttempter> weak_ptr_factory_;
+
   DISALLOW_COPY_AND_ASSIGN(UpdateAttempter);
 };
 

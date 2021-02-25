@@ -128,7 +128,8 @@ ErrorCode GetErrorCodeForAction(AbstractAction* action, ErrorCode code) {
 UpdateAttempter::UpdateAttempter(CertificateChecker* cert_checker)
     : processor_(new ActionProcessor()),
       cert_checker_(cert_checker),
-      is_install_(false) {}
+      is_install_(false),
+      weak_ptr_factory_(this) {}
 
 UpdateAttempter::~UpdateAttempter() {
   // Prevent any DBus communication from UpdateAttempter when shutting down the
@@ -173,7 +174,8 @@ bool UpdateAttempter::ScheduleUpdates() {
   SystemState::Get()->update_manager()->PolicyRequest2(
       std::make_unique<UpdateCheckAllowedPolicy>(),
       policy_data_,  // Do not move because we don't want transfer of ownership.
-      base::Bind(&UpdateAttempter::OnUpdateScheduled, base::Unretained(this)));
+      base::Bind(&UpdateAttempter::OnUpdateScheduled,
+                 weak_ptr_factory_.GetWeakPtr()));
 
   waiting_for_scheduled_check_ = true;
   return true;
@@ -195,14 +197,14 @@ bool UpdateAttempter::StartUpdater() {
 
   // Broadcast the update engine status on startup to ensure consistent system
   // state on crashes.
-  MessageLoop::current()->PostTask(
-      FROM_HERE,
-      base::Bind(&UpdateAttempter::BroadcastStatus, base::Unretained(this)));
+  MessageLoop::current()->PostTask(FROM_HERE,
+                                   base::Bind(&UpdateAttempter::BroadcastStatus,
+                                              weak_ptr_factory_.GetWeakPtr()));
 
   MessageLoop::current()->PostTask(
       FROM_HERE,
       base::Bind(&UpdateAttempter::UpdateEngineStarted,
-                 base::Unretained(this)));
+                 weak_ptr_factory_.GetWeakPtr()));
   return true;
 }
 
