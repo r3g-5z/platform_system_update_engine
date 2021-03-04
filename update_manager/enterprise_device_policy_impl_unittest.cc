@@ -22,6 +22,8 @@
 #include "update_engine/update_manager/policy_test_utils.h"
 #include "update_engine/update_manager/update_check_allowed_policy_data.h"
 
+using std::string;
+
 namespace chromeos_update_manager {
 
 class UmEnterpriseDevicePolicyImplTest : public UmPolicyTestBase {
@@ -33,11 +35,41 @@ class UmEnterpriseDevicePolicyImplTest : public UmPolicyTestBase {
     uca_data_ = static_cast<typeof(uca_data_)>(policy_data_.get());
   }
 
-  void SetUpDefaultState() override {
-    UmPolicyTestBase::SetUpDefaultState();
-
+  void SetUp() override {
+    UmPolicyTestBase::SetUp();
     fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
         new bool(true));
+  }
+
+  // Sets the policies required for a kiosk app to control Chrome OS version:
+  // - AllowKioskAppControlChromeVersion = True
+  // - UpdateDisabled = True
+  // In the kiosk app manifest:
+  // - RequiredPlatformVersion = 1234.
+  void SetKioskAppControlsChromeOsVersion() {
+    fake_state_.device_policy_provider()
+        ->var_allow_kiosk_app_control_chrome_version()
+        ->reset(new bool(true));
+    fake_state_.device_policy_provider()->var_update_disabled()->reset(
+        new bool(true));
+    fake_state_.system_provider()->var_kiosk_required_platform_version()->reset(
+        new string("1234."));
+  }
+
+  // Sets up a test with the value of RollbackToTargetVersion policy (and
+  // whether it's set), and returns the value of
+  // UpdateCheckParams.rollback_allowed.
+  bool TestRollbackAllowed(bool set_policy,
+                           RollbackToTargetVersion rollback_to_target_version) {
+    if (set_policy) {
+      // Override RollbackToTargetVersion device policy attribute.
+      fake_state_.device_policy_provider()
+          ->var_rollback_to_target_version()
+          ->reset(new RollbackToTargetVersion(rollback_to_target_version));
+    }
+
+    EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+    return uca_data_->update_check_params.rollback_allowed;
   }
 
   UpdateCheckAllowedPolicyData* uca_data_;
@@ -156,6 +188,121 @@ TEST_F(UmEnterpriseDevicePolicyImplTest, QuickFixBuildToken) {
       new std::string("token"));
   EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
   EXPECT_EQ(uca_data_->update_check_params.quick_fix_build_token, "token");
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest,
+       UpdateCheckAllowedRollbackAndPowerwash) {
+  EXPECT_TRUE(TestRollbackAllowed(
+      true, RollbackToTargetVersion::kRollbackAndPowerwash));
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest,
+       UpdateCheckAllowedRollbackAndRestoreIfPossible) {
+  // We're doing rollback even if we don't support data save and restore.
+  EXPECT_TRUE(TestRollbackAllowed(
+      true, RollbackToTargetVersion::kRollbackAndRestoreIfPossible));
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest, UpdateCheckAllowedRollbackDisabled) {
+  EXPECT_FALSE(TestRollbackAllowed(true, RollbackToTargetVersion::kDisabled));
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest,
+       UpdateCheckAllowedRollbackUnspecified) {
+  EXPECT_FALSE(
+      TestRollbackAllowed(true, RollbackToTargetVersion::kUnspecified));
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest, UpdateCheckAllowedRollbackNotSet) {
+  EXPECT_FALSE(
+      TestRollbackAllowed(false, RollbackToTargetVersion::kUnspecified));
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest,
+       UpdateCheckAllowedKioskRollbackAllowed) {
+  SetKioskAppControlsChromeOsVersion();
+
+  EXPECT_TRUE(TestRollbackAllowed(
+      true, RollbackToTargetVersion::kRollbackAndPowerwash));
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest,
+       UpdateCheckAllowedKioskRollbackDisabled) {
+  SetKioskAppControlsChromeOsVersion();
+
+  EXPECT_FALSE(TestRollbackAllowed(true, RollbackToTargetVersion::kDisabled));
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest,
+       UpdateCheckAllowedKioskRollbackUnspecified) {
+  SetKioskAppControlsChromeOsVersion();
+
+  EXPECT_FALSE(
+      TestRollbackAllowed(true, RollbackToTargetVersion::kUnspecified));
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest,
+       UpdateCheckAllowedKioskRollbackNotSet) {
+  SetKioskAppControlsChromeOsVersion();
+
+  EXPECT_FALSE(
+      TestRollbackAllowed(false, RollbackToTargetVersion::kUnspecified));
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest, UpdateCheckAllowedKioskPin) {
+  SetKioskAppControlsChromeOsVersion();
+
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+  EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
+  EXPECT_EQ("1234.", uca_data_->update_check_params.target_version_prefix);
+  EXPECT_FALSE(uca_data_->update_check_params.interactive);
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest,
+       UpdateCheckAllowedDisabledWhenNoKioskPin) {
+  // Disable AU policy is set but kiosk pin policy is set to false. Update is
+  // disabled in such case.
+  fake_state_.device_policy_provider()->var_update_disabled()->reset(
+      new bool(true));
+  fake_state_.device_policy_provider()
+      ->var_allow_kiosk_app_control_chrome_version()
+      ->reset(new bool(false));
+
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest,
+       UpdateCheckAllowedKioskPinWithNoRequiredVersion) {
+  // AU disabled, allow kiosk to pin but there is no kiosk required platform
+  // version (i.e. app does not provide the info). Update to latest in such
+  // case.
+  fake_state_.device_policy_provider()->var_update_disabled()->reset(
+      new bool(true));
+  fake_state_.device_policy_provider()
+      ->var_allow_kiosk_app_control_chrome_version()
+      ->reset(new bool(true));
+  fake_state_.system_provider()->var_kiosk_required_platform_version()->reset(
+      new string());
+
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+  EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
+  EXPECT_TRUE(uca_data_->update_check_params.target_version_prefix.empty());
+  EXPECT_FALSE(uca_data_->update_check_params.interactive);
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest,
+       UpdateCheckAllowedKioskPinWithFailedGetRequiredVersionCall) {
+  // AU disabled, allow kiosk to pin but D-Bus call to get required platform
+  // version failed. Defer update check in this case.
+  fake_state_.device_policy_provider()->var_update_disabled()->reset(
+      new bool(true));
+  fake_state_.device_policy_provider()
+      ->var_allow_kiosk_app_control_chrome_version()
+      ->reset(new bool(true));
+  fake_state_.system_provider()->var_kiosk_required_platform_version()->reset(
+      nullptr);
+
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 }
 
 }  // namespace chromeos_update_manager
