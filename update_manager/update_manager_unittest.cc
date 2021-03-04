@@ -186,16 +186,16 @@ static void AccumulateCallsCallback(vector<EvalStatus>* acc,
 // this tests cover all policy requests as defined in Policy.
 TEST_F(UmUpdateManagerTest, PolicyRequestCallUpdateCheckAllowed) {
   EXPECT_EQ(EvalStatus::kSucceeded,
-            umut_->PolicyRequest2(std::make_unique<SimplePolicy>(),
-                                  std::make_shared<PolicyDataInterface>()));
+            umut_->PolicyRequest(std::make_unique<SimplePolicy>(),
+                                 std::make_shared<PolicyDataInterface>()));
 }
 
 TEST_F(UmUpdateManagerTest, PolicyRequestCallsDefaultOnError) {
   // Tests that the default evaluation is called when the method fails, which
   // will set this as true.
   EXPECT_EQ(EvalStatus::kSucceeded,
-            umut_->PolicyRequest2(std::make_unique<FailingPolicy>(),
-                                  std::make_shared<PolicyDataInterface>()));
+            umut_->PolicyRequest(std::make_unique<FailingPolicy>(),
+                                 std::make_shared<PolicyDataInterface>()));
 }
 
 // This test only applies to debug builds where DCHECK is enabled.
@@ -204,8 +204,7 @@ TEST_F(UmUpdateManagerTest, PolicyRequestDoesntBlockDeathTest) {
   // The update manager should die (DCHECK) if a policy called synchronously
   // returns a kAskMeAgainLater value.
   PolicyDataInterface data;
-  EXPECT_DEATH(umut_->PolicyRequest2(std::make_unique<LazyPolicy>(), &data),
-               "");
+  EXPECT_DEATH(umut_->PolicyRequest(std::make_unique<LazyPolicy>(), &data), "");
 }
 #endif  // DCHECK_IS_ON
 
@@ -217,9 +216,9 @@ TEST_F(UmUpdateManagerTest, AsyncPolicyRequestDelaysEvaluation) {
   vector<EvalStatus> calls;
   Callback<void(EvalStatus)> callback = Bind(AccumulateCallsCallback, &calls);
 
-  umut_->PolicyRequest2(std::make_unique<FailingPolicy>(),
-                        std::make_shared<PolicyDataInterface>(),
-                        callback);
+  umut_->PolicyRequest(std::make_unique<FailingPolicy>(),
+                       std::make_shared<PolicyDataInterface>(),
+                       callback);
   // The callback should wait until we run the main loop for it to be executed.
   EXPECT_EQ(0U, calls.size());
   MessageLoopRunMaxIterations(MessageLoop::current(), 100);
@@ -233,9 +232,9 @@ TEST_F(UmUpdateManagerTest, AsyncPolicyRequestTimeoutDoesNotFire) {
   Callback<void(EvalStatus)> callback = Bind(AccumulateCallsCallback, &calls);
 
   int num_called = 0;
-  umut_->PolicyRequest2(std::make_unique<FailingPolicy>(&num_called),
-                        std::make_shared<PolicyDataInterface>(),
-                        callback);
+  umut_->PolicyRequest(std::make_unique<FailingPolicy>(&num_called),
+                       std::make_shared<PolicyDataInterface>(),
+                       callback);
   // Run the main loop, ensure that policy was attempted once before deferring
   // to the default.
   MessageLoopRunMaxIterations(MessageLoop::current(), 100);
@@ -263,7 +262,7 @@ TEST_F(UmUpdateManagerTest, AsyncPolicyRequestTimesOut) {
       0,
       fake_clock->GetWallclockTime() + TimeDelta::FromSeconds(3),
       &num_called);
-  umut_->PolicyRequest2(
+  umut_->PolicyRequest(
       std::move(policy), std::make_shared<PolicyDataInterface>(), callback);
   // Run the main loop, ensure that policy was attempted once but the callback
   // was not invoked.

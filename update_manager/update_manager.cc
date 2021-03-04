@@ -31,7 +31,7 @@ UpdateManager::UpdateManager(base::TimeDelta evaluation_timeout,
 
 UpdateManager::~UpdateManager() {}
 
-EvalStatus UpdateManager::PolicyRequest2(
+EvalStatus UpdateManager::PolicyRequest(
     std::unique_ptr<PolicyInterface> policy,
     std::shared_ptr<PolicyDataInterface> data) {
   return base::MakeRefCounted<PolicyEvaluator>(
@@ -42,9 +42,9 @@ EvalStatus UpdateManager::PolicyRequest2(
       ->Evaluate();
 }
 
-void UpdateManager::PolicyRequest2(std::unique_ptr<PolicyInterface> policy,
-                                   std::shared_ptr<PolicyDataInterface> data,
-                                   base::Callback<void(EvalStatus)> callback) {
+void UpdateManager::PolicyRequest(std::unique_ptr<PolicyInterface> policy,
+                                  std::shared_ptr<PolicyDataInterface> data,
+                                  base::Callback<void(EvalStatus)> callback) {
   auto ec = std::make_unique<EvaluationContext>(
       evaluation_timeout_,
       expiration_timeout_,

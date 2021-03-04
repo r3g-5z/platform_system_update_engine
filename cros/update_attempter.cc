@@ -171,7 +171,7 @@ bool UpdateAttempter::ScheduleUpdates() {
   // We limit the async policy request to a reasonably short time, to avoid a
   // starvation due to a transient bug.
   policy_data_.reset(new UpdateCheckAllowedPolicyData());
-  SystemState::Get()->update_manager()->PolicyRequest2(
+  SystemState::Get()->update_manager()->PolicyRequest(
       std::make_unique<UpdateCheckAllowedPolicy>(),
       policy_data_,  // Do not move because we don't want transfer of ownership.
       base::Bind(&UpdateAttempter::OnUpdateScheduled,

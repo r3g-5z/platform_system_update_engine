@@ -54,8 +54,8 @@ class UpdateManager {
   //
   // TODO(b/179419726): Remove "2" from the name once |PolicyRequest| functions
   // have been deprecated.
-  EvalStatus PolicyRequest2(std::unique_ptr<PolicyInterface> policy,
-                            std::shared_ptr<PolicyDataInterface> data);
+  EvalStatus PolicyRequest(std::unique_ptr<PolicyInterface> policy,
+                           std::shared_ptr<PolicyDataInterface> data);
 
   // Similar to the function above but the results are returned at a later time
   // using the given |callback| function.
@@ -64,9 +64,9 @@ class UpdateManager {
   // until another status is returned. If the policy implementation based
   // its return value solely on const variables, the callback will be called
   // with the EvalStatus::kAskMeAgainLater status (which indicates an error).
-  void PolicyRequest2(std::unique_ptr<PolicyInterface> policy,
-                      std::shared_ptr<PolicyDataInterface> data,
-                      base::Callback<void(EvalStatus)> callback);
+  void PolicyRequest(std::unique_ptr<PolicyInterface> policy,
+                     std::shared_ptr<PolicyDataInterface> data,
+                     base::Callback<void(EvalStatus)> callback);
 
   // Returns instance of update time restrictions monitor if |install_plan|
   // requires one. Otherwise returns nullptr.

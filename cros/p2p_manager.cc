@@ -233,7 +233,7 @@ bool P2PManagerImpl::IsP2PEnabled() {
   if (!waiting_for_enabled_status_change_) {
     // Get and store an initial value.
 
-    auto eval_status = update_manager_->PolicyRequest2(
+    auto eval_status = update_manager_->PolicyRequest(
         std::make_unique<P2PEnabledPolicy>(), policy_data_);
     if (eval_status == EvalStatus::kFailed) {
       policy_data_->set_enabled(false);
@@ -692,7 +692,7 @@ void P2PManagerImpl::ScheduleEnabledStatusChange() {
     return;
 
   policy_data_->set_prev_enabled(policy_data_->enabled());
-  update_manager_->PolicyRequest2(
+  update_manager_->PolicyRequest(
       std::make_unique<P2PEnabledChangedPolicy>(),
       policy_data_,
       Bind(&P2PManagerImpl::OnEnabledStatusChange, base::Unretained(this)));

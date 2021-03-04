@@ -259,7 +259,7 @@ void OmahaResponseHandlerAction::PerformAction() {
   // it can be applied at this time (or at all).
   auto policy_data =
       std::make_shared<UpdateCanBeAppliedPolicyData>(&install_plan_);
-  SystemState::Get()->update_manager()->PolicyRequest2(
+  SystemState::Get()->update_manager()->PolicyRequest(
       std::make_unique<UpdateCanBeAppliedPolicy>(), policy_data);
   completer.set_code(policy_data->error_code());
 
