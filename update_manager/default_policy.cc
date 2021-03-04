@@ -16,8 +16,6 @@
 
 #include "update_engine/common/system_state.h"
 // TODO(b/179419726): Remove.
-#include "update_engine/update_manager/p2p_enabled_policy.h"
-// TODO(b/179419726): Remove.
 #include "update_engine/update_manager/update_can_be_applied_policy.h"
 #include "update_engine/update_manager/update_can_be_applied_policy_data.h"
 #include "update_engine/update_manager/update_check_allowed_policy.h"
@@ -78,28 +76,6 @@ EvalStatus UpdateCanBeAppliedPolicy::EvaluateDefault(
     PolicyDataInterface* data) const {
   static_cast<UpdateCanBeAppliedPolicyData*>(data)->set_error_code(
       ErrorCode::kSuccess);
-  return EvalStatus::kSucceeded;
-}
-
-// TODO(b/179419726): Move to p2p_enabled_policy.cc.
-EvalStatus P2PEnabledPolicy::EvaluateDefault(EvaluationContext* ec,
-                                             State* state,
-                                             std::string* error,
-                                             PolicyDataInterface* data) const {
-  static_cast<P2PEnabledPolicyData*>(data)->set_enabled(false);
-  return EvalStatus::kSucceeded;
-}
-
-// TODO(b/179419726): Move to p2p_enabled_policy.cc.
-EvalStatus P2PEnabledChangedPolicy::EvaluateDefault(
-    EvaluationContext* ec,
-    State* state,
-    std::string* error,
-    PolicyDataInterface* data) const {
-  // This policy will always prohibit P2P, so this is signaling to the caller
-  // that the decision is final (because the current value is the same as the
-  // previous one) and there's no need to issue another call.
-  static_cast<P2PEnabledPolicyData*>(data)->set_enabled(false);
   return EvalStatus::kSucceeded;
 }
 

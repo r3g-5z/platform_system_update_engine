@@ -34,8 +34,6 @@
 #include "update_engine/update_manager/next_update_check_policy_impl.h"
 #include "update_engine/update_manager/official_build_check_policy_impl.h"
 #include "update_engine/update_manager/out_of_box_experience_policy_impl.h"
-// TODO(b/179419726): Remove.
-#include "update_engine/update_manager/p2p_enabled_policy.h"
 #include "update_engine/update_manager/policy_utils.h"
 #include "update_engine/update_manager/recovery_policy.h"
 #include "update_engine/update_manager/shill_provider.h"
@@ -56,10 +54,6 @@ using std::string;
 using std::vector;
 
 namespace chromeos_update_manager {
-
-// TODO(b/179419726): Move to p2p_enabled_policy.cc.
-const int kMaxP2PAttempts = 10;
-const int kMaxP2PAttemptsPeriodInSeconds = 5 * 24 * 60 * 60;
 
 // TODO(b/179419726): Move to update_check_allowed_policy.cc.
 EvalStatus UpdateCheckAllowedPolicy::Evaluate(EvaluationContext* ec,
@@ -161,58 +155,6 @@ EvalStatus UpdateCanBeAppliedPolicy::Evaluate(EvaluationContext* ec,
   static_cast<UpdateCanBeAppliedPolicyData*>(data)->set_error_code(
       ErrorCode::kSuccess);
   return EvalStatus::kSucceeded;
-}
-
-// TODO(b/179419726): Move to p2p_enabled_policy.cc.
-EvalStatus P2PEnabledPolicy::Evaluate(EvaluationContext* ec,
-                                      State* state,
-                                      string* error,
-                                      PolicyDataInterface* data) const {
-  bool enabled = false;
-
-  // Determine whether use of P2P is allowed by policy. Even if P2P is not
-  // explicitly allowed, we allow it if the device is enterprise enrolled (that
-  // is, missing or empty owner string).
-  DevicePolicyProvider* const dp_provider = state->device_policy_provider();
-  const bool* device_policy_is_loaded_p =
-      ec->GetValue(dp_provider->var_device_policy_is_loaded());
-  if (device_policy_is_loaded_p && *device_policy_is_loaded_p) {
-    const bool* policy_au_p2p_enabled_p =
-        ec->GetValue(dp_provider->var_au_p2p_enabled());
-    if (policy_au_p2p_enabled_p) {
-      enabled = *policy_au_p2p_enabled_p;
-    } else {
-      const bool* policy_has_owner_p =
-          ec->GetValue(dp_provider->var_has_owner());
-      if (!policy_has_owner_p || !*policy_has_owner_p)
-        enabled = true;
-    }
-  }
-
-  // Enable P2P, if so mandated by the updater configuration. This is additive
-  // to whether or not P2P is enabled by device policy.
-  if (!enabled) {
-    const bool* updater_p2p_enabled_p =
-        ec->GetValue(state->updater_provider()->var_p2p_enabled());
-    enabled = updater_p2p_enabled_p && *updater_p2p_enabled_p;
-  }
-
-  static_cast<P2PEnabledPolicyData*>(data)->set_enabled(enabled);
-  return EvalStatus::kSucceeded;
-}
-
-// TODO(b/179419726): Move to p2p_enabled_policy.cc.
-EvalStatus P2PEnabledChangedPolicy::Evaluate(EvaluationContext* ec,
-                                             State* state,
-                                             string* error,
-                                             PolicyDataInterface* data) const {
-  P2PEnabledPolicy policy;
-  EvalStatus status = policy.Evaluate(ec, state, error, data);
-  auto p2p_data = static_cast<P2PEnabledPolicyData*>(data);
-  if (status == EvalStatus::kSucceeded &&
-      p2p_data->enabled() == p2p_data->prev_enabled())
-    return EvalStatus::kAskMeAgainLater;
-  return status;
 }
 
 }  // namespace chromeos_update_manager

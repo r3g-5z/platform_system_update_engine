@@ -18,8 +18,6 @@
 // TODO(b/179419726): Remove.
 #include "update_engine/update_manager/enterprise_device_policy_impl.h"
 #include "update_engine/update_manager/next_update_check_policy_impl.h"
-// TODO(b/179419726): Remove.
-#include "update_engine/update_manager/p2p_enabled_policy.h"
 #include "update_engine/update_manager/policy_test_utils.h"
 #include "update_engine/update_manager/update_can_be_applied_policy_data.h"
 #include "update_engine/update_manager/update_can_start_policy.h"
@@ -443,66 +441,6 @@ TEST_F(UmEnterprisePolicyTest,
   fake_state_.system_provider()->var_kiosk_required_platform_version()->reset(
       nullptr);
 
-  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
-}
-
-class UmP2PEnabledPolicyTest : public UmPolicyTestBase {
- protected:
-  UmP2PEnabledPolicyTest() : UmPolicyTestBase() {
-    policy_data_.reset(new P2PEnabledPolicyData());
-    policy_2_.reset(new P2PEnabledPolicy());
-
-    p2p_data_ = static_cast<typeof(p2p_data_)>(policy_data_.get());
-  }
-
-  void SetUp() override {
-    UmPolicyTestBase::SetUp();
-    fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
-        new bool(true));
-    fake_state_.device_policy_provider()->var_has_owner()->reset(
-        new bool(true));
-  }
-
-  P2PEnabledPolicyData* p2p_data_;
-};
-
-TEST_F(UmP2PEnabledPolicyTest, NotAllowed) {
-  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
-  EXPECT_FALSE(p2p_data_->enabled());
-}
-
-TEST_F(UmP2PEnabledPolicyTest, AllowedByDevicePolicy) {
-  fake_state_.device_policy_provider()->var_au_p2p_enabled()->reset(
-      new bool(true));
-
-  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
-  EXPECT_TRUE(p2p_data_->enabled());
-}
-
-TEST_F(UmP2PEnabledPolicyTest, AllowedByUpdater) {
-  fake_state_.updater_provider()->var_p2p_enabled()->reset(new bool(true));
-
-  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
-  EXPECT_TRUE(p2p_data_->enabled());
-}
-
-TEST_F(UmP2PEnabledPolicyTest, DeviceEnterpriseEnrolled) {
-  fake_state_.device_policy_provider()->var_au_p2p_enabled()->reset(nullptr);
-  fake_state_.device_policy_provider()->var_has_owner()->reset(new bool(false));
-
-  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
-  EXPECT_TRUE(p2p_data_->enabled());
-}
-
-class UmP2PEnabledChangedPolicyTest : public UmPolicyTestBase {
- protected:
-  UmP2PEnabledChangedPolicyTest() : UmPolicyTestBase() {
-    policy_data_.reset(new P2PEnabledPolicyData());
-    policy_2_.reset(new P2PEnabledChangedPolicy());
-  }
-};
-
-TEST_F(UmP2PEnabledChangedPolicyTest, Blocks) {
   EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 }
 
