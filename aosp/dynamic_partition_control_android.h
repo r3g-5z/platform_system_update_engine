@@ -20,6 +20,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <base/files/file_util.h>
@@ -33,6 +34,10 @@ namespace chromeos_update_engine {
 
 class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
  public:
+  // A directory where all partitions mapped by VABC is expected to be found.
+  // Per earlier discussion with VAB team, this directory is unlikely to change.
+  // So we declare it as a constant here.
+  static constexpr std::string_view VABC_DEVICE_DIR = "/dev/block/mapper/";
   DynamicPartitionControlAndroid();
   ~DynamicPartitionControlAndroid();
 
@@ -58,7 +63,9 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
   bool ResetUpdate(PrefsInterface* prefs) override;
 
   bool ListDynamicPartitionsForSlot(
-      uint32_t current_slot, std::vector<std::string>* partitions) override;
+      uint32_t slot,
+      uint32_t current_slot,
+      std::vector<std::string>* partitions) override;
 
   bool VerifyExtentsForUntouchedPartitions(
       uint32_t source_slot,
@@ -104,6 +111,8 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
   bool UnmapAllPartitions() override;
 
   bool IsDynamicPartition(const std::string& part_name) override;
+
+  bool UpdateUsesSnapshotCompression() override;
 
  protected:
   // These functions are exposed for testing.

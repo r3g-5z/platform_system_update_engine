@@ -106,6 +106,10 @@ class PartitionProcessor : public base::DelegateSimpleThread::Delegate {
     if (!snapshot_enabled || !IsDynamicPartition(new_part_.name)) {
       return;
     }
+    // Skip cow size estimation if VABC isn't enabled
+    if (!config_.target.dynamic_partition_metadata->vabc_enabled()) {
+      return;
+    }
     if (!old_part_.path.empty()) {
       auto generator = MergeSequenceGenerator::Create(*aops_);
       if (!generator || !generator->Generate(cow_merge_sequence_)) {
@@ -127,13 +131,12 @@ class PartitionProcessor : public base::DelegateSimpleThread::Delegate {
     for (const AnnotatedOperation& aop : *aops_) {
       *operations.Add() = aop.op;
     }
-    // TODO(177936022) Skip cow size estimation if VABC isn't enabled
     *cow_size_ = EstimateCowSize(
-        source_fd,
         std::move(target_fd),
-        operations,
+        std::move(operations),
         {cow_merge_sequence_->begin(), cow_merge_sequence_->end()},
-        config_.block_size);
+        config_.block_size,
+        config_.target.dynamic_partition_metadata->vabc_compression_param());
     LOG(INFO) << "Estimated COW size for partition: " << new_part_.name << " "
               << *cow_size_;
   }

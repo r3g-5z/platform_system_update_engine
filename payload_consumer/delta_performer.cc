@@ -521,27 +521,24 @@ bool DeltaPerformer::Write(const void* bytes, size_t count, ErrorCode* error) {
     if (!CanPerformInstallOperation(op))
       return true;
 
-    // Validate the operation only if the metadata signature is present.
-    // Otherwise, keep the old behavior. This serves as a knob to disable
-    // the validation logic in case we find some regression after rollout.
-    // NOTE: If hash checks are mandatory and if metadata_signature is empty,
-    // we would have already failed in ParsePayloadMetadata method and thus not
-    // even be here. So no need to handle that case again here.
-    if (!payload_->metadata_signature.empty()) {
-      // Note: Validate must be called only if CanPerformInstallOperation is
-      // called. Otherwise, we might be failing operations before even if there
-      // isn't sufficient data to compute the proper hash.
-      *error = ValidateOperationHash(op);
-      if (*error != ErrorCode::kSuccess) {
-        if (install_plan_->hash_checks_mandatory) {
-          LOG(ERROR) << "Mandatory operation hash check failed";
-          return false;
-        }
-
-        // For non-mandatory cases, just send a UMA stat.
-        LOG(WARNING) << "Ignoring operation validation errors";
-        *error = ErrorCode::kSuccess;
+    // Validate the operation unconditionally. This helps prevent the
+    // exploitation of vulnerabilities in the patching libraries, e.g. bspatch.
+    // The hash of the patch data for a given operation is embedded in the
+    // payload metadata; and thus has been verified against the public key on
+    // device.
+    // Note: Validate must be called only if CanPerformInstallOperation is
+    // called. Otherwise, we might be failing operations before even if there
+    // isn't sufficient data to compute the proper hash.
+    *error = ValidateOperationHash(op);
+    if (*error != ErrorCode::kSuccess) {
+      if (install_plan_->hash_checks_mandatory) {
+        LOG(ERROR) << "Mandatory operation hash check failed";
+        return false;
       }
+
+      // For non-mandatory cases, just send a UMA stat.
+      LOG(WARNING) << "Ignoring operation validation errors";
+      *error = ErrorCode::kSuccess;
     }
 
     // Makes sure we unblock exit when this operation completes.
@@ -644,11 +641,6 @@ bool DeltaPerformer::ParseManifestPartitions(ErrorCode* error) {
     }
   }
 
-  auto dynamic_control = boot_control_->GetDynamicPartitionControl();
-  CHECK_NE(dynamic_control, nullptr);
-  TEST_AND_RETURN_FALSE(dynamic_control->ListDynamicPartitionsForSlot(
-      install_plan_->target_slot, &dynamic_partitions_));
-
   // Partitions in manifest are no longer needed after preparing partitions.
   manifest_.clear_partitions();
   // TODO(xunchang) TBD: allow partial update only on devices with dynamic
@@ -676,6 +668,7 @@ bool DeltaPerformer::ParseManifestPartitions(ErrorCode* error) {
     std::vector<std::string> dynamic_partitions;
     if (!boot_control_->GetDynamicPartitionControl()
              ->ListDynamicPartitionsForSlot(install_plan_->source_slot,
+                                            boot_control_->GetCurrentSlot(),
                                             &dynamic_partitions)) {
       LOG(ERROR) << "Failed to load dynamic partitions from slot "
                  << install_plan_->source_slot;
@@ -809,6 +802,7 @@ bool DeltaPerformer::PreparePartitionsForUpdate(
   } else {
     LOG(INFO) << "Preparing partitions for new update. last hash = "
               << last_hash << ", new hash = " << update_check_response_hash;
+    ResetUpdateProgress(prefs, false);
   }
 
   if (!boot_control->GetDynamicPartitionControl()->PreparePartitionsForUpdate(
@@ -1527,9 +1521,8 @@ bool DeltaPerformer::PrimeUpdateState() {
 }
 
 bool DeltaPerformer::IsDynamicPartition(const std::string& part_name) {
-  return std::find(dynamic_partitions_.begin(),
-                   dynamic_partitions_.end(),
-                   part_name) != dynamic_partitions_.end();
+  return boot_control_->GetDynamicPartitionControl()->IsDynamicPartition(
+      part_name);
 }
 
 std::unique_ptr<PartitionWriter> DeltaPerformer::CreatePartitionWriter(
