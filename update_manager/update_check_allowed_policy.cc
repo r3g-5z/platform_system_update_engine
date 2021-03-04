@@ -20,6 +20,7 @@
 #include <base/logging.h>
 #include <base/strings/string_util.h>
 
+#include "update_engine/common/system_state.h"
 #include "update_engine/update_manager/enough_slots_ab_updates_policy_impl.h"
 #include "update_engine/update_manager/enterprise_device_policy_impl.h"
 #include "update_engine/update_manager/interactive_update_policy_impl.h"
@@ -32,12 +33,22 @@
 #include "update_engine/update_manager/shill_provider.h"
 #include "update_engine/update_manager/update_check_allowed_policy.h"
 
+using chromeos_update_engine::SystemState;
 using std::string;
 using std::vector;
 
 namespace chromeos_update_manager {
 
-// TODO(b/179419726): Move to update_check_allowed_policy.cc.
+namespace {
+
+// A fixed minimum interval between consecutive allowed update checks. This
+// needs to be long enough to prevent busywork and/or DDoS attacks on Omaha, but
+// at the same time short enough to allow the machine to update itself
+// reasonably soon.
+const int kCheckIntervalInSeconds = 15 * 60;
+
+}  // namespace
+
 EvalStatus UpdateCheckAllowedPolicy::Evaluate(EvaluationContext* ec,
                                               State* state,
                                               string* error,
@@ -100,6 +111,37 @@ EvalStatus UpdateCheckAllowedPolicy::Evaluate(EvaluationContext* ec,
   }
   LOG(INFO) << "Allowing update check.";
   return EvalStatus::kSucceeded;
+}
+
+EvalStatus UpdateCheckAllowedPolicy::EvaluateDefault(
+    EvaluationContext* ec,
+    State* state,
+    string* error,
+    PolicyDataInterface* data) const {
+  UpdateCheckParams* result =
+      UpdateCheckAllowedPolicyData::GetUpdateCheckParams(data);
+  result->updates_enabled = true;
+  result->target_channel.clear();
+  result->lts_tag.clear();
+  result->target_version_prefix.clear();
+  result->rollback_allowed = false;
+  result->rollback_allowed_milestones = -1;  // No version rolls should happen.
+  result->rollback_on_channel_downgrade = false;
+  result->interactive = false;
+  result->quick_fix_build_token.clear();
+
+  // Ensure that the minimum interval is set. If there's no clock, this defaults
+  // to always allowing the update.
+  if (!aux_state_->IsLastCheckAllowedTimeSet() ||
+      ec->IsMonotonicTimeGreaterThan(
+          aux_state_->last_check_allowed_time() +
+          base::TimeDelta::FromSeconds(kCheckIntervalInSeconds))) {
+    aux_state_->set_last_check_allowed_time(
+        SystemState::Get()->clock()->GetMonotonicTime());
+    return EvalStatus::kSucceeded;
+  }
+
+  return EvalStatus::kAskMeAgainLater;
 }
 
 }  // namespace chromeos_update_manager

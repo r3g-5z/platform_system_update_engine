@@ -15,7 +15,6 @@
 //
 
 #include "update_engine/cros/fake_system_state.h"
-// TODO(b/179419726): Remove.
 #include "update_engine/update_manager/enterprise_device_policy_impl.h"
 #include "update_engine/update_manager/next_update_check_policy_impl.h"
 #include "update_engine/update_manager/policy_test_utils.h"
@@ -32,10 +31,9 @@ using std::string;
 
 namespace chromeos_update_manager {
 
-// TODO(b/179419726): Rename this class to |UpdateCheckAllowedPolicyTest|.
-class UmChromeOSPolicyTest : public UmPolicyTestBase {
+class UmUpdateCheckAllowedPolicyTest : public UmPolicyTestBase {
  protected:
-  UmChromeOSPolicyTest() : UmPolicyTestBase() {
+  UmUpdateCheckAllowedPolicyTest() : UmPolicyTestBase() {
     policy_data_.reset(new UpdateCheckAllowedPolicyData());
     policy_2_.reset(new UpdateCheckAllowedPolicy());
 
@@ -111,7 +109,7 @@ class UmChromeOSPolicyTest : public UmPolicyTestBase {
   UpdateCheckAllowedPolicyData* uca_data_;
 };
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWaitsForTheTimeout) {
+TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedWaitsForTheTimeout) {
   // We get the next update_check timestamp from the policy's private method
   // and then we check the public method respects that value on the normal
   // case.
@@ -144,7 +142,7 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWaitsForTheTimeout) {
   EXPECT_FALSE(uca_data_->update_check_params.interactive);
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWaitsForOOBE) {
+TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedWaitsForOOBE) {
   // Update checks are deferred until OOBE is completed.
 
   // Ensure that update is not allowed even if wait period is satisfied.
@@ -179,7 +177,7 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWaitsForOOBE) {
   EXPECT_FALSE(uca_data_->update_check_params.interactive);
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWithAttributes) {
+TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedWithAttributes) {
   // Update check is allowed, response includes attributes for use in the
   // request.
   SetUpdateCheckAllowed(true);
@@ -209,7 +207,7 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedWithAttributes) {
   EXPECT_FALSE(uca_data_->update_check_params.interactive);
 }
 
-TEST_F(UmChromeOSPolicyTest,
+TEST_F(UmUpdateCheckAllowedPolicyTest,
        UpdateCheckAllowedUpdatesDisabledForUnofficialBuilds) {
   // UpdateCheckAllowed should return kAskMeAgainLater if this is an unofficial
   // build; we don't want periodic update checks on developer images.
@@ -220,7 +218,7 @@ TEST_F(UmChromeOSPolicyTest,
   EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 }
 
-TEST_F(UmChromeOSPolicyTest, TestUpdateCheckIntervalTimeout) {
+TEST_F(UmUpdateCheckAllowedPolicyTest, TestUpdateCheckIntervalTimeout) {
   fake_state_.updater_provider()
       ->var_test_update_check_interval_timeout()
       ->reset(new int64_t(10));
@@ -237,7 +235,7 @@ TEST_F(UmChromeOSPolicyTest, TestUpdateCheckIntervalTimeout) {
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
 }
 
-TEST_F(UmChromeOSPolicyTest,
+TEST_F(UmUpdateCheckAllowedPolicyTest,
        UpdateCheckAllowedUpdatesDisabledWhenNotEnoughSlotsAbUpdates) {
   // UpdateCheckAllowed should return false (kSucceeded) if the image booted
   // without enough slots to do A/B updates.
@@ -249,7 +247,8 @@ TEST_F(UmChromeOSPolicyTest,
   EXPECT_FALSE(uca_data_->update_check_params.updates_enabled);
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedUpdatesDisabledByPolicy) {
+TEST_F(UmUpdateCheckAllowedPolicyTest,
+       UpdateCheckAllowedUpdatesDisabledByPolicy) {
   // UpdateCheckAllowed should return kAskMeAgainLater because a device policy
   // is loaded and prohibits updates.
 
@@ -260,7 +259,7 @@ TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedUpdatesDisabledByPolicy) {
   EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 }
 
-TEST_F(UmChromeOSPolicyTest,
+TEST_F(UmUpdateCheckAllowedPolicyTest,
        UpdateCheckAllowedForcedUpdateRequestedInteractive) {
   // UpdateCheckAllowed should return true because a forced update request was
   // signaled for an interactive update.
@@ -274,7 +273,8 @@ TEST_F(UmChromeOSPolicyTest,
   EXPECT_TRUE(uca_data_->update_check_params.interactive);
 }
 
-TEST_F(UmChromeOSPolicyTest, UpdateCheckAllowedForcedUpdateRequestedPeriodic) {
+TEST_F(UmUpdateCheckAllowedPolicyTest,
+       UpdateCheckAllowedForcedUpdateRequestedPeriodic) {
   // UpdateCheckAllowed should return true because a forced update request was
   // signaled for a periodic check.
 
