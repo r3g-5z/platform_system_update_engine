@@ -239,6 +239,7 @@ static_library("libupdate_engine") {
     "update_manager/recovery_policy.cc",
     "update_manager/staging_utils.cc",
     "update_manager/state_factory.cc",
+    "update_manager/update_can_be_applied_policy.cc",
     "update_manager/update_can_start_policy.cc",
     "update_manager/update_manager.cc",
     "update_manager/update_time_restrictions_monitor.cc",

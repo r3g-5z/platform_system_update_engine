@@ -15,9 +15,6 @@
 //
 
 #include "update_engine/common/system_state.h"
-// TODO(b/179419726): Remove.
-#include "update_engine/update_manager/update_can_be_applied_policy.h"
-#include "update_engine/update_manager/update_can_be_applied_policy_data.h"
 #include "update_engine/update_manager/update_check_allowed_policy.h"
 
 using chromeos_update_engine::ErrorCode;
@@ -66,17 +63,6 @@ EvalStatus UpdateCheckAllowedPolicy::EvaluateDefault(
   }
 
   return EvalStatus::kAskMeAgainLater;
-}
-
-// TODO(b/179419726): Move to update_can_be_applied.cc.
-EvalStatus UpdateCanBeAppliedPolicy::EvaluateDefault(
-    EvaluationContext* ec,
-    State* state,
-    std::string* error,
-    PolicyDataInterface* data) const {
-  static_cast<UpdateCanBeAppliedPolicyData*>(data)->set_error_code(
-      ErrorCode::kSuccess);
-  return EvalStatus::kSucceeded;
 }
 
 }  // namespace chromeos_update_manager
