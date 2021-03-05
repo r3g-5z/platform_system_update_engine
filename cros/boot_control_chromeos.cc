@@ -79,6 +79,32 @@ void OnMarkBootSuccessfulDone(base::Callback<void(bool)> callback,
   callback.Run(return_code == 0);
 }
 
+// TODO(b/182165759): Use hardware system state to determine whether we are
+// running from MiniOs.
+bool IsRunningFromMiniOs() {
+  return base::PathExists(base::FilePath("/etc").Append("minios"));
+}
+
+// Will return the partition corresponding to slot B to update into Slot A.
+// Empty on error.
+string GetBootDeviceForMiniOs() {
+  int exit_code = 0;
+  string boot_device, error;
+  if (!chromeos_update_engine::Subprocess::SynchronousExec(
+          {"/usr/bin/root_partition_for_recovery"},
+          &exit_code,
+          &boot_device,
+          &error)) {
+    LOG(ERROR)
+        << "Failed to get the root partition name. Returned with exit code: "
+        << exit_code << " and error: " << error;
+    return "";
+  }
+  base::TrimString(boot_device, " \n", &boot_device);
+  LOG(INFO) << "Running in MiniOs, set boot device to: " << boot_device;
+  return boot_device;
+}
+
 }  // namespace
 
 namespace chromeos_update_engine {
@@ -98,7 +124,14 @@ std::unique_ptr<BootControlInterface> CreateBootControl() {
 }  // namespace boot_control
 
 bool BootControlChromeOS::Init() {
-  string boot_device = GetBootDevice();
+  string boot_device;
+  if (IsRunningFromMiniOs()) {
+    // Unable to get a boot device from rootdev when in recovery mode.
+    boot_device = GetBootDeviceForMiniOs();
+  } else {
+    boot_device = GetBootDevice();
+  }
+
   if (boot_device.empty())
     return false;
 

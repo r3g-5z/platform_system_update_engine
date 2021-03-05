@@ -1211,6 +1211,10 @@ void OmahaRequestAction::ActionCompleted(ErrorCode code) {
 }
 
 bool OmahaRequestAction::ShouldIgnoreUpdate(ErrorCode* error) const {
+  // Never ignore valid update when running from MiniOs.
+  if (SystemState::Get()->hardware()->IsRunningFromMiniOs())
+    return false;
+
   // Note: policy decision to not update to a version we rolled back from.
   string rollback_version =
       SystemState::Get()->payload_state()->GetRollbackVersion();

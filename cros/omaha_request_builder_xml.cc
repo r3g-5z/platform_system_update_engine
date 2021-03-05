@@ -38,7 +38,6 @@ using std::string;
 
 namespace chromeos_update_engine {
 
-const char kNoVersion[] = "0.0.0.0";
 const int kPingNeverPinged = -1;
 const int kPingUnknownValue = -2;
 const int kPingActiveValue = 1;

@@ -38,6 +38,8 @@
 
 namespace chromeos_update_engine {
 
+extern const char kNoVersion[];
+
 // This class encapsulates the data Omaha gets for the request, along with
 // essential state needed for the processing of the request/response.  The
 // strings in this struct should not be XML escaped.

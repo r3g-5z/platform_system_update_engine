@@ -291,4 +291,11 @@ TEST_F(OmahaRequestParamsTest, AutoUpdateTokenTest) {
   EXPECT_EQ("foo-token", params_.autoupdate_token());
 }
 
+TEST_F(OmahaRequestParamsTest, MiniOsParams) {
+  FakeSystemState::Get()->fake_hardware()->SetIsRunningFromMiniOs(true);
+  EXPECT_TRUE(params_.Init("", "", {}));
+  EXPECT_FALSE(params_.delta_okay());
+  EXPECT_EQ(kNoVersion, params_.app_version());
+}
+
 }  // namespace chromeos_update_engine

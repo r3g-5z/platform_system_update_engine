@@ -46,6 +46,7 @@ using std::string;
 namespace chromeos_update_engine {
 
 const char OmahaRequestParams::kOsVersion[] = "Indy";
+const char kNoVersion[] = "0.0.0.0";
 
 const char* kChannelsByStability[] = {
     // This list has to be sorted from least stable to most stable channel.
@@ -85,8 +86,14 @@ bool OmahaRequestParams::Init(const string& app_version,
   app_lang_ = "en-US";
   hwid_ = SystemState::Get()->hardware()->GetHardwareClass();
   device_requisition_ = SystemState::Get()->hardware()->GetDeviceRequisition();
-
-  if (image_props_.current_channel == mutable_image_props_.target_channel) {
+  if (SystemState::Get()->hardware()->IsRunningFromMiniOs()) {
+    delta_okay_ = false;
+    image_props_.version = kNoVersion;
+    LOG(INFO) << "In recovery mode, need a full payload, "
+                 "setting delta to false and version to "
+              << kNoVersion;
+  } else if (image_props_.current_channel ==
+             mutable_image_props_.target_channel) {
     // deltas are only okay if the /.nodelta file does not exist.  if we don't
     // know (i.e. stat() returns some unexpected error), then err on the side of
     // caution and say deltas are not okay.

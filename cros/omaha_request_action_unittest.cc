@@ -1116,6 +1116,19 @@ TEST_F(OmahaRequestActionTest, SkipNonCriticalUpdatesInOOBEOverCellular) {
   EXPECT_FALSE(response_.update_exists);
 }
 
+// Verify when running from MiniOs, the update can continue even if OOBE is
+// enabled and uncompleted.
+TEST_F(OmahaRequestActionTest, AllowMiniOsWithoutOOBE) {
+  FakeSystemState::Get()->fake_hardware()->SetIsRunningFromMiniOs(true);
+  FakeSystemState::Get()->fake_hardware()->UnsetIsOOBEComplete();
+  FakeSystemState::Get()->fake_hardware()->SetIsOOBEEnabled(true);
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+
+  ASSERT_TRUE(TestUpdateCheck());
+
+  EXPECT_TRUE(response_.update_exists);
+}
+
 TEST_F(OmahaRequestActionTest, WallClockBasedWaitAloneCausesScattering) {
   request_params_.set_wall_clock_based_wait_enabled(true);
   request_params_.set_update_check_count_wait_enabled(false);
