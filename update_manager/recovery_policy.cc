@@ -23,7 +23,7 @@ EvalStatus RecoveryPolicy::Evaluate(EvaluationContext* ec,
                                     std::string* error,
                                     PolicyDataInterface* data) const {
   const bool* running_in_minios =
-      ec->GetValue(state->updater_provider()->var_running_from_minios());
+      ec->GetValue(state->config_provider()->var_is_running_from_minios());
   if (running_in_minios && (*running_in_minios)) {
     LOG(INFO) << "In Recovery Mode, always allow update check.";
     return EvalStatus::kSucceeded;

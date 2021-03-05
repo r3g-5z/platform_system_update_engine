@@ -22,7 +22,6 @@
 #include <string>
 
 #include <base/bind.h>
-#include <base/files/file_util.h>
 #include <base/strings/stringprintf.h>
 #include <base/time/time.h>
 #include <update_engine/dbus-constants.h>
@@ -406,22 +405,6 @@ class ForcedUpdateRequestedVariable
   DISALLOW_COPY_AND_ASSIGN(ForcedUpdateRequestedVariable);
 };
 
-// A variable defining whether UE is in recovery mode.
-class RunningFromMiniOs : public AsyncCopyVariable<bool> {
- public:
-  explicit RunningFromMiniOs(const string& name)
-      : AsyncCopyVariable<bool>(name) {}
-
- private:
-  const bool* GetValue(TimeDelta /* timeout */, string* errmsg) override {
-    if (base::PathExists(base::FilePath("/etc").Append("minios"))) {
-      return new bool(true);
-    }
-    return new bool(false);
-  }
-  DISALLOW_COPY_AND_ASSIGN(RunningFromMiniOs);
-};
-
 // A variable returning the current update restrictions that are in effect.
 class UpdateRestrictionsVariable
     : public UpdaterVariableBase<UpdateRestrictions> {
@@ -512,7 +495,6 @@ RealUpdaterProvider::RealUpdaterProvider()
           "server_dictated_poll_interval")),
       var_forced_update_requested_(
           new ForcedUpdateRequestedVariable("forced_update_requested")),
-      var_running_from_minios_(new RunningFromMiniOs("running_from_minios")),
       var_update_restrictions_(
           new UpdateRestrictionsVariable("update_restrictions")),
       var_test_update_check_interval_timeout_(

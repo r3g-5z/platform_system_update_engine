@@ -20,6 +20,7 @@
 
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <brillo/file_utils.h>
 #include <gtest/gtest.h>
 
 #include "update_engine/common/constants.h"
@@ -85,6 +86,17 @@ TEST_F(HardwareChromeOSTest, ReadRootfsIfStatefulNotFound) {
 
   CallLoadConfig(false /* normal_mode */);
   EXPECT_FALSE(hardware_.IsOOBEEnabled());
+}
+
+TEST_F(HardwareChromeOSTest, RunningInMiniOs) {
+  base::FilePath test_path = root_dir_.GetPath();
+  hardware_.SetRootForTest(test_path);
+  brillo::TouchFile(test_path.Append("etc").Append("minios"));
+  EXPECT_TRUE(hardware_.IsRunningFromMiniOs());
+}
+
+TEST_F(HardwareChromeOSTest, NotRunningInMiniOs) {
+  EXPECT_FALSE(hardware_.IsRunningFromMiniOs());
 }
 
 }  // namespace chromeos_update_engine

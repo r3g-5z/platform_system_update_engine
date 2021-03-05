@@ -102,6 +102,11 @@ bool HardwareAndroid::IsNormalBootMode() const {
   return !GetBoolProperty("ro.debuggable", false);
 }
 
+bool HardwareAndroid::IsRunningFromMiniOs() const {
+  // MiniOs not supported.
+  return false;
+}
+
 bool HardwareAndroid::AreDevFeaturesEnabled() const {
   return !IsNormalBootMode();
 }

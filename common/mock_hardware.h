@@ -35,6 +35,9 @@ class MockHardware : public HardwareInterface {
     ON_CALL(*this, IsNormalBootMode())
         .WillByDefault(
             testing::Invoke(&fake_, &FakeHardware::IsNormalBootMode));
+    ON_CALL(*this, IsRunningFromMiniOs())
+        .WillByDefault(
+            testing::Invoke(&fake_, &FakeHardware::IsRunningFromMiniOs));
     ON_CALL(*this, AreDevFeaturesEnabled())
         .WillByDefault(
             testing::Invoke(&fake_, &FakeHardware::AreDevFeaturesEnabled));
@@ -82,6 +85,7 @@ class MockHardware : public HardwareInterface {
   // Hardware overrides.
   MOCK_CONST_METHOD0(IsOfficialBuild, bool());
   MOCK_CONST_METHOD0(IsNormalBootMode, bool());
+  MOCK_CONST_METHOD0(IsRunningFromMiniOs, bool());
   MOCK_CONST_METHOD0(IsOOBEEnabled, bool());
   MOCK_CONST_METHOD1(IsOOBEComplete, bool(base::Time* out_time_of_oobe));
   MOCK_CONST_METHOD0(GetHardwareClass, std::string());

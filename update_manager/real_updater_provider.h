@@ -88,10 +88,6 @@ class RealUpdaterProvider : public UpdaterProvider {
     return var_forced_update_requested_.get();
   }
 
-  Variable<bool>* var_running_from_minios() override {
-    return var_running_from_minios_.get();
-  }
-
   Variable<UpdateRestrictions>* var_update_restrictions() override {
     return var_update_restrictions_.get();
   }
@@ -116,7 +112,6 @@ class RealUpdaterProvider : public UpdaterProvider {
   std::unique_ptr<Variable<unsigned int>> var_consecutive_failed_update_checks_;
   std::unique_ptr<Variable<unsigned int>> var_server_dictated_poll_interval_;
   std::unique_ptr<Variable<UpdateRequestStatus>> var_forced_update_requested_;
-  std::unique_ptr<Variable<bool>> var_running_from_minios_;
   std::unique_ptr<Variable<UpdateRestrictions>> var_update_restrictions_;
   std::unique_ptr<Variable<int64_t>> var_test_update_check_interval_timeout_;
 

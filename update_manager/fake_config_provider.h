@@ -31,9 +31,15 @@ class FakeConfigProvider : public ConfigProvider {
     return &var_is_oobe_enabled_;
   }
 
+  FakeVariable<bool>* var_is_running_from_minios() override {
+    return &var_is_running_from_minios_;
+  }
+
  private:
   FakeVariable<bool> var_is_oobe_enabled_{"is_oobe_enabled",
                                           kVariableModeConst};
+  FakeVariable<bool> var_is_running_from_minios_{"is_running_from_minios",
+                                                 kVariableModeConst};
 
   DISALLOW_COPY_AND_ASSIGN(FakeConfigProvider);
 };

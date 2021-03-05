@@ -112,11 +112,6 @@ class UpdaterProvider : public Provider {
   // scheduled update.
   virtual Variable<UpdateRequestStatus>* var_forced_update_requested() = 0;
 
-  // A variable that returns whether update engine is running in MiniOs by
-  // checking for a file marker. Recovery mode will allow UE to skip other
-  // policy checks.
-  virtual Variable<bool>* var_running_from_minios() = 0;
-
   // A variable that returns the update restriction flags that are set
   // for all updates.
   virtual Variable<UpdateRestrictions>* var_update_restrictions() = 0;

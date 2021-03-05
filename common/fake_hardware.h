@@ -62,6 +62,8 @@ class FakeHardware : public HardwareInterface {
 
   bool IsNormalBootMode() const override { return is_normal_boot_mode_; }
 
+  bool IsRunningFromMiniOs() const override { return is_running_from_minios_; }
+
   bool AreDevFeaturesEnabled() const override {
     return are_dev_features_enabled_;
   }
@@ -151,6 +153,10 @@ class FakeHardware : public HardwareInterface {
     is_normal_boot_mode_ = is_normal_boot_mode;
   }
 
+  void SetIsRunningFromMiniOs(bool is_running_from_minios) {
+    is_running_from_minios_ = is_running_from_minios;
+  }
+
   void SetAreDevFeaturesEnabled(bool are_dev_features_enabled) {
     are_dev_features_enabled_ = are_dev_features_enabled;
   }
@@ -217,6 +223,7 @@ class FakeHardware : public HardwareInterface {
  private:
   bool is_official_build_{true};
   bool is_normal_boot_mode_{true};
+  bool is_running_from_minios_{false};
   bool are_dev_features_enabled_{false};
   bool is_oobe_enabled_{true};
   bool is_oobe_complete_{true};

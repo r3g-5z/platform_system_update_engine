@@ -114,6 +114,10 @@ bool HardwareChromeOS::IsNormalBootMode() const {
   return !dev_mode;
 }
 
+bool HardwareChromeOS::IsRunningFromMiniOs() const {
+  return base::PathExists(root_.Append("etc").Append("minios"));
+}
+
 bool HardwareChromeOS::AreDevFeaturesEnabled() const {
   // Even though the debugd tools are also gated on devmode, checking here can
   // save us a D-Bus call so it's worth doing explicitly.

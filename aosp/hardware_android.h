@@ -39,6 +39,7 @@ class HardwareAndroid : public HardwareInterface {
   // HardwareInterface methods.
   bool IsOfficialBuild() const override;
   bool IsNormalBootMode() const override;
+  bool IsRunningFromMiniOs() const override;
   bool AreDevFeaturesEnabled() const override;
   bool IsOOBEEnabled() const override;
   bool IsOOBEComplete(base::Time* out_time_of_oobe) const override;

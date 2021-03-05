@@ -33,13 +33,13 @@ class UmRecoveryPolicyTest : public UmPolicyTestBase {
 };
 
 TEST_F(UmRecoveryPolicyTest, RecoveryMode) {
-  fake_state_.updater_provider()->var_running_from_minios()->reset(
+  fake_state_.config_provider()->var_is_running_from_minios()->reset(
       new bool(true));
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
 }
 
 TEST_F(UmRecoveryPolicyTest, NotRecoveryMode) {
-  fake_state_.updater_provider()->var_running_from_minios()->reset(
+  fake_state_.config_provider()->var_is_running_from_minios()->reset(
       new bool(false));
   EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
 }

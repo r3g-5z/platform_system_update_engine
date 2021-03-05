@@ -23,7 +23,8 @@ namespace chromeos_update_manager {
 bool RealConfigProvider::Init() {
   var_is_oobe_enabled_.reset(new ConstCopyVariable<bool>(
       "is_oobe_enabled", hardware_->IsOOBEEnabled()));
-
+  var_is_running_from_minios_.reset(new ConstCopyVariable<bool>(
+      "is_running_from_minios", hardware_->IsRunningFromMiniOs()));
   return true;
 }
 

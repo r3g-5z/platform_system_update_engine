@@ -48,6 +48,9 @@ class HardwareInterface {
   // features.
   virtual bool IsNormalBootMode() const = 0;
 
+  // Returns true if booted from MiniOs for recovery mode.
+  virtual bool IsRunningFromMiniOs() const = 0;
+
   // Returns whether the developer features are enabled.
   virtual bool AreDevFeaturesEnabled() const = 0;
 

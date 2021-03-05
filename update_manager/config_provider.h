@@ -31,6 +31,10 @@ class ConfigProvider : public Provider {
   // an OOBE workflow.
   virtual Variable<bool>* var_is_oobe_enabled() = 0;
 
+  // Returns a variable stating whether the device is booted from the MiniOs
+  // partition. Is true, update checks are always permitted.
+  virtual Variable<bool>* var_is_running_from_minios() = 0;
+
  protected:
   ConfigProvider() {}
 

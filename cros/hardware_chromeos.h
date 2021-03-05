@@ -34,7 +34,7 @@ namespace chromeos_update_engine {
 // process.
 class HardwareChromeOS final : public HardwareInterface {
  public:
-  HardwareChromeOS() = default;
+  HardwareChromeOS() : root_("/") {}
   ~HardwareChromeOS() override = default;
 
   void Init();
@@ -42,6 +42,7 @@ class HardwareChromeOS final : public HardwareInterface {
   // HardwareInterface methods.
   bool IsOfficialBuild() const override;
   bool IsNormalBootMode() const override;
+  bool IsRunningFromMiniOs() const override;
   bool AreDevFeaturesEnabled() const override;
   bool IsOOBEEnabled() const override;
   bool IsOOBEComplete(base::Time* out_time_of_oobe) const override;
@@ -68,6 +69,8 @@ class HardwareChromeOS final : public HardwareInterface {
       const std::string& partition_name,
       const std::string& new_version) const override;
 
+  void SetRootForTest(base::FilePath test_root) { root_ = test_root; }
+
  private:
   friend class HardwareChromeOSTest;
 
@@ -77,6 +80,8 @@ class HardwareChromeOS final : public HardwareInterface {
   void LoadConfig(const std::string& root_prefix, bool normal_mode);
 
   bool is_oobe_enabled_;
+
+  base::FilePath root_;
 
   std::unique_ptr<org::chromium::debugdProxyInterface> debugd_proxy_;
 

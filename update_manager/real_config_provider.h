@@ -39,8 +39,13 @@ class RealConfigProvider : public ConfigProvider {
     return var_is_oobe_enabled_.get();
   }
 
+  Variable<bool>* var_is_running_from_minios() override {
+    return var_is_running_from_minios_.get();
+  }
+
  private:
   std::unique_ptr<ConstCopyVariable<bool>> var_is_oobe_enabled_;
+  std::unique_ptr<ConstCopyVariable<bool>> var_is_running_from_minios_;
 
   chromeos_update_engine::HardwareInterface* hardware_;
 
