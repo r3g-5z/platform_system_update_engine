@@ -28,6 +28,9 @@
 #include <base/format_macros.h>
 #include <base/location.h>
 #include <base/logging.h>
+#if BASE_VER >= 822064
+#include <base/notreached.h>
+#endif
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>

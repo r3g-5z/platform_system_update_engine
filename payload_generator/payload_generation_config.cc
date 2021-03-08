@@ -21,6 +21,9 @@
 #include <utility>
 
 #include <base/logging.h>
+#if BASE_VER >= 822064
+#include <base/notreached.h>
+#endif
 #include <base/strings/string_number_conversions.h>
 #include <brillo/strings/string_utils.h>
 

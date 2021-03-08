@@ -16,6 +16,8 @@
 
 #include "update_engine/update_manager/enterprise_device_policy_impl.h"
 
+#include <base/notreached.h>
+
 #include "update_engine/common/utils.h"
 
 #include "update_engine/update_manager/update_check_allowed_policy_data.h"

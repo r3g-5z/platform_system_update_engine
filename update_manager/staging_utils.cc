@@ -20,6 +20,7 @@
 #include <vector>
 
 #include <base/logging.h>
+#include <base/notreached.h>
 #include <base/rand_util.h>
 #include <base/time/time.h>
 #include <policy/device_policy.h>

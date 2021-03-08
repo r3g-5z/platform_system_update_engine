@@ -16,7 +16,11 @@
 
 #include "update_engine/payload_consumer/payload_constants.h"
 
+#if BASE_VER < 822064
 #include <base/logging.h>
+#else
+#include <base/notreached.h>
+#endif
 
 namespace chromeos_update_engine {
 

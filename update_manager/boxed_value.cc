@@ -21,6 +21,7 @@
 #include <set>
 #include <string>
 
+#include <base/notreached.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/time/time.h>
 #include <base/version.h>

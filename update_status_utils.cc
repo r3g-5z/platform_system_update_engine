@@ -15,7 +15,11 @@
 //
 #include "update_engine/update_status_utils.h"
 
+#if BASE_VER < 822064
 #include <base/logging.h>
+#else
+#include <base/notreached.h>
+#endif
 #include <base/strings/string_number_conversions.h>
 #include <brillo/key_value_store.h>
 #include <update_engine/dbus-constants.h>
