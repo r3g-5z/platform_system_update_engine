@@ -49,6 +49,7 @@ void ConvertToStatusResult(const UpdateEngineStatus& ue_status,
   out_status->set_eol_date(ue_status.eol_date);
   out_status->set_will_powerwash_after_reboot(
       ue_status.will_powerwash_after_reboot);
+  out_status->set_last_attempt_error(ue_status.last_attempt_error);
 }
 }  // namespace
 

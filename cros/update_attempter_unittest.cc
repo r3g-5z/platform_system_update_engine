@@ -2295,6 +2295,30 @@ TEST_F(UpdateAttempterTest, MissingEolTest) {
   EXPECT_EQ(kEolDateInvalid, status.eol_date);
 }
 
+TEST_F(UpdateAttempterTest, LastAttemptError) {
+  UpdateEngineStatus status;
+  attempter_.GetStatus(&status);
+  EXPECT_EQ(static_cast<int32_t>(ErrorCode::kSuccess),
+            status.last_attempt_error);
+}
+
+TEST_F(UpdateAttempterTest, NoUpdateLastAttemptError) {
+  attempter_.ProcessingDone(nullptr, ErrorCode::kNoUpdate);
+
+  UpdateEngineStatus status;
+  attempter_.GetStatus(&status);
+  EXPECT_EQ(static_cast<int32_t>(ErrorCode::kNoUpdate),
+            status.last_attempt_error);
+}
+
+TEST_F(UpdateAttempterTest, SomeOtherLastAttemptError) {
+  attempter_.ProcessingDone(nullptr, ErrorCode::kVerityCalculationError);
+
+  UpdateEngineStatus status;
+  attempter_.GetStatus(&status);
+  EXPECT_EQ(static_cast<int32_t>(ErrorCode::kError), status.last_attempt_error);
+}
+
 TEST_F(UpdateAttempterTest, CalculateDlcParamsInstallTest) {
   string dlc_id = "dlc0";
   attempter_.is_install_ = true;

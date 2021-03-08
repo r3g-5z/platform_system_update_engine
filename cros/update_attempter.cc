@@ -1490,6 +1490,18 @@ bool UpdateAttempter::GetStatus(UpdateEngineStatus* out_status) {
       install_plan_ &&
       (install_plan_->powerwash_required || install_plan_->is_rollback);
 
+  switch (static_cast<update_engine::ErrorCode>(attempt_error_code_)) {
+    case update_engine::ErrorCode::kSuccess:
+    case update_engine::ErrorCode::kNoUpdate:
+      out_status->last_attempt_error =
+          static_cast<int32_t>(attempt_error_code_);
+      break;
+    default:
+      out_status->last_attempt_error =
+          static_cast<int32_t>(update_engine::ErrorCode::kError);
+      break;
+  }
+
   return true;
 }
 

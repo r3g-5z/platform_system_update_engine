@@ -93,6 +93,8 @@ struct UpdateEngineStatus {
   int64_t eol_date;
   // The system will powerwash once the update is applied.
   bool will_powerwash_after_reboot;
+  // The last update attempt error.
+  int32_t last_attempt_error;
 };
 
 }  // namespace update_engine
