@@ -70,10 +70,11 @@ const char* InstallOperationTypeName(InstallOperation::Type op_type) {
       return "PUFFDIFF";
     case InstallOperation::BROTLI_BSDIFF:
       return "BROTLI_BSDIFF";
-
+#ifndef __CHROMEOS__
     case InstallOperation::BSDIFF:
     case InstallOperation::MOVE:
       NOTREACHED();
+#endif
   }
   return "<unknown_op>";
 }

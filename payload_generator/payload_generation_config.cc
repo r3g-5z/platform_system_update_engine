@@ -261,10 +261,11 @@ bool PayloadVersion::OperationAllowed(InstallOperation::Type operation) const {
 
     case InstallOperation::PUFFDIFF:
       return minor >= kPuffdiffMinorPayloadVersion;
-
+#ifndef __CHROMEOS__
     case InstallOperation::MOVE:
     case InstallOperation::BSDIFF:
       NOTREACHED();
+#endif
   }
   return false;
 }
