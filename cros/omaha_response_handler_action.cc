@@ -50,9 +50,6 @@ namespace chromeos_update_engine {
 
 const char kDeadlineNow[] = "now";
 
-OmahaResponseHandlerAction::OmahaResponseHandlerAction()
-    : deadline_file_(constants::kOmahaResponseDeadlineFile) {}
-
 void OmahaResponseHandlerAction::PerformAction() {
   CHECK(HasInputObject());
   ScopedActionCompleter completer(processor_, this);
@@ -236,39 +233,24 @@ void OmahaResponseHandlerAction::PerformAction() {
     }
   }
 
-  // Send the deadline data (if any) to Chrome through a file. This is a pretty
-  // hacky solution but should be OK for now.
-  //
-  // TODO(petkov): Re-architect this to avoid communication through a
-  // file. Ideally, we would include this information in D-Bus's GetStatus
-  // method and UpdateStatus signal. A potential issue is that update_engine may
-  // be unresponsive during an update download.
-  if (!deadline_file_.empty()) {
-    if (payload_state->GetRollbackHappened()) {
-      // Don't do forced update if rollback has happened since the last update
-      // check where policy was present.
-      LOG(INFO) << "Not forcing update because a rollback happened.";
-      utils::WriteFile(deadline_file_.c_str(), nullptr, 0);
+  if (payload_state->GetRollbackHappened()) {
+    // Don't do forced update if rollback has happened since the last update
+    // check where policy was present.
+    LOG(INFO) << "Not forcing update because a rollback happened.";
+    install_plan_.update_urgency =
+        update_engine::UpdateUrgencyInternal::REGULAR;
+  } else {
+    // There is a critical update only when deadline="now".
+    if (response.deadline == kDeadlineNow) {
+      install_plan_.update_urgency =
+          update_engine::UpdateUrgencyInternal::CRITICAL;
+    } else {
       install_plan_.update_urgency =
           update_engine::UpdateUrgencyInternal::REGULAR;
-    } else {
-      utils::WriteFile(deadline_file_.c_str(),
-                       response.deadline.data(),
-                       response.deadline.size());
-      // There is a critical update only when deadline="now".
-      if (response.deadline == kDeadlineNow) {
-        install_plan_.update_urgency =
-            update_engine::UpdateUrgencyInternal::CRITICAL;
-      } else {
-        install_plan_.update_urgency =
-            update_engine::UpdateUrgencyInternal::REGULAR;
-        if (!response.deadline.empty())
-          LOG(WARNING)
-              << response.deadline
-              << " is not a valid deadline value for critical updates.";
-      }
+      if (!response.deadline.empty())
+        LOG(WARNING) << response.deadline
+                     << " is not a valid deadline value for critical updates.";
     }
-    chmod(deadline_file_.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
   }
 
   // Check the generated install-plan with the Policy to confirm that

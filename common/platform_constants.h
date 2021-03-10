@@ -47,10 +47,6 @@ extern const char kUpdateCertificatesPath[];
 // HTTPS is used for that as well).
 extern const char kCACertificatesPath[];
 
-// Path to the file used to notify chrome about the deadline of the last omaha
-// response. Empty if not supported.
-extern const char kOmahaResponseDeadlineFile[];
-
 // The stateful directory used by update_engine.
 extern const char kNonVolatileDirectory[];
 

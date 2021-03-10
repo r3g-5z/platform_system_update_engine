@@ -43,7 +43,7 @@ class ActionTraits<OmahaResponseHandlerAction> {
 
 class OmahaResponseHandlerAction : public Action<OmahaResponseHandlerAction> {
  public:
-  OmahaResponseHandlerAction();
+  OmahaResponseHandlerAction() = default;
 
   typedef ActionTraits<OmahaResponseHandlerAction>::InputObjectType
       InputObjectType;
@@ -68,9 +68,6 @@ class OmahaResponseHandlerAction : public Action<OmahaResponseHandlerAction> {
 
   // The install plan, if we have an update.
   InstallPlan install_plan_;
-
-  // File used for communication deadline to Chrome.
-  std::string deadline_file_;
 
   friend class OmahaResponseHandlerActionTest;
   friend class OmahaResponseHandlerActionProcessorDelegate;

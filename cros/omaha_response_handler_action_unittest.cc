@@ -20,7 +20,6 @@
 #include <string>
 #include <utility>
 
-#include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <brillo/message_loops/fake_message_loop.h>
 #include <gtest/gtest.h>
@@ -92,7 +91,6 @@ class OmahaResponseHandlerActionTest : public ::testing::Test {
   // Return true iff the OmahaResponseHandlerAction succeeded.
   // If out is non-null, it's set w/ the response from the action.
   bool DoTest(const OmahaResponse& in,
-              const string& deadline_file,
               InstallPlan* out);
 
   // Delegate passed to the ActionProcessor.
@@ -124,7 +122,6 @@ const char* const kPayloadAppId = "test_app_id";
 }  // namespace
 
 bool OmahaResponseHandlerActionTest::DoTest(const OmahaResponse& in,
-                                            const string& test_deadline_file,
                                             InstallPlan* out) {
   brillo::FakeMessageLoop loop(nullptr);
   loop.SetAsCurrent();
@@ -156,8 +153,6 @@ bool OmahaResponseHandlerActionTest::DoTest(const OmahaResponse& in,
       .WillRepeatedly(Return(current_url));
 
   auto response_handler_action = std::make_unique<OmahaResponseHandlerAction>();
-  if (!test_deadline_file.empty())
-    response_handler_action->deadline_file_ = test_deadline_file;
 
   auto collector_action =
       std::make_unique<ObjectCollectorAction<InstallPlan>>();
@@ -196,22 +191,15 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
     in.prompt = false;
     in.deadline = "not-valid-deadline";
     InstallPlan install_plan;
-    EXPECT_TRUE(DoTest(in, test_deadline_file.path(), &install_plan));
+    EXPECT_TRUE(DoTest(in, &install_plan));
     EXPECT_EQ(in.packages[0].payload_urls[0], install_plan.download_url);
     EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
     EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
     EXPECT_EQ(in.packages[0].fp, install_plan.payloads[0].fp);
     EXPECT_EQ(1U, install_plan.target_slot);
-    string deadline;
-    EXPECT_TRUE(utils::ReadFile(test_deadline_file.path(), &deadline));
-    EXPECT_EQ("not-valid-deadline", deadline);
-    struct stat deadline_stat;
-    EXPECT_EQ(0, stat(test_deadline_file.path().c_str(), &deadline_stat));
+    // Not a valid value of deadline.
     EXPECT_EQ(install_plan.update_urgency,
               update_engine::UpdateUrgencyInternal::REGULAR);
-    EXPECT_EQ(
-        static_cast<mode_t>(S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH),
-        deadline_stat.st_mode);
     EXPECT_EQ(in.version, install_plan.version);
   }
   {
@@ -229,15 +217,12 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
     InstallPlan install_plan;
     // Set the other slot as current.
     FakeSystemState::Get()->fake_boot_control()->SetCurrentSlot(1);
-    EXPECT_TRUE(DoTest(in, test_deadline_file.path(), &install_plan));
+    EXPECT_TRUE(DoTest(in, &install_plan));
     EXPECT_EQ(in.packages[0].payload_urls[0], install_plan.download_url);
     EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
     EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
     EXPECT_EQ(in.packages[0].fp, install_plan.payloads[0].fp);
     EXPECT_EQ(0U, install_plan.target_slot);
-    string deadline;
-    EXPECT_TRUE(utils::ReadFile(test_deadline_file.path(), &deadline) &&
-                deadline.empty());
     EXPECT_EQ(install_plan.update_urgency,
               update_engine::UpdateUrgencyInternal::REGULAR);
     EXPECT_EQ(in.version, install_plan.version);
@@ -261,15 +246,12 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
     EXPECT_CALL(*(FakeSystemState::Get()->mock_payload_state()),
                 GetRollbackHappened())
         .WillOnce(Return(true));
-    EXPECT_TRUE(DoTest(in, test_deadline_file.path(), &install_plan));
+    EXPECT_TRUE(DoTest(in, &install_plan));
     EXPECT_EQ(in.packages[0].payload_urls[0], install_plan.download_url);
     EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
     EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
     EXPECT_EQ(in.packages[0].fp, install_plan.payloads[0].fp);
     EXPECT_EQ(1U, install_plan.target_slot);
-    string deadline;
-    EXPECT_TRUE(utils::ReadFile(test_deadline_file.path(), &deadline));
-    EXPECT_TRUE(deadline.empty());
     EXPECT_EQ(install_plan.update_urgency,
               update_engine::UpdateUrgencyInternal::REGULAR);
     EXPECT_EQ(in.version, install_plan.version);
@@ -291,15 +273,12 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
     EXPECT_CALL(*(FakeSystemState::Get()->mock_payload_state()),
                 GetRollbackHappened())
         .WillOnce(Return(false));
-    EXPECT_TRUE(DoTest(in, test_deadline_file.path(), &install_plan));
+    EXPECT_TRUE(DoTest(in, &install_plan));
     EXPECT_EQ(in.packages[0].payload_urls[0], install_plan.download_url);
     EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
     EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
     EXPECT_EQ(in.packages[0].fp, install_plan.payloads[0].fp);
     EXPECT_EQ(1U, install_plan.target_slot);
-    string deadline;
-    EXPECT_TRUE(utils::ReadFile(test_deadline_file.path(), &deadline));
-    EXPECT_EQ(kDeadlineNow, deadline);
     EXPECT_EQ(install_plan.update_urgency,
               update_engine::UpdateUrgencyInternal::CRITICAL);
     EXPECT_EQ(in.version, install_plan.version);
@@ -310,7 +289,7 @@ TEST_F(OmahaResponseHandlerActionTest, NoUpdatesTest) {
   OmahaResponse in;
   in.update_exists = false;
   InstallPlan install_plan;
-  EXPECT_FALSE(DoTest(in, "", &install_plan));
+  EXPECT_FALSE(DoTest(in, &install_plan));
   EXPECT_TRUE(install_plan.partitions.empty());
 }
 
@@ -329,7 +308,7 @@ TEST_F(OmahaResponseHandlerActionTest, InstallTest) {
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_EQ(install_plan.source_slot, UINT_MAX);
 }
 
@@ -349,7 +328,7 @@ TEST_F(OmahaResponseHandlerActionTest, MultiPackageTest) {
                          .fp = kPayloadFp2});
   in.more_info_url = "http://more/info";
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_EQ(in.packages[0].payload_urls[0], install_plan.download_url);
   EXPECT_EQ(2u, install_plan.payloads.size());
   EXPECT_EQ(in.packages[0].size, install_plan.payloads[0].size);
@@ -375,7 +354,7 @@ TEST_F(OmahaResponseHandlerActionTest, DisableHashChecks) {
   in.disable_hash_checks = true;
 
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_FALSE(install_plan.hash_checks_mandatory);
 }
 
@@ -395,7 +374,7 @@ TEST_F(OmahaResponseHandlerActionTest, SignatureChecksForHttpTest) {
               IsUpdateUrlOfficial())
       .WillRepeatedly(Return(true));
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_EQ(in.packages[0].payload_urls[0], install_plan.download_url);
   EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
   EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
@@ -419,7 +398,7 @@ TEST_F(OmahaResponseHandlerActionTest, SignatureChecksForUnofficialUpdateUrl) {
               IsUpdateUrlOfficial())
       .WillRepeatedly(Return(false));
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_EQ(in.packages[0].payload_urls[0], install_plan.download_url);
   EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
   EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
@@ -447,7 +426,7 @@ TEST_F(OmahaResponseHandlerActionTest,
       .WillRepeatedly(Return(true));
   FakeSystemState::Get()->fake_hardware()->SetIsOfficialBuild(false);
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_EQ(in.packages[0].payload_urls[0], install_plan.download_url);
   EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
   EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
@@ -471,7 +450,7 @@ TEST_F(OmahaResponseHandlerActionTest, SignatureChecksForHttpsTest) {
               IsUpdateUrlOfficial())
       .WillRepeatedly(Return(true));
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_EQ(in.packages[0].payload_urls[0], install_plan.download_url);
   EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
   EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
@@ -496,7 +475,7 @@ TEST_F(OmahaResponseHandlerActionTest, SignatureChecksForBothHttpAndHttpsTest) {
               IsUpdateUrlOfficial())
       .WillRepeatedly(Return(true));
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_EQ(in.packages[0].payload_urls[0], install_plan.download_url);
   EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
   EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
@@ -529,7 +508,7 @@ TEST_F(OmahaResponseHandlerActionTest,
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_TRUE(install_plan.powerwash_required);
 }
 
@@ -557,7 +536,7 @@ TEST_F(OmahaResponseHandlerActionTest,
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_FALSE(install_plan.powerwash_required);
 }
 
@@ -585,7 +564,7 @@ TEST_F(OmahaResponseHandlerActionTest,
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_FALSE(install_plan.powerwash_required);
 }
 
@@ -613,7 +592,7 @@ TEST_F(OmahaResponseHandlerActionTest,
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_FALSE(install_plan.powerwash_required);
   EXPECT_FALSE(install_plan.rollback_data_save_requested);
 }
@@ -649,7 +628,7 @@ TEST_F(OmahaResponseHandlerActionTest,
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_TRUE(install_plan.rollback_data_save_requested);
 }
 
@@ -683,7 +662,7 @@ TEST_F(OmahaResponseHandlerActionTest,
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_FALSE(install_plan.rollback_data_save_requested);
 }
 
@@ -711,7 +690,7 @@ TEST_F(OmahaResponseHandlerActionTest,
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_FALSE(install_plan.rollback_data_save_requested);
 }
 
@@ -739,7 +718,7 @@ TEST_F(OmahaResponseHandlerActionTest,
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_FALSE(install_plan.powerwash_required);
 }
 
@@ -773,7 +752,7 @@ TEST_F(OmahaResponseHandlerActionTest, P2PUrlIsUsed) {
       .WillRepeatedly(Return(true));
 
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_EQ(expected_hash_, install_plan.payloads[0].hash);
   EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
   EXPECT_EQ(in.packages[0].fp, install_plan.payloads[0].fp);
@@ -815,7 +794,7 @@ TEST_F(OmahaResponseHandlerActionTest, RollbackTest) {
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_TRUE(install_plan.is_rollback);
 
   // The max rollforward should be set the values of the image
@@ -860,7 +839,7 @@ TEST_F(OmahaResponseHandlerActionTest, RollbackKernelVersionErrorTest) {
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_FALSE(DoTest(in, "", &install_plan));
+  EXPECT_FALSE(DoTest(in, &install_plan));
 
   // Max rollforward is not changed in error cases.
   EXPECT_EQ(
@@ -892,7 +871,7 @@ TEST_F(OmahaResponseHandlerActionTest, RollbackFirmwareVersionErrorTest) {
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_FALSE(DoTest(in, "", &install_plan));
+  EXPECT_FALSE(DoTest(in, &install_plan));
 }
 
 TEST_F(OmahaResponseHandlerActionTest, RollbackNotRollbackTest) {
@@ -913,7 +892,7 @@ TEST_F(OmahaResponseHandlerActionTest, RollbackNotRollbackTest) {
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_FALSE(install_plan.is_rollback);
 
   // Max rollforward is not changed for non-rollback cases.
@@ -941,7 +920,7 @@ TEST_F(OmahaResponseHandlerActionTest, RollbackNotAllowedTest) {
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_FALSE(DoTest(in, "", &install_plan));
+  EXPECT_FALSE(DoTest(in, &install_plan));
 
   // This case generates an error so, do not update max rollforward.
   EXPECT_EQ(
@@ -968,7 +947,7 @@ TEST_F(OmahaResponseHandlerActionTest, NormalUpdateWithZeroMilestonesAllowed) {
 
   FakeSystemState::Get()->set_request_params(&params);
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
 
   // When allowed_milestones is 0, this is set to infinity.
   EXPECT_EQ(
@@ -993,7 +972,7 @@ TEST_F(OmahaResponseHandlerActionTest, SystemVersionTest) {
                          .fp = kPayloadFp2});
   in.more_info_url = "http://more/info";
   InstallPlan install_plan;
-  EXPECT_TRUE(DoTest(in, "", &install_plan));
+  EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_EQ(in.packages[0].payload_urls[0], install_plan.download_url);
   EXPECT_EQ(2u, install_plan.payloads.size());
   EXPECT_EQ(in.packages[0].size, install_plan.payloads[0].size);
@@ -1029,7 +1008,7 @@ TEST_F(OmahaResponseHandlerActionTest, DISABLED_TestDeferredByPolicy) {
 #endif
   // Perform the Action. It should "fail" with kOmahaUpdateDeferredPerPolicy.
   InstallPlan install_plan;
-  EXPECT_FALSE(DoTest(in, "", &install_plan));
+  EXPECT_FALSE(DoTest(in, &install_plan));
   EXPECT_EQ(ErrorCode::kOmahaUpdateDeferredPerPolicy, action_result_code_);
   // Verify that DoTest() didn't set the output install plan.
   EXPECT_EQ("", install_plan.version);
