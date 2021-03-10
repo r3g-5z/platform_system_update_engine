@@ -970,6 +970,17 @@ TEST_F(OmahaRequestActionTest,
   EXPECT_FALSE(response_.update_exists);
 }
 
+TEST_F(OmahaRequestActionTest, InstallationsOverCellularSkipCheck) {
+  fake_prefs_->SetBoolean(kPrefsUpdateOverCellularPermission, false);
+
+  request_params_.set_is_install(true);
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+
+  ASSERT_TRUE(TestUpdateCheck());
+
+  EXPECT_TRUE(response_.update_exists);
+}
+
 TEST_F(OmahaRequestActionTest,
        ValidUpdateOverCellularAllowedByUpdateTargetMatch) {
   // This test tests that, when device policy is not set and permission for

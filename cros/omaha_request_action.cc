@@ -1238,7 +1238,9 @@ bool OmahaRequestAction::ShouldIgnoreUpdate(ErrorCode* error) const {
     return true;
   }
 
-  if (!IsUpdateAllowedOverCurrentConnection(error)) {
+  if (params->is_install()) {
+    LOG(INFO) << "Skipping connection type check for DLC installations.";
+  } else if (!IsUpdateAllowedOverCurrentConnection(error)) {
     LOG(INFO) << "Update is not allowed over current connection.";
     return true;
   }
