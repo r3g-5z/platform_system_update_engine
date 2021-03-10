@@ -171,6 +171,9 @@ struct InstallPlan {
 
   // True if download can be canceled due to restricted time interval.
   bool can_download_be_canceled{false};
+
+  // True if there is a critical update.
+  bool critical_update{false};
 };
 
 class InstallPlanAction;

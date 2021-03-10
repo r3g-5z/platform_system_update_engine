@@ -194,7 +194,7 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
          .fp = kPayloadFp1});
     in.more_info_url = "http://more/info";
     in.prompt = false;
-    in.deadline = "20101020";
+    in.deadline = "not-valid-deadline";
     InstallPlan install_plan;
     EXPECT_TRUE(DoTest(in, test_deadline_file.path(), &install_plan));
     EXPECT_EQ(in.packages[0].payload_urls[0], install_plan.download_url);
@@ -204,9 +204,10 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
     EXPECT_EQ(1U, install_plan.target_slot);
     string deadline;
     EXPECT_TRUE(utils::ReadFile(test_deadline_file.path(), &deadline));
-    EXPECT_EQ("20101020", deadline);
+    EXPECT_EQ("not-valid-deadline", deadline);
     struct stat deadline_stat;
     EXPECT_EQ(0, stat(test_deadline_file.path().c_str(), &deadline_stat));
+    EXPECT_FALSE(install_plan.critical_update);
     EXPECT_EQ(
         static_cast<mode_t>(S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH),
         deadline_stat.st_mode);
@@ -236,6 +237,7 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
     string deadline;
     EXPECT_TRUE(utils::ReadFile(test_deadline_file.path(), &deadline) &&
                 deadline.empty());
+    EXPECT_FALSE(install_plan.critical_update);
     EXPECT_EQ(in.version, install_plan.version);
   }
   {
@@ -266,6 +268,7 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
     string deadline;
     EXPECT_TRUE(utils::ReadFile(test_deadline_file.path(), &deadline));
     EXPECT_TRUE(deadline.empty());
+    EXPECT_FALSE(install_plan.critical_update);
     EXPECT_EQ(in.version, install_plan.version);
   }
   {
@@ -279,7 +282,7 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
                            .fp = kPayloadFp1});
     in.more_info_url = "http://more/info";
     in.prompt = true;
-    in.deadline = "some-deadline";
+    in.deadline = kDeadlineNow;
     InstallPlan install_plan;
     FakeSystemState::Get()->fake_boot_control()->SetCurrentSlot(0);
     EXPECT_CALL(*(FakeSystemState::Get()->mock_payload_state()),
@@ -293,7 +296,8 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
     EXPECT_EQ(1U, install_plan.target_slot);
     string deadline;
     EXPECT_TRUE(utils::ReadFile(test_deadline_file.path(), &deadline));
-    EXPECT_EQ("some-deadline", deadline);
+    EXPECT_EQ(kDeadlineNow, deadline);
+    EXPECT_TRUE(install_plan.critical_update);
     EXPECT_EQ(in.version, install_plan.version);
   }
 }

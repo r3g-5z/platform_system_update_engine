@@ -48,6 +48,8 @@ using std::string;
 
 namespace chromeos_update_engine {
 
+const char kDeadlineNow[] = "now";
+
 OmahaResponseHandlerAction::OmahaResponseHandlerAction()
     : deadline_file_(constants::kOmahaResponseDeadlineFile) {}
 
@@ -247,10 +249,17 @@ void OmahaResponseHandlerAction::PerformAction() {
       // check where policy was present.
       LOG(INFO) << "Not forcing update because a rollback happened.";
       utils::WriteFile(deadline_file_.c_str(), nullptr, 0);
+      install_plan_.critical_update = false;
     } else {
       utils::WriteFile(deadline_file_.c_str(),
                        response.deadline.data(),
                        response.deadline.size());
+      // There is a critical update only when deadline="now".
+      install_plan_.critical_update = (response.deadline == kDeadlineNow);
+      if (!response.deadline.empty() && !install_plan_.critical_update) {
+        LOG(WARNING) << response.deadline
+                     << " is not a valid deadline value for critical updates.";
+      }
     }
     chmod(deadline_file_.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
   }

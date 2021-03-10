@@ -269,6 +269,8 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest,
               PowerwashInGetStatusTrueBecausePowerwashRequired);
   FRIEND_TEST(UpdateAttempterTest, PowerwashInGetStatusTrueBecauseRollback);
+  FRIEND_TEST(UpdateAttempterTest, CriticalUpdateDefault);
+  FRIEND_TEST(UpdateAttempterTest, CriticalUpdate);
   FRIEND_TEST(UpdateAttempterTest, MarkDeltaUpdateFailureTest);
   FRIEND_TEST(UpdateAttempterTest, PingOmahaTest);
   FRIEND_TEST(UpdateAttempterTest, ProcessingDoneInstallError);

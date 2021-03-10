@@ -95,6 +95,8 @@ struct UpdateEngineStatus {
   bool will_powerwash_after_reboot;
   // The last update attempt error.
   int32_t last_attempt_error;
+  // Whether the update is critical.
+  bool critical_update;
 };
 
 }  // namespace update_engine

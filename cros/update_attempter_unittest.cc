@@ -2273,6 +2273,23 @@ TEST_F(UpdateAttempterTest, PowerwashInGetStatusTrueBecauseRollback) {
   EXPECT_TRUE(status.will_powerwash_after_reboot);
 }
 
+TEST_F(UpdateAttempterTest, CriticalUpdateDefault) {
+  attempter_.install_plan_.reset(new InstallPlan);
+
+  UpdateEngineStatus status;
+  attempter_.GetStatus(&status);
+  EXPECT_FALSE(status.critical_update);
+}
+
+TEST_F(UpdateAttempterTest, CriticalUpdate) {
+  attempter_.install_plan_.reset(new InstallPlan);
+  attempter_.install_plan_->critical_update = true;
+
+  UpdateEngineStatus status;
+  attempter_.GetStatus(&status);
+  EXPECT_TRUE(status.critical_update);
+}
+
 TEST_F(UpdateAttempterTest, FutureEolTest) {
   EolDate eol_date = std::numeric_limits<int64_t>::max();
   EXPECT_TRUE(prefs_->SetString(kPrefsOmahaEolDate, EolDateToString(eol_date)));

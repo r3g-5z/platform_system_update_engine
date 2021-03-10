@@ -30,6 +30,8 @@
 
 namespace chromeos_update_engine {
 
+extern const char kDeadlineNow[];
+
 class OmahaResponseHandlerAction;
 
 template <>
