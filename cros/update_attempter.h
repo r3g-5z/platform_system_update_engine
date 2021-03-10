@@ -426,6 +426,9 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // policy is available again.
   void UpdateRollbackHappened();
 
+  // Categorizes and returns the last update error.
+  ErrorCode GetLastUpdateError();
+
   // Returns if an update is: running, applied and needs reboot, or scheduled.
   bool IsBusyOrUpdateScheduled();
 
