@@ -861,7 +861,7 @@ bool DynamicPartitionControlAndroid::UpdatePartitionMetadata(
     uint32_t target_slot,
     const DeltaArchiveManifest& manifest) {
   // Check preconditions.
-  CHECK(!GetVirtualAbFeatureFlag().IsEnabled() || IsRecovery())
+  LOG_IF(WARNING, !GetVirtualAbFeatureFlag().IsEnabled() || IsRecovery())
       << "UpdatePartitionMetadata is called on a Virtual A/B device "
          "but source partitions is not deleted. This is not allowed.";
 
@@ -937,6 +937,12 @@ bool DynamicPartitionControlAndroid::UpdatePartitionMetadata(
       if (!builder->ResizePartition(p, partition_size)) {
         LOG(ERROR) << "Cannot resize partition " << partition_name_suffix
                    << " to size " << partition_size << ". Not enough space?";
+        return false;
+      }
+      if (p->size() < partition_size) {
+        LOG(ERROR) << "Partition " << partition_name_suffix
+                   << " was expected to have size " << partition_size
+                   << ", but instead has size " << p->size();
         return false;
       }
       LOG(INFO) << "Added partition " << partition_name_suffix << " to group "
@@ -1015,9 +1021,11 @@ DynamicPartitionControlAndroid::GetPartitionDevice(
       partition_name + SlotSuffixForSlotNumber(slot);
   if (UpdateUsesSnapshotCompression() && IsDynamicPartition(partition_name) &&
       slot != current_slot) {
-    return {{.mountable_device_path =
-                 GetStaticDevicePath(device_dir, partition_name_suffix),
-             .is_dynamic = true}};
+    return {
+        {.mountable_device_path = base::FilePath{std::string{VABC_DEVICE_DIR}}
+                                      .Append(partition_name_suffix)
+                                      .value(),
+         .is_dynamic = true}};
   }
 
   // When looking up target partition devices, treat them as static if the
