@@ -534,9 +534,10 @@ class P2PDownloadActionTest : public testing::Test {
   void SetupDownload(off_t starting_offset) {
     start_at_offset_ = starting_offset;
     // Prepare data 10 kB of data.
-    data_.clear();
-    for (unsigned int i = 0; i < 10 * 1000; i++)
-      data_ += 'a' + (i % 25);
+    data_.resize(10 * 1000);
+    std::generate(data_.begin(), data_.end(), [i = 0]() mutable {
+      return 'a' + (i++ % 26);
+    });
 
     // Setup p2p.
     FakeP2PManagerConfiguration* test_conf = new FakeP2PManagerConfiguration();
@@ -702,6 +703,69 @@ TEST_F(P2PDownloadActionTest, DeletePartialP2PFileIfResumingWithoutP2P) {
   // DownloadAction should have deleted the p2p file. Check that it's gone.
   EXPECT_EQ(-1, p2p_manager_->FileGetSize(file_id));
   EXPECT_EQ(0, p2p_manager_->CountSharedFiles());
+}
+
+TEST_F(P2PDownloadActionTest, MultiplePayload) {
+  SetupDownload(0);
+  EXPECT_CALL(*FakeSystemState::Get()->mock_payload_state(),
+              GetUsingP2PForSharing())
+      .WillRepeatedly(Return(true));
+
+  EXPECT_CALL(*FakeSystemState::Get()->mock_payload_state(), NextPayload())
+      .WillOnce(Return(true));
+
+  MockFileWriter mock_file_writer;
+  EXPECT_CALL(mock_file_writer, Close()).WillRepeatedly(Return(0));
+  EXPECT_CALL(mock_file_writer, Write(_, _, _))
+      .WillRepeatedly(
+          DoAll(SetArgPointee<2>(ErrorCode::kSuccess), Return(true)));
+
+  InstallPlan install_plan;
+  install_plan.payloads.push_back(
+      {.size = data_.length() / 4,
+       .hash = {'1', '1', '1', '1', 'h', 'a', 's', 'h'}});
+  install_plan.payloads.push_back(
+      {.size = (data_.length() / 4) * 3,
+       .hash = {'2', '2', '2', '2', 'h', 'a', 's', 'h'}});
+
+  auto feeder_action = std::make_unique<ObjectFeederAction<InstallPlan>>();
+  feeder_action->set_obj(install_plan);
+  auto download_action = std::make_unique<DownloadActionChromeos>(
+      FakeSystemState::Get()->prefs(),
+      FakeSystemState::Get()->boot_control(),
+      FakeSystemState::Get()->hardware(),
+      new MockHttpFetcher(data_.c_str(), data_.length(), nullptr),
+      /*interactive=*/false);
+
+  download_action->SetTestFileWriter(&mock_file_writer);
+  BondActions(feeder_action.get(), download_action.get());
+  processor_.EnqueueAction(std::move(feeder_action));
+  processor_.EnqueueAction(std::move(download_action));
+
+  loop_.PostTask(
+      FROM_HERE,
+      base::Bind(
+          [](ActionProcessor* processor) { processor->StartProcessing(); },
+          base::Unretained(&processor_)));
+  loop_.Run();
+  EXPECT_FALSE(loop_.PendingTasks());
+
+  EXPECT_EQ(2, p2p_manager_->CountSharedFiles());
+  size_t offset = 0;
+  for (auto& payload : install_plan.payloads) {
+    string file_id = utils::CalculateP2PFileId(payload.hash, payload.size);
+    LOG(INFO) << "test" << file_id;
+    EXPECT_EQ(payload.size, p2p_manager_->FileGetSize(file_id));
+    string file_content;
+    EXPECT_TRUE(
+        ReadFileToString(p2p_manager_->FileGetPath(file_id), &file_content));
+    EXPECT_EQ(data_.substr(0, payload.size), file_content);
+    offset += payload.size;
+  }
+
+  // We don't use the |delegate_| in this test. So just sets it's processing
+  // done to true so it doesn't complain on destruction.
+  delegate_.processing_done_called_ = true;
 }
 
 class RestrictedTimeIntervalDownloadActionTest : public ::testing::Test {

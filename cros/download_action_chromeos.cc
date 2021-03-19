@@ -80,6 +80,7 @@ void DownloadActionChromeos::CloseP2PSharingFd(bool delete_p2p_file) {
 
   // Don't use p2p from this point onwards.
   p2p_file_id_.clear();
+  p2p_visible_ = false;
 }
 
 bool DownloadActionChromeos::SetupP2PSharingFd() {
@@ -122,8 +123,7 @@ void DownloadActionChromeos::WriteToP2PFile(const void* data,
                                             size_t length,
                                             off_t file_offset) {
   if (p2p_sharing_fd_ == -1) {
-    if (!SetupP2PSharingFd())
-      return;
+    return;
   }
 
   // Check that the file is at least |file_offset| bytes long - if
@@ -255,6 +255,10 @@ void DownloadActionChromeos::StartDownloading() {
   }
 
   if (SystemState::Get() != nullptr) {
+    // Close any previous P2P sharing. It will be a no-op if there were no
+    // previous file sharing.
+    CloseP2PSharingFd(false);
+
     const PayloadStateInterface* payload_state =
         SystemState::Get()->payload_state();
     string file_id = utils::CalculateP2PFileId(payload_->hash, payload_->size);
@@ -262,7 +266,9 @@ void DownloadActionChromeos::StartDownloading() {
       // If we're sharing the update, store the file_id to convey
       // that we should write to the file.
       p2p_file_id_ = file_id;
-      LOG(INFO) << "p2p file id: " << p2p_file_id_;
+      LOG(INFO) << "Sharing p2p file with id: " << p2p_file_id_;
+      if (!SetupP2PSharingFd())
+        return;
     } else {
       // Even if we're not sharing the update, it could be that
       // there's a partial file from a previous attempt with the same
