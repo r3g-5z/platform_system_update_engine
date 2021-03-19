@@ -28,7 +28,6 @@
 #include <base/stl_util.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
-#include <gmock/gmock-matchers.h>
 #include <google/protobuf/repeated_field.h>
 #include <gtest/gtest.h>
 #include <openssl/pem.h>
