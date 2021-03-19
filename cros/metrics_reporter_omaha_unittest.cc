@@ -519,6 +519,22 @@ TEST_F(MetricsReporterOmahaTest,
       true /* has_time_restriction_policy */, kDaysToUpdate);
 }
 
+TEST_F(MetricsReporterOmahaTest, ReportConsecutiveUpdateCount) {
+  int consecutive_update_count = 2;
+  EXPECT_CALL(*mock_metrics_lib_,
+              SendSparseToUMA(metrics::kMetricConsecutiveUpdateCount,
+                              consecutive_update_count));
+
+  reporter_.ReportConsecutiveUpdateCount(consecutive_update_count);
+}
+
+TEST_F(MetricsReporterOmahaTest, ReportFailedConsecutiveUpdate) {
+  EXPECT_CALL(*mock_metrics_lib_,
+              SendBoolToUMA(metrics::kMetricConsecutiveUpdateFailed, true));
+
+  reporter_.ReportFailedConsecutiveUpdate();
+}
+
 TEST_F(MetricsReporterOmahaTest, WallclockDurationHelper) {
   base::TimeDelta duration;
   const std::string state_variable_key = "test-prefs";

@@ -35,6 +35,7 @@ const char kPrefsAllowRepeatedUpdates[] = "allow-repeated-updates";
 const char kPrefsAttemptInProgress[] = "attempt-in-progress";
 const char kPrefsBackoffExpiryTime[] = "backoff-expiry-time";
 const char kPrefsBootId[] = "boot-id";
+const char kPrefsConsecutiveUpdateCount[] = "consecutive-update-count";
 const char kPrefsCurrentBytesDownloaded[] = "current-bytes-downloaded";
 const char kPrefsCurrentResponseSignature[] = "current-response-signature";
 const char kPrefsCurrentUrlFailureCount[] = "current-url-failure-count";

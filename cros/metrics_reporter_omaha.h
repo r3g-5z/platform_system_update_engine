@@ -100,6 +100,10 @@ extern const char kMetricFailedUpdateCount[];
 extern const char kMetricInstallDateProvisioningSource[];
 extern const char kMetricTimeToRebootMinutes[];
 
+// UpdateEngine.ConsecutiveUpdate.* metrics.
+extern const char kMetricConsecutiveUpdateCount[];
+extern const char kMetricConsecutiveUpdateFailed[];
+
 }  // namespace metrics
 
 class MetricsReporterOmaha : public MetricsReporterInterface {
@@ -166,6 +170,10 @@ class MetricsReporterOmaha : public MetricsReporterInterface {
 
   void ReportEnterpriseUpdateSeenToDownloadDays(
       bool has_time_restriction_policy, int time_to_update_days) override;
+
+  void ReportConsecutiveUpdateCount(int count) override;
+
+  void ReportFailedConsecutiveUpdate() override;
 
  private:
   friend class MetricsReporterOmahaTest;

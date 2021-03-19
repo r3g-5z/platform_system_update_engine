@@ -90,6 +90,10 @@ class MetricsReporterAndroid : public MetricsReporterInterface {
   void ReportEnterpriseUpdateSeenToDownloadDays(
       bool has_time_restriction_policy, int time_to_update_days) override {}
 
+  void ReportConsecutiveUpdateCount(int count) override {}
+
+  void ReportFailedConsecutiveUpdate() override {}
+
  private:
   DISALLOW_COPY_AND_ASSIGN(MetricsReporterAndroid);
 };

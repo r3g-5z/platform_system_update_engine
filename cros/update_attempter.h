@@ -301,6 +301,9 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest, GetSuccessfulDlcIds);
   FRIEND_TEST(UpdateAttempterTest, QuickFixTokenWhenDeviceIsEnterpriseEnrolled);
   FRIEND_TEST(UpdateAttempterTest, MoveToPrefs);
+  FRIEND_TEST(UpdateAttempterTest, FirstUpdateBeforeReboot);
+  FRIEND_TEST(UpdateAttempterTest, ConsecutiveUpdateBeforeRebootSuccess);
+  FRIEND_TEST(UpdateAttempterTest, ConsecutiveUpdateFailureMetric);
 
   // Returns the special flags to be added to ErrorCode values based on the
   // parameters used in the current update attempt.
@@ -320,6 +323,9 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // reported and, if so, reports daily metrics. Returns |true| if
   // metrics were reported, |false| otherwise.
   bool CheckAndReportDailyMetrics();
+
+  // Report the |ConsecutiveUpdateCount| metric after reboot.
+  void ReportConsecutiveUpdateMetric();
 
   // Calculates and reports the age of the currently running OS. This
   // is defined as the age of the /etc/lsb-release file.

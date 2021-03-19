@@ -135,6 +135,12 @@ const char kMetricInstallDateProvisioningSource[] =
     "UpdateEngine.InstallDateProvisioningSource";
 const char kMetricTimeToRebootMinutes[] = "UpdateEngine.TimeToRebootMinutes";
 
+// UpdateEngine.ConsecutiveUpdate.* metrics.
+const char kMetricConsecutiveUpdateCount[] =
+    "UpdateEngine.ConsecutiveUpdate.Count";
+const char kMetricConsecutiveUpdateFailed[] =
+    "UpdateEngine.ConsecutiveUpdate.Failed";
+
 std::unique_ptr<MetricsReporterInterface> CreateMetricsReporter() {
   return std::make_unique<MetricsReporterOmaha>();
 }
@@ -547,6 +553,16 @@ void MetricsReporterOmaha::ReportEnterpriseUpdateSeenToDownloadDays(
                           1,       // min: 1 days
                           6 * 30,  // max: 6 months (approx)
                           50);     // num_buckets
+}
+
+void MetricsReporterOmaha::ReportConsecutiveUpdateCount(int count) {
+  string metric = metrics::kMetricConsecutiveUpdateCount;
+  metrics_lib_->SendSparseToUMA(metric, count);
+}
+
+void MetricsReporterOmaha::ReportFailedConsecutiveUpdate() {
+  string metric = metrics::kMetricConsecutiveUpdateFailed;
+  metrics_lib_->SendBoolToUMA(metric, true);
 }
 
 bool MetricsReporterOmaha::WallclockDurationHelper(

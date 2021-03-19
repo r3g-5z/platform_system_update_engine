@@ -42,6 +42,7 @@ extern const char kPrefsAllowRepeatedUpdates[];
 extern const char kPrefsAttemptInProgress[];
 extern const char kPrefsBackoffExpiryTime[];
 extern const char kPrefsBootId[];
+extern const char kPrefsConsecutiveUpdateCount[];
 extern const char kPrefsCurrentBytesDownloaded[];
 extern const char kPrefsCurrentResponseSignature[];
 extern const char kPrefsCurrentUrlFailureCount[];

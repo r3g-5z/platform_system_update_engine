@@ -159,8 +159,13 @@ void UpdateAttempter::Init() {
   if (GetBootTimeAtUpdate(nullptr)) {
     status_ = UpdateStatus::UPDATED_NEED_REBOOT;
   } else {
+    // Send metric before deleting prefs. Metric tells us how many times the
+    // inactive partition was updated before the reboot.
+    ReportConsecutiveUpdateMetric();
+
     status_ = UpdateStatus::IDLE;
     prefs_->Delete(kPrefsLastFp, {kDlcPrefsSubDir});
+    prefs_->Delete(kPrefsConsecutiveUpdateCount);
   }
 }
 
@@ -248,6 +253,15 @@ bool UpdateAttempter::CheckAndReportDailyMetrics() {
   ReportOSAge();
 
   return true;
+}
+
+void UpdateAttempter::ReportConsecutiveUpdateMetric() {
+  int64_t num_consecutive_updates = 0;
+  SystemState::Get()->prefs()->GetInt64(kPrefsConsecutiveUpdateCount,
+                                        &num_consecutive_updates);
+  if (num_consecutive_updates != 0)
+    SystemState::Get()->metrics_reporter()->ReportConsecutiveUpdateCount(
+        num_consecutive_updates);
 }
 
 void UpdateAttempter::ReportOSAge() {
@@ -1200,14 +1214,22 @@ void UpdateAttempter::ProcessingDoneUpdate(const ActionProcessor* processor,
   // |install_plan_| is null during rollback operations, and the stats don't
   // make much sense then anyway.
   if (install_plan_) {
+    if (SystemState::Get()->prefs()->Exists(kPrefsLastFp)) {
+      int64_t num_consecutive_updates = 0;
+      SystemState::Get()->prefs()->GetInt64(kPrefsConsecutiveUpdateCount,
+                                            &num_consecutive_updates);
+      // If last fingerprint exists, then this is a consecutive update.
+      // Increment pref.
+      SystemState::Get()->prefs()->SetInt64(kPrefsConsecutiveUpdateCount,
+                                            ++num_consecutive_updates);
+    }
     // Generate an unique payload identifier.
     string target_version_uid;
     for (const auto& payload : install_plan_->payloads) {
       target_version_uid += brillo::data_encoding::Base64Encode(payload.hash) +
                             ":" + payload.metadata_signature + ":";
       // Set fingerprint value for updates only.
-      if (!is_install_)
-        SetPref(kPrefsLastFp, payload.fp, payload.app_id);
+      SetPref(kPrefsLastFp, payload.fp, payload.app_id);
     }
 
     // If we just downloaded a rollback image, we should preserve this fact
@@ -1349,6 +1371,14 @@ void UpdateAttempter::ActionCompleted(ActionProcessor* processor,
         case UpdateStatus::DISABLED:
         case UpdateStatus::CLEANUP_PREVIOUS_UPDATE:
           MarkDeltaUpdateFailure();
+          // Errored out after partition was marked unbootable.
+          if (SystemState::Get()->prefs()->Exists(kPrefsLastFp)) {
+            // Last fingerprint exists so this is a consecutive update that
+            // failed. Send Metric.
+            SystemState::Get()
+                ->metrics_reporter()
+                ->ReportFailedConsecutiveUpdate();
+          }
           break;
       }
     }
@@ -1428,13 +1458,15 @@ bool UpdateAttempter::ResetStatus() {
     case UpdateStatus::UPDATED_NEED_REBOOT: {
       bool ret_value = true;
       status_ = UpdateStatus::IDLE;
-
+      // Send metrics before resetting.
+      ReportConsecutiveUpdateMetric();
       // Remove the reboot marker so that if the machine is rebooted
       // after resetting to idle state, it doesn't go back to
       // UpdateStatus::UPDATED_NEED_REBOOT state.
       ret_value = prefs_->Delete(kPrefsUpdateCompletedOnBootId) && ret_value;
       ret_value = prefs_->Delete(kPrefsUpdateCompletedBootTime) && ret_value;
       ret_value = prefs_->Delete(kPrefsLastFp, {kDlcPrefsSubDir}) && ret_value;
+      ret_value = prefs_->Delete(kPrefsConsecutiveUpdateCount) && ret_value;
 
       // Update the boot flags so the current slot has higher priority.
       BootControlInterface* boot_control = SystemState::Get()->boot_control();

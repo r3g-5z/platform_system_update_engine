@@ -2452,6 +2452,54 @@ TEST_F(UpdateAttempterTest, CalculateDlcParamsValidValuesTest) {
   EXPECT_EQ("3.75", dlc_app_params.last_fp);
 }
 
+TEST_F(UpdateAttempterTest, FirstUpdateBeforeReboot) {
+  attempter_.is_install_ = false;
+  attempter_.install_plan_.reset(new InstallPlan);
+  attempter_.install_plan_->payloads.push_back(
+      {.size = 1234ULL, .type = InstallPayloadType::kFull});
+
+  // Call |ProcessingDoneUpdate|.
+  pd_params_.should_update_completed_be_called = true;
+  pd_params_.expected_exit_status = UpdateStatus::UPDATED_NEED_REBOOT;
+  TestProcessingDone();
+
+  // Consecutive update metric should not be updated on the first update.
+  EXPECT_FALSE(
+      FakeSystemState::Get()->prefs()->Exists(kPrefsConsecutiveUpdateCount));
+}
+
+TEST_F(UpdateAttempterTest, ConsecutiveUpdateBeforeRebootSuccess) {
+  FakeSystemState::Get()->prefs()->SetString(kPrefsLastFp, "3.75");
+  attempter_.is_install_ = false;
+  attempter_.install_plan_.reset(new InstallPlan);
+  attempter_.install_plan_->payloads.push_back(
+      {.size = 1234ULL, .type = InstallPayloadType::kFull, .fp = "4.0"});
+
+  // Call |ProcessingDoneUpdate|.
+  pd_params_.should_update_completed_be_called = true;
+  pd_params_.expected_exit_status = UpdateStatus::UPDATED_NEED_REBOOT;
+  TestProcessingDone();
+
+  // Consecutive update metric should be updated.
+  int64_t num_updates;
+  FakeSystemState::Get()->prefs()->GetInt64(kPrefsConsecutiveUpdateCount,
+                                            &num_updates);
+  EXPECT_EQ(num_updates, 1);
+}
+
+TEST_F(UpdateAttempterTest, ConsecutiveUpdateFailureMetric) {
+  MockAction action;
+  FakeSystemState::Get()->prefs()->SetString(kPrefsLastFp, "3.75");
+
+  // Fail an update.
+  EXPECT_CALL(action, Type()).WillRepeatedly(Return("MockAction"));
+  attempter_.status_ = UpdateStatus::DOWNLOADING;
+  EXPECT_CALL(*FakeSystemState::Get()->mock_metrics_reporter(),
+              ReportFailedConsecutiveUpdate());
+  attempter_.ActionCompleted(nullptr, &action, ErrorCode::kError);
+  ASSERT_NE(nullptr, attempter_.error_event_.get());
+}
+
 TEST_F(UpdateAttempterTest, CalculateDlcParamsRemoveStaleMetadata) {
   string dlc_id = "dlc0";
   auto active_key =

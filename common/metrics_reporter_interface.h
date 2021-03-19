@@ -231,6 +231,14 @@ class MetricsReporterInterface {
   //
   virtual void ReportEnterpriseUpdateSeenToDownloadDays(
       bool has_time_restriction_policy, int time_to_update_days) = 0;
+
+  // Metrics for consecutive updates before reboot.
+  // |kMetricConsecutiveUpdateCount|
+  virtual void ReportConsecutiveUpdateCount(int count) = 0;
+
+  // |kMetricConsecutiveUpdateFailed|. Sent only when a consecutive update
+  // invalidates a previous update.
+  virtual void ReportFailedConsecutiveUpdate() = 0;
 };
 
 namespace metrics {

@@ -90,6 +90,8 @@ class MockMetricsReporter : public MetricsReporterInterface {
 
   MOCK_METHOD2(ReportEnterpriseUpdateSeenToDownloadDays,
                void(bool has_time_restriction_policy, int time_to_update_days));
+  MOCK_METHOD(void, ReportConsecutiveUpdateCount, (int count), (override));
+  MOCK_METHOD(void, ReportFailedConsecutiveUpdate, (), (override));
 };
 
 }  // namespace chromeos_update_engine
