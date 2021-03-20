@@ -754,7 +754,6 @@ TEST_F(P2PDownloadActionTest, MultiplePayload) {
   size_t offset = 0;
   for (auto& payload : install_plan.payloads) {
     string file_id = utils::CalculateP2PFileId(payload.hash, payload.size);
-    LOG(INFO) << "test" << file_id;
     EXPECT_EQ(payload.size, p2p_manager_->FileGetSize(file_id));
     string file_content;
     EXPECT_TRUE(

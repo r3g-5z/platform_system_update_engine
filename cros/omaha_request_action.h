@@ -23,12 +23,12 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
-#include <base/optional.h>
 #include <brillo/secure_blob.h>
 #include <curl/curl.h>
 
@@ -180,7 +180,7 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
   // deleted. Don't call this function with an empty |new_value| if the value
   // was not set in the XML, since that would delete the stored value.
   void PersistCohortData(const std::string& prefs_key,
-                         const base::Optional<std::string>& new_value);
+                         const std::optional<std::string>& new_value);
 
   // Parses and persists the cohorts sent back in the updatecheck tag
   // attributes.

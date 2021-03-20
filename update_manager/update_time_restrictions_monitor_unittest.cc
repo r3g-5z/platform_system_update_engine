@@ -15,8 +15,8 @@
 //
 
 #include <memory>
+#include <optional>
 
-#include <base/optional.h>
 #include <base/time/time.h>
 #include <base/test/simple_test_clock.h>
 #include <brillo/message_loops/fake_message_loop.h>
@@ -144,7 +144,7 @@ class UmUpdateTimeRestrictionsMonitorTest : public ::testing::Test {
   FakeMessageLoop fake_loop_{&test_clock_};
   FakeState fake_state_;
   MockUpdateTimeRestrictionsMonitorDelegate mock_delegate_;
-  base::Optional<UpdateTimeRestrictionsMonitor> monitor_;
+  std::optional<UpdateTimeRestrictionsMonitor> monitor_;
 };
 
 TEST_F(UmUpdateTimeRestrictionsMonitorTest, PolicyIsNotSet) {

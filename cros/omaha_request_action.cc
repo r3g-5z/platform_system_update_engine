@@ -27,7 +27,6 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/notreached.h>
-#include <base/optional.h>
 #include <base/rand_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
@@ -56,7 +55,6 @@
 #include "update_engine/cros/update_attempter.h"
 #include "update_engine/metrics_utils.h"
 
-using base::Optional;
 using base::Time;
 using base::TimeDelta;
 using chromeos_update_manager::kRollforwardInfinity;
@@ -1098,8 +1096,8 @@ bool OmahaRequestAction::PersistInstallDate(
   return true;
 }
 
-void OmahaRequestAction::PersistCohortData(const string& prefs_key,
-                                           const Optional<string>& new_value) {
+void OmahaRequestAction::PersistCohortData(
+    const string& prefs_key, const std::optional<string>& new_value) {
   if (!new_value)
     return;
   const string& value = new_value.value();

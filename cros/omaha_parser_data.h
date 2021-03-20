@@ -19,8 +19,7 @@
 
 #include <string>
 #include <vector>
-
-#include <base/optional.h>
+#include <optional>
 
 namespace chromeos_update_engine {
 
@@ -85,9 +84,9 @@ struct OmahaParserData {
 
   struct App {
     std::string id;
-    base::Optional<std::string> cohort;
-    base::Optional<std::string> cohorthint;
-    base::Optional<std::string> cohortname;
+    std::optional<std::string> cohort;
+    std::optional<std::string> cohorthint;
+    std::optional<std::string> cohortname;
 
     struct Url {
       std::string codebase;
@@ -127,7 +126,7 @@ struct OmahaParserData {
       std::string disable_hash_checks;
       std::string disable_repeated_updates;
     };
-    base::Optional<PostInstallAction> postinstall_action;
+    std::optional<PostInstallAction> postinstall_action;
 
     struct Package {
       std::string name;
