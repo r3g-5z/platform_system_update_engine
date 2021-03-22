@@ -24,6 +24,7 @@
 // NOTE: Keep this file in sync with
 // platform2/system_api/dbus/update_engine/update_engine.proto especially:
 // - |UpdateStatus| <-> |Operation|
+// - |UpdateUrgencyInternal| <-> |UpdateUrgency|
 // - |UpdateEngineStatus| <-> |StatusResult|
 
 namespace update_engine {
@@ -56,6 +57,12 @@ enum class UpdateStatus {
   // state that the update_engine stays on. This is the result of an internal
   // failure and should be reflected differently.
   // ERROR = -1,
+};
+
+// Enum of update types.
+enum class UpdateUrgencyInternal {
+  REGULAR = 0,
+  CRITICAL = 1,
 };
 
 // Enum of bit-wise flags for controlling how updates are attempted.
@@ -95,8 +102,8 @@ struct UpdateEngineStatus {
   bool will_powerwash_after_reboot;
   // The last update attempt error.
   int32_t last_attempt_error;
-  // Whether the update is critical.
-  bool critical_update;
+  // How urgent an update is, critical or regular.
+  UpdateUrgencyInternal update_urgency_internal;
 };
 
 }  // namespace update_engine

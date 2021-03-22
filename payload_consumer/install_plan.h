@@ -23,6 +23,7 @@
 #include <base/macros.h>
 #include <brillo/secure_blob.h>
 
+#include "update_engine/client_library/include/update_engine/update_status.h"
 #include "update_engine/common/action.h"
 #include "update_engine/common/boot_control_interface.h"
 
@@ -172,8 +173,9 @@ struct InstallPlan {
   // True if download can be canceled due to restricted time interval.
   bool can_download_be_canceled{false};
 
-  // True if there is a critical update.
-  bool critical_update{false};
+  // Indicates the type of update.
+  update_engine::UpdateUrgencyInternal update_urgency{
+      update_engine::UpdateUrgencyInternal::REGULAR};
 };
 
 class InstallPlanAction;

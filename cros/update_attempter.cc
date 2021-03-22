@@ -1476,7 +1476,9 @@ bool UpdateAttempter::GetStatus(UpdateEngineStatus* out_status) {
   out_status->is_enterprise_rollback =
       install_plan_ && install_plan_->is_rollback;
   out_status->is_install = is_install_;
-  out_status->critical_update = install_plan_ && install_plan_->critical_update;
+  out_status->update_urgency_internal =
+      install_plan_ ? install_plan_->update_urgency
+                    : update_engine::UpdateUrgencyInternal::REGULAR;
 
   string str_eol_date;
   if (SystemState::Get()->prefs()->Exists(kPrefsOmahaEolDate) &&

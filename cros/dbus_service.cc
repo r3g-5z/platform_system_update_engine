@@ -34,6 +34,7 @@ using std::vector;
 using update_engine::Operation;
 using update_engine::StatusResult;
 using update_engine::UpdateEngineStatus;
+using update_engine::UpdateUrgency;
 
 namespace {
 // Converts the internal |UpdateEngineStatus| to the protobuf |StatusResult|.
@@ -50,7 +51,8 @@ void ConvertToStatusResult(const UpdateEngineStatus& ue_status,
   out_status->set_will_powerwash_after_reboot(
       ue_status.will_powerwash_after_reboot);
   out_status->set_last_attempt_error(ue_status.last_attempt_error);
-  out_status->set_critical_update(ue_status.critical_update);
+  out_status->set_update_urgency(
+      static_cast<UpdateUrgency>(ue_status.update_urgency_internal));
 }
 }  // namespace
 

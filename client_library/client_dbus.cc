@@ -58,6 +58,8 @@ void ConvertToUpdateEngineStatus(const StatusResult& status,
   out_status->eol_date = status.eol_date();
   out_status->will_powerwash_after_reboot =
       status.will_powerwash_after_reboot();
+  out_status->update_urgency_internal =
+      static_cast<UpdateUrgencyInternal>(status.update_urgency());
 }
 }  // namespace
 

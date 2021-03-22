@@ -2278,16 +2278,19 @@ TEST_F(UpdateAttempterTest, CriticalUpdateDefault) {
 
   UpdateEngineStatus status;
   attempter_.GetStatus(&status);
-  EXPECT_FALSE(status.critical_update);
+  EXPECT_EQ(status.update_urgency_internal,
+            update_engine::UpdateUrgencyInternal::REGULAR);
 }
 
 TEST_F(UpdateAttempterTest, CriticalUpdate) {
   attempter_.install_plan_.reset(new InstallPlan);
-  attempter_.install_plan_->critical_update = true;
+  attempter_.install_plan_->update_urgency =
+      update_engine::UpdateUrgencyInternal::CRITICAL;
 
   UpdateEngineStatus status;
   attempter_.GetStatus(&status);
-  EXPECT_TRUE(status.critical_update);
+  EXPECT_EQ(status.update_urgency_internal,
+            update_engine::UpdateUrgencyInternal::CRITICAL);
 }
 
 TEST_F(UpdateAttempterTest, FutureEolTest) {

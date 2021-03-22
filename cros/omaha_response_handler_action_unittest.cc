@@ -207,7 +207,8 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
     EXPECT_EQ("not-valid-deadline", deadline);
     struct stat deadline_stat;
     EXPECT_EQ(0, stat(test_deadline_file.path().c_str(), &deadline_stat));
-    EXPECT_FALSE(install_plan.critical_update);
+    EXPECT_EQ(install_plan.update_urgency,
+              update_engine::UpdateUrgencyInternal::REGULAR);
     EXPECT_EQ(
         static_cast<mode_t>(S_IFREG | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH),
         deadline_stat.st_mode);
@@ -237,7 +238,8 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
     string deadline;
     EXPECT_TRUE(utils::ReadFile(test_deadline_file.path(), &deadline) &&
                 deadline.empty());
-    EXPECT_FALSE(install_plan.critical_update);
+    EXPECT_EQ(install_plan.update_urgency,
+              update_engine::UpdateUrgencyInternal::REGULAR);
     EXPECT_EQ(in.version, install_plan.version);
   }
   {
@@ -268,7 +270,8 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
     string deadline;
     EXPECT_TRUE(utils::ReadFile(test_deadline_file.path(), &deadline));
     EXPECT_TRUE(deadline.empty());
-    EXPECT_FALSE(install_plan.critical_update);
+    EXPECT_EQ(install_plan.update_urgency,
+              update_engine::UpdateUrgencyInternal::REGULAR);
     EXPECT_EQ(in.version, install_plan.version);
   }
   {
@@ -297,7 +300,8 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
     string deadline;
     EXPECT_TRUE(utils::ReadFile(test_deadline_file.path(), &deadline));
     EXPECT_EQ(kDeadlineNow, deadline);
-    EXPECT_TRUE(install_plan.critical_update);
+    EXPECT_EQ(install_plan.update_urgency,
+              update_engine::UpdateUrgencyInternal::CRITICAL);
     EXPECT_EQ(in.version, install_plan.version);
   }
 }
