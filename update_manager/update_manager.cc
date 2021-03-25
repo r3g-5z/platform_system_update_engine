@@ -27,19 +27,20 @@ UpdateManager::UpdateManager(base::TimeDelta evaluation_timeout,
                              State* state)
     : state_(state),
       evaluation_timeout_(evaluation_timeout),
-      expiration_timeout_(expiration_timeout) {}
+      expiration_timeout_(expiration_timeout),
+      weak_ptr_factory_(this) {}
 
-UpdateManager::~UpdateManager() {}
+UpdateManager::~UpdateManager() = default;
 
 EvalStatus UpdateManager::PolicyRequest(
     std::unique_ptr<PolicyInterface> policy,
     std::shared_ptr<PolicyDataInterface> data) {
-  return base::MakeRefCounted<PolicyEvaluator>(
+  return PolicyEvaluator(
              state_.get(),
              std::make_unique<EvaluationContext>(evaluation_timeout_),
              std::move(policy),
              std::move(data))
-      ->Evaluate();
+      .Evaluate();
 }
 
 void UpdateManager::PolicyRequest(std::unique_ptr<PolicyInterface> policy,
@@ -49,9 +50,27 @@ void UpdateManager::PolicyRequest(std::unique_ptr<PolicyInterface> policy,
       evaluation_timeout_,
       expiration_timeout_,
       std::unique_ptr<base::Callback<void(EvaluationContext*)>>(nullptr));
-  base::MakeRefCounted<PolicyEvaluator>(
-      state_.get(), std::move(ec), std::move(policy), std::move(data))
-      ->ScheduleEvaluation(std::move(callback));
+  evaluators_.push_back(std::make_unique<PolicyEvaluator>(
+      state_.get(),
+      std::move(ec),
+      std::move(policy),
+      std::move(data),
+      base::BindOnce(&UpdateManager::Unregister,
+                     weak_ptr_factory_.GetWeakPtr())));
+  evaluators_.back()->ScheduleEvaluation(std::move(callback));
+}
+
+void UpdateManager::Unregister(PolicyEvaluator* evaluator) {
+  // TODO(ahassani): Once we move to C++20 use |std::erase_if()| instead.
+  auto it =
+      std::find_if(evaluators_.begin(),
+                   evaluators_.end(),
+                   [evaluator](const std::unique_ptr<PolicyEvaluator>& e) {
+                     return e.get() == evaluator;
+                   });
+  if (it != evaluators_.end()) {
+    evaluators_.erase(it);
+  }
 }
 
 std::unique_ptr<UpdateTimeRestrictionsMonitor>

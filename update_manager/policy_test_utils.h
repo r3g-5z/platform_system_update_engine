@@ -77,7 +77,7 @@ class UmPolicyTestBase : public ::testing::Test {
   FakeState fake_state_;
   std::shared_ptr<EvaluationContext> eval_ctx_;
 
-  scoped_refptr<PolicyEvaluator> evaluator_;
+  std::unique_ptr<PolicyEvaluator> evaluator_;
   std::unique_ptr<PolicyInterface> policy_2_;
   std::shared_ptr<PolicyDataInterface> policy_data_;
 };

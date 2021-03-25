@@ -37,7 +37,7 @@ void UmPolicyTestBase::SetUp() {
   eval_ctx_.reset(new EvaluationContext(TimeDelta::FromSeconds(5)));
   SetUpDefaultState();
 
-  evaluator_ = base::MakeRefCounted<PolicyEvaluator>(
+  evaluator_ = std::make_unique<PolicyEvaluator>(
       &fake_state_,
       std::make_unique<EvaluationContext>(TimeDelta::FromSeconds(5)),
       std::move(policy_2_),

@@ -19,7 +19,8 @@
 #include <memory>
 #include <utility>
 
-#include <base/memory/ref_counted.h>
+#include <base/callback.h>
+#include <base/memory/weak_ptr.h>
 
 #include "update_engine/update_manager/evaluation_context.h"
 #include "update_engine/update_manager/policy_interface.h"
@@ -27,27 +28,31 @@
 
 namespace chromeos_update_manager {
 
-// This class is the main point of entry for evaluating any kind of policy. The
-// reason an instance of this class needs to be ref counted is because normally
-// we don't want to keep a reference to an object of this class
-// around. Specially when we want to evaluate a policy asychronously. Ref
-// counting allows us to pass a pointer to this class in repeated callbacks.  To
-// make an instance of this class use base::AdoptRef() or base::MakeRefCounted()
-// (See base/memory/ref_counted.h).
-class PolicyEvaluator : public base::RefCounted<PolicyEvaluator> {
+// This class is the main point of entry for evaluating any kind of policy.
+class PolicyEvaluator {
  public:
+  using UnregisterCallback = base::OnceCallback<void(PolicyEvaluator*)>;
+
   PolicyEvaluator(State* state,
                   std::unique_ptr<EvaluationContext> ec,
                   std::unique_ptr<PolicyInterface> policy,
-                  std::shared_ptr<PolicyDataInterface> data)
+                  std::shared_ptr<PolicyDataInterface> data,
+                  UnregisterCallback unregister_cb = {})
       : state_(state),
         ec_(std::move(ec)),
         policy_(std::move(policy)),
-        data_(std::move(data)) {}
-  virtual ~PolicyEvaluator() = default;
+        data_(std::move(data)),
+        unregister_cb_(std::move(unregister_cb)),
+        weak_ptr_factory_(this) {}
+  virtual ~PolicyEvaluator();
 
   PolicyEvaluator(const PolicyEvaluator&) = delete;
   PolicyEvaluator& operator=(const PolicyEvaluator&) = delete;
+
+  // Unregisters the current object from its owner. This object will probably
+  // gets deleted after calling this function, so there should be no member
+  // access after this function has been called.
+  void Unregister();
 
   // Evaluations the policy given in the ctor using the provided |data_| and
   // returns the result of the evaluation.
@@ -59,14 +64,16 @@ class PolicyEvaluator : public base::RefCounted<PolicyEvaluator> {
   void ScheduleEvaluation(base::Callback<void(EvalStatus)> callback);
 
  private:
-  friend class base::RefCounted<PolicyEvaluator>;
-
   // Internal function to reschedule policy evaluation.
   void OnPolicyReadyToEvaluate(base::Callback<void(EvalStatus)> callback);
   State* state_;
   std::unique_ptr<EvaluationContext> ec_;
   std::unique_ptr<PolicyInterface> policy_;
   std::shared_ptr<PolicyDataInterface> data_;
+
+  UnregisterCallback unregister_cb_;
+
+  base::WeakPtrFactory<PolicyEvaluator> weak_ptr_factory_;
 };
 
 }  // namespace chromeos_update_manager

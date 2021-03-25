@@ -219,12 +219,12 @@ class UpdateAttempterUnderTest : public UpdateAttempter {
 class UpdateAttempterTest : public ::testing::Test {
  protected:
   void SetUp() override {
+    loop_.SetAsCurrent();
     // Override system state members.
     FakeSystemState::CreateInstance();
     FakeSystemState::Get()->set_connection_manager(&mock_connection_manager);
     FakeSystemState::Get()->set_update_attempter(&attempter_);
     FakeSystemState::Get()->set_dlcservice(&mock_dlcservice_);
-    loop_.SetAsCurrent();
 
     prefs_ = FakeSystemState::Get()->fake_prefs();
     certificate_checker_.reset(

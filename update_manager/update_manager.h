@@ -20,8 +20,10 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <vector>
 
 #include <base/callback.h>
+#include <base/memory/weak_ptr.h>
 #include <base/time/time.h>
 
 #include "update_engine/common/system_state.h"
@@ -68,6 +70,9 @@ class UpdateManager {
                      std::shared_ptr<PolicyDataInterface> data,
                      base::Callback<void(EvalStatus)> callback);
 
+  // Removes the |evaluator| from the internal list of |evaluators_|.
+  void Unregister(PolicyEvaluator* evaluator);
+
   // Returns instance of update time restrictions monitor if |install_plan|
   // requires one. Otherwise returns nullptr.
   std::unique_ptr<UpdateTimeRestrictionsMonitor>
@@ -84,6 +89,7 @@ class UpdateManager {
   FRIEND_TEST(UmUpdateManagerTest, PolicyRequestCallsDefaultOnError);
   FRIEND_TEST(UmUpdateManagerTest, PolicyRequestDoesntBlockDeathTest);
   FRIEND_TEST(UmUpdateManagerTest, AsyncPolicyRequestDelaysEvaluation);
+  FRIEND_TEST(UmUpdateManagerTest, AsyncPolicyRequestIsAddedToList);
   FRIEND_TEST(UmUpdateManagerTest, AsyncPolicyRequestTimeoutDoesNotFire);
   FRIEND_TEST(UmUpdateManagerTest, AsyncPolicyRequestTimesOut);
 
@@ -95,6 +101,10 @@ class UpdateManager {
 
   // Timeout for expiration of the evaluation context, used for async requests.
   const base::TimeDelta expiration_timeout_;
+
+  std::vector<std::unique_ptr<PolicyEvaluator>> evaluators_;
+
+  base::WeakPtrFactory<UpdateManager> weak_ptr_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(UpdateManager);
 };

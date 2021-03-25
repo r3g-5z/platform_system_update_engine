@@ -289,6 +289,17 @@ TEST_F(UmUpdateManagerTest, AsyncPolicyRequestTimesOut) {
   EXPECT_EQ(EvalStatus::kSucceeded, calls[0]);
 }
 
+TEST_F(UmUpdateManagerTest, AsyncPolicyRequestIsAddedToList) {
+  umut_->PolicyRequest(std::make_unique<SimplePolicy>(),
+                       std::make_shared<PolicyDataInterface>(),
+                       base::Bind([](EvalStatus) {}));
+  EXPECT_EQ(1, umut_->evaluators_.size());
+
+  MessageLoopRunMaxIterations(MessageLoop::current(), 10);
+  // It should released from the list after the policy is evaluated.
+  EXPECT_EQ(0, umut_->evaluators_.size());
+}
+
 TEST_F(UmUpdateManagerTest, UpdateTimeRestrictionsMonitorIsNotNeeded) {
   FakeUpdateTimeRestrictionsMonitorDelegate delegate;
   chromeos_update_engine::InstallPlan install_plan;
