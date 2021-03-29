@@ -97,10 +97,7 @@ class UmEvaluationContextTest : public ::testing::Test {
     fake_clock_->SetMonotonicTime(Time::FromTimeT(1240428300));
     // Mar 2, 2006 1:23:45 UTC.
     fake_clock_->SetWallclockTime(Time::FromTimeT(1141262625));
-    eval_ctx_.reset(new EvaluationContext(
-        default_timeout_,
-        default_timeout_,
-        unique_ptr<base::Callback<void(EvaluationContext*)>>(nullptr)));
+    eval_ctx_.reset(new EvaluationContext(default_timeout_, default_timeout_));
   }
 
   void TearDown() override {

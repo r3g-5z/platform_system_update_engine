@@ -65,13 +65,10 @@ TimeDelta GetTimeout(Time curr, Time expires) {
 
 namespace chromeos_update_manager {
 
-EvaluationContext::EvaluationContext(
-    TimeDelta evaluation_timeout,
-    TimeDelta expiration_timeout,
-    unique_ptr<Callback<void(EvaluationContext*)>> unregister_cb)
+EvaluationContext::EvaluationContext(TimeDelta evaluation_timeout,
+                                     TimeDelta expiration_timeout)
     : evaluation_timeout_(evaluation_timeout),
       expiration_timeout_(expiration_timeout),
-      unregister_cb_(std::move(unregister_cb)),
       weak_ptr_factory_(this) {
   ResetEvaluation();
   ResetExpiration();
@@ -79,8 +76,6 @@ EvaluationContext::EvaluationContext(
 
 EvaluationContext::~EvaluationContext() {
   RemoveObserversAndTimeout();
-  if (unregister_cb_.get())
-    unregister_cb_->Run(this);
 }
 
 unique_ptr<Closure> EvaluationContext::RemoveObserversAndTimeout() {

@@ -56,9 +56,7 @@ WeeklyTime Now() {
 
 UpdateTimeRestrictionsMonitor::UpdateTimeRestrictionsMonitor(
     DevicePolicyProvider* device_policy_provider, Delegate* delegate)
-    : evaluation_context_(/* evaluation_timeout = */ TimeDelta::Max(),
-                          /* expiration_timeout = */ TimeDelta::Max(),
-                          /* unregister_cb = */ {}),
+    : evaluation_context_(/* evaluation_timeout = */ TimeDelta::Max()),
       device_policy_provider_(device_policy_provider),
       delegate_(delegate),
       weak_ptr_factory_(this) {

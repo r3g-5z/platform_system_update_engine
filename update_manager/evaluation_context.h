@@ -62,15 +62,10 @@ namespace chromeos_update_manager {
 //
 class EvaluationContext : private BaseVariable::ObserverInterface {
  public:
-  EvaluationContext(
-      base::TimeDelta evaluation_timeout,
-      base::TimeDelta expiration_timeout,
-      std::unique_ptr<base::Callback<void(EvaluationContext*)>> unregister_cb);
+  EvaluationContext(base::TimeDelta evaluation_timeout,
+                    base::TimeDelta expiration_timeout);
   explicit EvaluationContext(base::TimeDelta evaluation_timeout)
-      : EvaluationContext(
-            evaluation_timeout,
-            base::TimeDelta::Max(),
-            std::unique_ptr<base::Callback<void(EvaluationContext*)>>()) {}
+      : EvaluationContext(evaluation_timeout, base::TimeDelta::Max()) {}
   ~EvaluationContext();
 
   // Returns a pointer to the value returned by the passed variable |var|. The
@@ -196,9 +191,6 @@ class EvaluationContext : private BaseVariable::ObserverInterface {
 
   // The monotonic clock deadline at which expiration occurs.
   base::Time expiration_monotonic_deadline_;
-
-  // A callback for unregistering the context upon destruction.
-  std::unique_ptr<base::Callback<void(EvaluationContext*)>> unregister_cb_;
 
   base::WeakPtrFactory<EvaluationContext> weak_ptr_factory_;
 
