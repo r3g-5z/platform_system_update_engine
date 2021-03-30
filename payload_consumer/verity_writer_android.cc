@@ -43,9 +43,6 @@ std::unique_ptr<VerityWriterInterface> CreateVerityWriter() {
 bool VerityWriterAndroid::Init(const InstallPlan::Partition& partition) {
   partition_ = &partition;
 
-  if (partition_->hash_tree_size != 0 || partition_->fec_size != 0) {
-    utils::SetBlockDeviceReadOnly(partition_->target_path, false);
-  }
   if (partition_->hash_tree_size != 0) {
     auto hash_function =
         HashTreeBuilder::HashFunction(partition_->hash_tree_algorithm);
@@ -67,12 +64,18 @@ bool VerityWriterAndroid::Init(const InstallPlan::Partition& partition) {
       return false;
     }
   }
+  total_offset_ = 0;
   return true;
 }
 
-bool VerityWriterAndroid::Update(uint64_t offset,
+bool VerityWriterAndroid::Update(const uint64_t offset,
                                  const uint8_t* buffer,
                                  size_t size) {
+  if (offset != total_offset_) {
+    LOG(ERROR) << "Sequential read expected, expected to read at: "
+               << total_offset_ << " actual read occurs at: " << offset;
+    return false;
+  }
   if (partition_->hash_tree_size != 0) {
     const uint64_t hash_tree_data_end =
         partition_->hash_tree_data_offset + partition_->hash_tree_data_size;
@@ -96,12 +99,22 @@ bool VerityWriterAndroid::Update(uint64_t offset,
       }
     }
   }
+  total_offset_ += size;
 
   return true;
 }
 
 bool VerityWriterAndroid::Finalize(FileDescriptorPtr read_fd,
                                    FileDescriptorPtr write_fd) {
+  const auto hash_tree_data_end =
+      partition_->hash_tree_data_offset + partition_->hash_tree_data_size;
+  if (total_offset_ < hash_tree_data_end) {
+    LOG(ERROR) << "Read up to " << total_offset_
+               << " when we are expecting to read everything "
+                  "before "
+               << hash_tree_data_end;
+    return false;
+  }
   // All hash tree data blocks has been hashed, write hash tree to disk.
   LOG(INFO) << "Writing verity hash tree to " << partition_->target_path;
   TEST_AND_RETURN_FALSE(hash_tree_builder_->BuildHashTree());
