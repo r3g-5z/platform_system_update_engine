@@ -33,6 +33,7 @@ using std::vector;
 namespace {
 
 constexpr char kOemRequisitionKey[] = "oem_device_requisition";
+constexpr char kNoRequisition[] = "none";
 
 }  // namespace
 
@@ -42,9 +43,13 @@ string ReadDeviceRequisition(const base::FilePath& local_state) {
   string requisition;
   bool vpd_retval = utils::GetVpdValue(kOemRequisitionKey, &requisition);
 
-  // Some users manually convert non-CfM hardware at enrollment time, so VPD
-  // value may be missing. So check the Local State JSON as well.
-  if ((requisition.empty() || !vpd_retval) && base::PathExists(local_state)) {
+  // Check the Local State JSON for the value of the device_requisition key iff:
+  // 1. The VPD value is missing as a result of users manually converting
+  // non-CfM hardware at enrollment time.
+  // OR
+  // 2. Requisition value mistakenly set to "none".
+  if ((requisition.empty() || requisition == kNoRequisition || !vpd_retval) &&
+      base::PathExists(local_state)) {
     int error_code;
     std::string error_msg;
     JSONFileValueDeserializer deserializer(local_state);
