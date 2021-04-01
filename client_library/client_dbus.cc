@@ -60,6 +60,7 @@ void ConvertToUpdateEngineStatus(const StatusResult& status,
       status.will_powerwash_after_reboot();
   out_status->update_urgency_internal =
       static_cast<UpdateUrgencyInternal>(status.update_urgency());
+  out_status->last_attempt_error = status.last_attempt_error();
 }
 }  // namespace
 

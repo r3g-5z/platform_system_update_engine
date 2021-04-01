@@ -36,11 +36,13 @@ TEST(UpdateStatusUtilsTest, UpdateEngineStatusToStringTest) {
       .is_enterprise_rollback = true,
       .is_install = true,
       .will_powerwash_after_reboot = true,
+      .last_attempt_error = 0,
   };
   string print =
       R"(CURRENT_OP=UPDATE_STATUS_CHECKING_FOR_UPDATE
 IS_ENTERPRISE_ROLLBACK=true
 IS_INSTALL=true
+LAST_ATTEMPT_ERROR=ErrorCode::kSuccess
 LAST_CHECKED_TIME=156000000
 NEW_SIZE=888
 NEW_VERSION=12345.0.0

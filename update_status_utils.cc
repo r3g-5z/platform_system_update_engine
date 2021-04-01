@@ -24,6 +24,8 @@
 #include <brillo/key_value_store.h>
 #include <update_engine/dbus-constants.h>
 
+#include "update_engine/common/error_code_utils.h"
+
 using brillo::KeyValueStore;
 using std::string;
 using update_engine::UpdateEngineStatus;
@@ -43,6 +45,7 @@ const char kNewSize[] = "NEW_SIZE";
 const char kNewVersion[] = "NEW_VERSION";
 const char kProgress[] = "PROGRESS";
 const char kWillPowerwashAfterReboot[] = "WILL_POWERWASH_AFTER_REBOOT";
+const char kLastAttemptError[] = "LAST_ATTEMPT_ERROR";
 
 }  // namespace
 
@@ -93,6 +96,9 @@ string UpdateEngineStatusToString(const UpdateEngineStatus& status) {
   key_value_store.SetBoolean(kIsInstall, status.is_install);
   key_value_store.SetBoolean(kWillPowerwashAfterReboot,
                              status.will_powerwash_after_reboot);
+  key_value_store.SetString(kLastAttemptError,
+                            utils::ErrorCodeToString(static_cast<ErrorCode>(
+                                status.last_attempt_error)));
 
   return key_value_store.SaveToString();
 }
