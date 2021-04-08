@@ -68,6 +68,7 @@
 #include "update_engine/payload_consumer/filesystem_verifier_action.h"
 #include "update_engine/payload_consumer/postinstall_runner_action.h"
 #include "update_engine/update_boot_flags_action.h"
+#include "update_engine/update_manager/omaha_request_params_policy.h"
 #include "update_engine/update_manager/update_manager.h"
 #include "update_engine/update_status_utils.h"
 
@@ -80,6 +81,7 @@ using base::TimeTicks;
 using brillo::MessageLoop;
 using chromeos_update_manager::CalculateStagingCase;
 using chromeos_update_manager::EvalStatus;
+using chromeos_update_manager::OmahaRequestParamsPolicy;
 using chromeos_update_manager::StagingCase;
 using chromeos_update_manager::UpdateCheckAllowedPolicy;
 using chromeos_update_manager::UpdateCheckAllowedPolicyData;
@@ -425,6 +427,10 @@ bool UpdateAttempter::CalculateUpdateParams(const UpdateCheckParams& params) {
     LOG(ERROR) << "Unable to initialize Omaha request params.";
     return false;
   }
+  // Get all the policy related omaha request params. This should potentially
+  // replace the Init() function call above in the future.
+  SystemState::Get()->update_manager()->PolicyRequest(
+      std::make_unique<OmahaRequestParamsPolicy>(), nullptr);
 
   // The function |CalculateDlcParams| makes use of the function |GetAppId| from
   // |OmahaRequestParams|, so to ensure that the return from |GetAppId|

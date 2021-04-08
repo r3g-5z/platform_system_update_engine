@@ -384,6 +384,8 @@ struct TestUpdateCheckParams {
 class OmahaRequestActionTest : public ::testing::Test {
  protected:
   void SetUp() override {
+    loop_.SetAsCurrent();
+
     FakeSystemState::CreateInstance();
 
     request_params_.set_os_sp("service_pack");
@@ -477,6 +479,8 @@ class OmahaRequestActionTest : public ::testing::Test {
 
   OmahaResponse response_;
   string post_str_;
+
+  brillo::FakeMessageLoop loop_{nullptr};
 };
 
 class OmahaRequestActionDlcPingTest : public OmahaRequestActionTest {
@@ -511,8 +515,6 @@ class OmahaRequestActionDlcPingTest : public OmahaRequestActionTest {
 };
 
 bool OmahaRequestActionTest::TestUpdateCheck() {
-  brillo::FakeMessageLoop loop(nullptr);
-  loop.SetAsCurrent();
   auto fetcher =
       std::make_unique<MockHttpFetcher>(tuc_params_.http_response.data(),
                                         tuc_params_.http_response.size(),
@@ -573,11 +575,11 @@ bool OmahaRequestActionTest::TestUpdateCheck() {
                                tuc_params_.expected_download_error_code))
       .Times(tuc_params_.ping_only ? 0 : 1);
 
-  loop.PostTask(base::Bind(
+  loop_.PostTask(base::Bind(
       [](ActionProcessor* processor) { processor->StartProcessing(); },
       base::Unretained(&processor)));
-  loop.Run();
-  EXPECT_FALSE(loop.PendingTasks());
+  loop_.Run();
+  EXPECT_FALSE(loop_.PendingTasks());
   if (delegate_.omaha_response_)
     response_ = *delegate_.omaha_response_;
   post_str_ = string(delegate_.post_data_.begin(), delegate_.post_data_.end());
@@ -589,9 +591,6 @@ bool OmahaRequestActionTest::TestUpdateCheck() {
 // returned.
 void OmahaRequestActionTest::TestEvent(OmahaEvent* event,
                                        const string& http_response) {
-  brillo::FakeMessageLoop loop(nullptr);
-  loop.SetAsCurrent();
-
   auto action = std::make_unique<OmahaRequestAction>(
       event,
       std::make_unique<MockHttpFetcher>(
@@ -602,11 +601,11 @@ void OmahaRequestActionTest::TestEvent(OmahaEvent* event,
   processor.set_delegate(&delegate_);
   processor.EnqueueAction(std::move(action));
 
-  loop.PostTask(base::Bind(
+  loop_.PostTask(base::Bind(
       [](ActionProcessor* processor) { processor->StartProcessing(); },
       base::Unretained(&processor)));
-  loop.Run();
-  EXPECT_FALSE(loop.PendingTasks());
+  loop_.Run();
+  EXPECT_FALSE(loop_.PendingTasks());
 
   post_str_ = string(delegate_.post_data_.begin(), delegate_.post_data_.end());
 }
@@ -1514,9 +1513,6 @@ TEST_F(OmahaRequestActionTest, MultiAppCohortTest) {
 
 TEST_F(OmahaRequestActionTest, NoOutputPipeTest) {
   const string http_response(fake_update_response_.GetNoUpdateResponse());
-  brillo::FakeMessageLoop loop(nullptr);
-  loop.SetAsCurrent();
-
   auto action = std::make_unique<OmahaRequestAction>(
       nullptr,
       std::make_unique<MockHttpFetcher>(
@@ -1527,11 +1523,11 @@ TEST_F(OmahaRequestActionTest, NoOutputPipeTest) {
   processor.set_delegate(&delegate_);
   processor.EnqueueAction(std::move(action));
 
-  loop.PostTask(base::Bind(
+  loop_.PostTask(base::Bind(
       [](ActionProcessor* processor) { processor->StartProcessing(); },
       base::Unretained(&processor)));
-  loop.Run();
-  EXPECT_FALSE(loop.PendingTasks());
+  loop_.Run();
+  EXPECT_FALSE(loop_.PendingTasks());
   EXPECT_FALSE(processor.IsRunning());
 }
 
@@ -1648,9 +1644,6 @@ void TerminateTransferTestStarter(ActionProcessor* processor) {
 }  // namespace
 
 TEST_F(OmahaRequestActionTest, TerminateTransferTest) {
-  brillo::FakeMessageLoop loop(nullptr);
-  loop.SetAsCurrent();
-
   string http_response("doesn't matter");
   auto action = std::make_unique<OmahaRequestAction>(
       nullptr,
@@ -1663,9 +1656,9 @@ TEST_F(OmahaRequestActionTest, TerminateTransferTest) {
   processor.set_delegate(&delegate);
   processor.EnqueueAction(std::move(action));
 
-  loop.PostTask(base::Bind(&TerminateTransferTestStarter, &processor));
-  loop.Run();
-  EXPECT_FALSE(loop.PendingTasks());
+  loop_.PostTask(base::Bind(&TerminateTransferTestStarter, &processor));
+  loop_.Run();
+  EXPECT_FALSE(loop_.PendingTasks());
 }
 
 TEST_F(OmahaRequestActionTest, XmlEncodeIsUsedForParams) {

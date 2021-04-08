@@ -109,7 +109,7 @@ class FakeDevicePolicyProvider : public DevicePolicyProvider {
   }
 
  private:
-  FakeVariable<bool> var_device_policy_is_loaded_{"policy_is_loaded",
+  FakeVariable<bool> var_device_policy_is_loaded_{"device_policy_is_loaded",
                                                   kVariableModePoll};
   FakeVariable<std::string> var_release_channel_{"release_channel",
                                                  kVariableModePoll};
