@@ -101,10 +101,6 @@ class RealDevicePolicyProvider : public DevicePolicyProvider {
     return &var_allow_kiosk_app_control_chrome_version_;
   }
 
-  Variable<std::string>* var_auto_launched_kiosk_app_id() override {
-    return &var_auto_launched_kiosk_app_id_;
-  }
-
   Variable<WeeklyTimeIntervalVector>* var_disallowed_time_intervals() override {
     return &var_disallowed_time_intervals_;
   }
@@ -234,8 +230,6 @@ class RealDevicePolicyProvider : public DevicePolicyProvider {
       "allow_kiosk_app_control_chrome_version"};
   AsyncCopyVariable<WeeklyTimeIntervalVector> var_disallowed_time_intervals_{
       "update_time_restrictions"};
-  AsyncCopyVariable<std::string> var_auto_launched_kiosk_app_id_{
-      "auto_launched_kiosk_app_id"};
   AsyncCopyVariable<ChannelDowngradeBehavior> var_channel_downgrade_behavior_{
       "channel_downgrade_behavior"};
   AsyncCopyVariable<base::Version> var_device_minimum_version_{

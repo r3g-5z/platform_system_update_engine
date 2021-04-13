@@ -86,10 +86,6 @@ class FakeDevicePolicyProvider : public DevicePolicyProvider {
     return &var_allow_kiosk_app_control_chrome_version_;
   }
 
-  FakeVariable<std::string>* var_auto_launched_kiosk_app_id() override {
-    return &var_auto_launched_kiosk_app_id_;
-  }
-
   FakeVariable<WeeklyTimeIntervalVector>* var_disallowed_time_intervals()
       override {
     return &var_disallowed_time_intervals_;
@@ -139,8 +135,6 @@ class FakeDevicePolicyProvider : public DevicePolicyProvider {
   FakeVariable<bool> var_au_p2p_enabled_{"au_p2p_enabled", kVariableModePoll};
   FakeVariable<bool> var_allow_kiosk_app_control_chrome_version_{
       "allow_kiosk_app_control_chrome_version", kVariableModePoll};
-  FakeVariable<std::string> var_auto_launched_kiosk_app_id_{
-      "auto_launched_kiosk_app_id", kVariableModePoll};
   FakeVariable<WeeklyTimeIntervalVector> var_disallowed_time_intervals_{
       "disallowed_time_intervals", kVariableModeAsync};
   FakeVariable<ChannelDowngradeBehavior> var_channel_downgrade_behavior_{
