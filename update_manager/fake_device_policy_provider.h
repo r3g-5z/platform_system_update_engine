@@ -108,6 +108,10 @@ class FakeDevicePolicyProvider : public DevicePolicyProvider {
     return &var_quick_fix_build_token_;
   }
 
+  FakeVariable<std::string>* var_market_segment() override {
+    return &var_market_segment_;
+  }
+
  private:
   FakeVariable<bool> var_device_policy_is_loaded_{"device_policy_is_loaded",
                                                   kVariableModePoll};
@@ -145,6 +149,8 @@ class FakeDevicePolicyProvider : public DevicePolicyProvider {
       "device_minimum_version", kVariableModePoll};
   FakeVariable<std::string> var_quick_fix_build_token_{"quick_fix_build_token",
                                                        kVariableModePoll};
+  FakeVariable<std::string> var_market_segment_{"market_segment",
+                                                kVariableModePoll};
 
   DISALLOW_COPY_AND_ASSIGN(FakeDevicePolicyProvider);
 };

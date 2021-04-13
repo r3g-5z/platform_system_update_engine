@@ -122,6 +122,10 @@ class RealDevicePolicyProvider : public DevicePolicyProvider {
     return &var_quick_fix_build_token_;
   }
 
+  Variable<std::string>* var_market_segment() override {
+    return &var_market_segment_;
+  }
+
  private:
   FRIEND_TEST(UmRealDevicePolicyProviderTest, RefreshScheduledTest);
   FRIEND_TEST(UmRealDevicePolicyProviderTest, NonExistentDevicePolicyReloaded);
@@ -188,6 +192,10 @@ class RealDevicePolicyProvider : public DevicePolicyProvider {
   bool ConvertChannelDowngradeBehavior(
       ChannelDowngradeBehavior* channel_downgrade_behavior) const;
 
+  // Wrapper for |DevicePolicy::GetDeviceMarketSegment| that converts the enum
+  // values to a string to be sent to Omaha.
+  bool ConvertDeviceMarketSegment(std::string* market_segment) const;
+
   // Used for fetching information about the device policy.
   policy::PolicyProvider* policy_provider_;
 
@@ -234,6 +242,7 @@ class RealDevicePolicyProvider : public DevicePolicyProvider {
       "device_minimum_version"};
   AsyncCopyVariable<std::string> var_quick_fix_build_token_{
       "quick_fix_build_token"};
+  AsyncCopyVariable<std::string> var_market_segment_{"market_segment"};
 
   DISALLOW_COPY_AND_ASSIGN(RealDevicePolicyProvider);
 };

@@ -20,6 +20,7 @@
 #include <stdint.h>
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -224,6 +225,11 @@ class OmahaRequestParams {
     return autoupdate_token_;
   }
 
+  inline void set_market_segment(const std::string& market_segment) {
+    market_segment_ = market_segment;
+  }
+  inline const std::string& market_segment() const { return market_segment_; }
+
   // Returns the App ID corresponding to the current value of the
   // download channel.
   virtual std::string GetAppId() const;
@@ -423,6 +429,9 @@ class OmahaRequestParams {
   // For example: Token for a Quick Fix Build:
   // https://cloud.google.com/docs/chrome-enterprise/policies/?policy=DeviceQuickFixBuildToken
   std::string autoupdate_token_;
+
+  // Defines the device's market segment.
+  std::string market_segment_;
 
   DISALLOW_COPY_AND_ASSIGN(OmahaRequestParams);
 };

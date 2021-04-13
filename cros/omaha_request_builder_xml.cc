@@ -415,13 +415,14 @@ string OmahaRequestBuilderXml::GetApp(const OmahaAppData& app_data) const {
 string OmahaRequestBuilderXml::GetOs() const {
   const auto* params = SystemState::Get()->request_params();
   string os_xml =
-      "    <os "
-      "version=\"" +
-      XmlEncodeWithDefault(params->os_version()) + "\" " + "platform=\"" +
-      XmlEncodeWithDefault(params->os_platform()) + "\" " + "sp=\"" +
-      XmlEncodeWithDefault(params->os_sp()) +
-      "\">"
-      "</os>\n";
+      "    <os version=\"" + XmlEncodeWithDefault(params->os_version()) +
+      "\" platform=\"" + XmlEncodeWithDefault(params->os_platform()) +
+      "\" sp=\"" + XmlEncodeWithDefault(params->os_sp());
+  if (!params->market_segment().empty()) {
+    os_xml +=
+        "\" market_segment=\"" + XmlEncodeWithDefault(params->market_segment());
+  }
+  os_xml += "\"></os>\n";
   return os_xml;
 }
 

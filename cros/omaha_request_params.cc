@@ -45,9 +45,7 @@ using std::string;
 
 namespace chromeos_update_engine {
 
-const char OmahaRequestParams::kOsVersion[] = "Indy";
-const char kNoVersion[] = "0.0.0.0";
-
+namespace {
 const char* kChannelsByStability[] = {
     // This list has to be sorted from least stable to most stable channel.
     "canary-channel",
@@ -55,6 +53,11 @@ const char* kChannelsByStability[] = {
     "beta-channel",
     "stable-channel",
 };
+
+}  // namespace
+
+constexpr char OmahaRequestParams::kOsVersion[] = "Indy";
+const char kNoVersion[] = "0.0.0.0";
 
 OmahaRequestParams::~OmahaRequestParams() {
   if (!root_.empty())
@@ -116,6 +119,8 @@ bool OmahaRequestParams::Init(const string& app_version,
     update_url_ = image_props_.omaha_url;
   else
     update_url_ = update_url;
+
+  market_segment_.clear();
 
   // Set the interactive flag accordingly.
   interactive_ = params.interactive;

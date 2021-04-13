@@ -1940,6 +1940,28 @@ TEST_F(OmahaRequestActionTest, DeviceQuickFixBuildTokenIsNotSetTest) {
   EXPECT_EQ(string::npos, post_str_.find(omaha_cohort_hint));
 }
 
+// If no market segment is set, nothing will be send.
+TEST_F(OmahaRequestActionTest, DefaultMarketSegment) {
+  tuc_params_.http_response = fake_update_response_.GetNoUpdateResponse();
+  tuc_params_.expected_check_result = metrics::CheckResult::kNoUpdateAvailable;
+  tuc_params_.expected_check_reaction = metrics::CheckReaction::kUnset;
+
+  ASSERT_TRUE(TestUpdateCheck());
+
+  EXPECT_EQ(string::npos, post_str_.find("market_segment=)"));
+}
+
+TEST_F(OmahaRequestActionTest, FooMarketSegment) {
+  tuc_params_.http_response = fake_update_response_.GetNoUpdateResponse();
+  tuc_params_.expected_check_result = metrics::CheckResult::kNoUpdateAvailable;
+  tuc_params_.expected_check_reaction = metrics::CheckReaction::kUnset;
+  request_params_.set_market_segment("foo-segment");
+
+  ASSERT_TRUE(TestUpdateCheck());
+
+  EXPECT_NE(string::npos, post_str_.find("market_segment=\"foo-segment\""));
+}
+
 TEST_F(OmahaRequestActionTest, TargetChannelHintTest) {
   tuc_params_.http_response = fake_update_response_.GetNoUpdateResponse();
   tuc_params_.expected_check_result = metrics::CheckResult::kNoUpdateAvailable;

@@ -14,8 +14,11 @@
 // limitations under the License.
 //
 
+#include "update_engine/cros/fake_system_state.h"
 #include "update_engine/update_manager/omaha_request_params_policy.h"
 #include "update_engine/update_manager/policy_test_utils.h"
+
+using chromeos_update_engine::FakeSystemState;
 
 namespace chromeos_update_manager {
 
@@ -35,6 +38,21 @@ class UmOmahaRequestParamsPolicyTest : public UmPolicyTestBase {
 
 TEST_F(UmOmahaRequestParamsPolicyTest, PolicyIsLoaded) {
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+}
+
+TEST_F(UmOmahaRequestParamsPolicyTest, DefaultMarketSegment) {
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_EQ(FakeSystemState::Get()->request_params()->market_segment(),
+            "consumer");
+}
+
+TEST_F(UmOmahaRequestParamsPolicyTest, FooMarketSegment) {
+  fake_state_.device_policy_provider()->var_market_segment()->reset(
+      new std::string("foo-segment"));
+
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_EQ(FakeSystemState::Get()->request_params()->market_segment(),
+            "foo-segment");
 }
 
 }  // namespace chromeos_update_manager

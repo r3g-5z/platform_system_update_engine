@@ -41,6 +41,10 @@ namespace {
 
 const int kDevicePolicyRefreshRateInMinutes = 60;
 
+constexpr char kMarketSegmentUnknown[] = "unknown";
+constexpr char kMarketSegmentEducation[] = "education";
+constexpr char kMarketSegmentEnterprise[] = "enterprise";
+
 }  // namespace
 
 namespace chromeos_update_manager {
@@ -222,6 +226,28 @@ bool RealDevicePolicyProvider::ConvertChannelDowngradeBehavior(
   return true;
 }
 
+bool RealDevicePolicyProvider::ConvertDeviceMarketSegment(
+    string* market_segment) const {
+  DevicePolicy::DeviceMarketSegment device_market_segment;
+  if (!policy_provider_->GetDevicePolicy().GetDeviceMarketSegment(
+          &device_market_segment)) {
+    return false;
+  }
+
+  switch (device_market_segment) {
+    case DevicePolicy::DeviceMarketSegment::kEducation:
+      *market_segment = kMarketSegmentEducation;
+      break;
+    case DevicePolicy::DeviceMarketSegment::kEnterprise:
+      *market_segment = kMarketSegmentEnterprise;
+      break;
+    case DevicePolicy::DeviceMarketSegment::kUnknown:
+    default:
+      *market_segment = kMarketSegmentUnknown;
+  }
+  return true;
+}
+
 void RealDevicePolicyProvider::RefreshDevicePolicy() {
   if (!policy_provider_->Reload()) {
     LOG(INFO) << "No device policies/settings present.";
@@ -266,6 +292,8 @@ void RealDevicePolicyProvider::RefreshDevicePolicy() {
                  &DevicePolicy::GetHighestDeviceMinimumVersion);
   UpdateVariable(&var_quick_fix_build_token_,
                  &DevicePolicy::GetDeviceQuickFixBuildToken);
+  UpdateVariable(&var_market_segment_,
+                 &RealDevicePolicyProvider::ConvertDeviceMarketSegment);
 }
 
 }  // namespace chromeos_update_manager

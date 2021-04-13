@@ -101,6 +101,9 @@ class DevicePolicyProvider : public Provider {
   // which the device would be updated if not blocked by another policy.
   virtual Variable<std::string>* var_quick_fix_build_token() = 0;
 
+  // Variable that contains the market segment defined in the device policy.
+  virtual Variable<std::string>* var_market_segment() = 0;
+
  protected:
   DevicePolicyProvider() {}
 

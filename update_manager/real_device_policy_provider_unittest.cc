@@ -25,6 +25,7 @@
 #include <brillo/message_loops/message_loop_utils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <policy/device_policy.h>
 #include <policy/mock_device_policy.h>
 #include <policy/mock_libpolicy.h>
 #include <session_manager/dbus-proxies.h>
@@ -176,6 +177,7 @@ TEST_F(UmRealDevicePolicyProviderTest, NonExistentDevicePolicyEmptyVariables) {
   UmTestUtils::ExpectVariableNotSet(
       provider_->var_channel_downgrade_behavior());
   UmTestUtils::ExpectVariableNotSet(provider_->var_quick_fix_build_token());
+  UmTestUtils::ExpectVariableNotSet(provider_->var_market_segment());
 }
 
 TEST_F(UmRealDevicePolicyProviderTest, ValuesUpdated) {
@@ -407,6 +409,60 @@ TEST_F(UmRealDevicePolicyProviderTest, DeviceQuickFixBuildTokenSet) {
 
   UmTestUtils::ExpectVariableHasValue(string("some_token"),
                                       provider_->var_quick_fix_build_token());
+}
+
+TEST_F(UmRealDevicePolicyProviderTest, DeviceSegmentEducation) {
+  SetUpExistentDevicePolicy();
+  EXPECT_CALL(mock_device_policy_, GetDeviceMarketSegment(_))
+      .WillRepeatedly(
+          DoAll(SetArgPointee<0>(
+                    policy::DevicePolicy::DeviceMarketSegment::kEducation),
+                Return(true)));
+  EXPECT_TRUE(provider_->Init());
+  loop_.RunOnce(false);
+
+  UmTestUtils::ExpectVariableHasValue(string("education"),
+                                      provider_->var_market_segment());
+}
+
+TEST_F(UmRealDevicePolicyProviderTest, DeviceSegmentEnterprise) {
+  SetUpExistentDevicePolicy();
+  EXPECT_CALL(mock_device_policy_, GetDeviceMarketSegment(_))
+      .WillRepeatedly(
+          DoAll(SetArgPointee<0>(
+                    policy::DevicePolicy::DeviceMarketSegment::kEnterprise),
+                Return(true)));
+  EXPECT_TRUE(provider_->Init());
+  loop_.RunOnce(false);
+
+  UmTestUtils::ExpectVariableHasValue(string("enterprise"),
+                                      provider_->var_market_segment());
+}
+
+TEST_F(UmRealDevicePolicyProviderTest, DeviceSegmentUnknown) {
+  SetUpExistentDevicePolicy();
+  EXPECT_CALL(mock_device_policy_, GetDeviceMarketSegment(_))
+      .WillRepeatedly(DoAll(
+          SetArgPointee<0>(policy::DevicePolicy::DeviceMarketSegment::kUnknown),
+          Return(true)));
+  EXPECT_TRUE(provider_->Init());
+  loop_.RunOnce(false);
+
+  UmTestUtils::ExpectVariableHasValue(string("unknown"),
+                                      provider_->var_market_segment());
+}
+
+TEST_F(UmRealDevicePolicyProviderTest, DeviceSegmentNotSet) {
+  SetUpExistentDevicePolicy();
+  EXPECT_CALL(mock_device_policy_, GetDeviceMarketSegment(_))
+      .WillRepeatedly(
+          DoAll(SetArgPointee<0>(
+                    policy::DevicePolicy::DeviceMarketSegment::kEnterprise),
+                Return(false)));
+  EXPECT_TRUE(provider_->Init());
+  loop_.RunOnce(false);
+
+  UmTestUtils::ExpectVariableNotSet(provider_->var_market_segment());
 }
 
 }  // namespace chromeos_update_manager

@@ -18,20 +18,37 @@
 
 #include <string>
 
+#include "update_engine/common/system_state.h"
+#include "update_engine/cros/omaha_request_params.h"
+
+using chromeos_update_engine::SystemState;
 using std::string;
 
 namespace chromeos_update_manager {
+
+namespace {
+constexpr char kMarketSegmentConsumer[] = "consumer";
+}  // namespace
 
 EvalStatus OmahaRequestParamsPolicy::Evaluate(EvaluationContext* ec,
                                               State* state,
                                               string* error,
                                               PolicyDataInterface* data) const {
+  auto request_params = SystemState::Get()->request_params();
+  request_params->set_market_segment(kMarketSegmentConsumer);
+
   // If no device policy was loaded, nothing else to do.
   DevicePolicyProvider* const dp_provider = state->device_policy_provider();
   const bool* device_policy_is_loaded_p =
       ec->GetValue(dp_provider->var_device_policy_is_loaded());
   if (!device_policy_is_loaded_p || !(*device_policy_is_loaded_p)) {
     return EvalStatus::kContinue;
+  }
+
+  const string* market_segment_p =
+      ec->GetValue(dp_provider->var_market_segment());
+  if (market_segment_p) {
+    request_params->set_market_segment(*market_segment_p);
   }
 
   return EvalStatus::kSucceeded;
