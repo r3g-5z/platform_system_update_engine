@@ -192,15 +192,12 @@ TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedWithAttributes) {
       new bool(false));
   fake_state_.device_policy_provider()->var_release_channel()->reset(
       new string("foo-channel"));
-  fake_state_.device_policy_provider()->var_release_lts_tag()->reset(
-      new string("foo-hint"));
 
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
   EXPECT_EQ("1.2", uca_data_->update_check_params.target_version_prefix);
   EXPECT_EQ(5, uca_data_->update_check_params.rollback_allowed_milestones);
   EXPECT_EQ("foo-channel", uca_data_->update_check_params.target_channel);
-  EXPECT_EQ("foo-hint", uca_data_->update_check_params.lts_tag);
   EXPECT_FALSE(uca_data_->update_check_params.interactive);
 }
 

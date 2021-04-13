@@ -133,7 +133,7 @@ bool OmahaRequestParams::Init(const string& app_version,
 
   target_version_prefix_ = params.target_version_prefix;
 
-  lts_tag_ = params.lts_tag;
+  release_lts_tag_.clear();
 
   quick_fix_build_token_.clear();
 

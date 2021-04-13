@@ -157,10 +157,10 @@ string OmahaRequestBuilderXml::GetAppBody(const OmahaAppData& app_data) const {
             app_body += " rollback_allowed=\"true\"";
           }
         }
-        if (!params->lts_tag().empty()) {
+        if (!params->release_lts_tag().empty()) {
           app_body += base::StringPrintf(
               " ltstag=\"%s\"",
-              XmlEncodeWithDefault(params->lts_tag()).c_str());
+              XmlEncodeWithDefault(params->release_lts_tag()).c_str());
         }
         // If allowing repeated update checks, send fp value of the last update.
         if (SystemState::Get()

@@ -1671,7 +1671,7 @@ TEST_F(OmahaRequestActionTest, XmlEncodeIsUsedForParams) {
   request_params_.set_os_board("x86 generic<id");
   request_params_.set_current_channel("unittest_track&lt;");
   request_params_.set_target_channel("unittest_track&lt;");
-  request_params_.set_lts_tag("unittest_hint&lt;");
+  request_params_.set_release_lts_tag("unittest_hint&lt;");
   request_params_.set_hwid("<OEM MODEL>");
   fake_prefs_->SetString(kPrefsOmahaCohort, "evil\nstring");
   fake_prefs_->SetString(kPrefsOmahaCohortHint, "evil&string\\");
@@ -1995,7 +1995,7 @@ TEST_F(OmahaRequestActionTest, TargetChannelHintTest) {
   tuc_params_.http_response = fake_update_response_.GetNoUpdateResponse();
   tuc_params_.expected_check_result = metrics::CheckResult::kNoUpdateAvailable;
   tuc_params_.expected_check_reaction = metrics::CheckReaction::kUnset;
-  request_params_.set_lts_tag("hint>");
+  request_params_.set_release_lts_tag("hint>");
 
   ASSERT_TRUE(TestUpdateCheck());
 

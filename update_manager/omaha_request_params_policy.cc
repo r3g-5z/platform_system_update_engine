@@ -65,6 +65,12 @@ EvalStatus OmahaRequestParamsPolicy::Evaluate(EvaluationContext* ec,
     request_params->set_quick_fix_build_token(*quick_fix_build_token_p);
   }
 
+  const string* release_lts_tag_p =
+      ec->GetValue(dp_provider->var_release_lts_tag());
+  if (release_lts_tag_p) {
+    request_params->set_release_lts_tag(*release_lts_tag_p);
+  }
+
   return EvalStatus::kSucceeded;
 }
 

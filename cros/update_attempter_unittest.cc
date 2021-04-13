@@ -1649,14 +1649,6 @@ TEST_F(UpdateAttempterTest, TargetVersionPrefixSetAndReset) {
                   .empty());
 }
 
-TEST_F(UpdateAttempterTest, TargetChannelHintSetAndReset) {
-  attempter_.CalculateUpdateParams({.lts_tag = "hint"});
-  EXPECT_EQ("hint", FakeSystemState::Get()->request_params()->lts_tag());
-
-  attempter_.CalculateUpdateParams({});
-  EXPECT_TRUE(FakeSystemState::Get()->request_params()->lts_tag().empty());
-}
-
 TEST_F(UpdateAttempterTest, RollbackAllowedSetAndReset) {
   attempter_.CalculateUpdateParams({
       .target_version_prefix = "1234",

@@ -86,4 +86,13 @@ TEST_F(UmOmahaRequestParamsPolicyTest, QuickFixBuildToken) {
             kToken);
 }
 
+TEST_F(UmOmahaRequestParamsPolicyTest, ReleaseLtsTag) {
+  constexpr char kReleaseTag[] = "foo-release-tag";
+  fake_state_.device_policy_provider()->var_release_lts_tag()->reset(
+      new std::string(kReleaseTag));
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_EQ(FakeSystemState::Get()->request_params()->release_lts_tag(),
+            kReleaseTag);
+}
+
 }  // namespace chromeos_update_manager

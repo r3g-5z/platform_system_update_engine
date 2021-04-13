@@ -144,9 +144,10 @@ class OmahaRequestParams {
     return target_version_prefix_;
   }
 
-  inline std::string lts_tag() const { return lts_tag_; }
-
-  inline void set_lts_tag(const std::string& hint) { lts_tag_ = hint; }
+  inline std::string release_lts_tag() const { return release_lts_tag_; }
+  inline void set_release_lts_tag(const std::string& tag) {
+    release_lts_tag_ = tag;
+  }
 
   inline std::string last_fp() const { return last_fp_; }
 
@@ -375,7 +376,8 @@ class OmahaRequestParams {
   std::string last_fp_;
 
   // The value defining the parameters of the LTS (Long Term Support).
-  std::string lts_tag_;
+  // Normally is set by |OmahaRequestParamsPolicy|.
+  std::string release_lts_tag_;
 
   std::string hwid_;  // Hardware Qualification ID of the client
   // TODO(b:133324571) tracks removal of this field once it is no longer
