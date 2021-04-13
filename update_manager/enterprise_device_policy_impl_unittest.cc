@@ -183,13 +183,6 @@ TEST_F(UmEnterpriseDevicePolicyImplTest, ChannelDowngradeBehaviorRollback) {
   EXPECT_TRUE(uca_data_->update_check_params.rollback_on_channel_downgrade);
 }
 
-TEST_F(UmEnterpriseDevicePolicyImplTest, QuickFixBuildToken) {
-  fake_state_.device_policy_provider()->var_quick_fix_build_token()->reset(
-      new std::string("token"));
-  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
-  EXPECT_EQ(uca_data_->update_check_params.quick_fix_build_token, "token");
-}
-
 TEST_F(UmEnterpriseDevicePolicyImplTest,
        UpdateCheckAllowedRollbackAndPowerwash) {
   EXPECT_TRUE(TestRollbackAllowed(

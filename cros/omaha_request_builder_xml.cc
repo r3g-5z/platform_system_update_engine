@@ -335,10 +335,8 @@ string OmahaRequestBuilderXml::GetApp(const OmahaAppData& app_data) const {
   app_cohort_args += GetCohortArg("cohort", cohort_key);
   app_cohort_args += GetCohortArg("cohortname", cohortname_key);
   // Policy provided value overrides pref.
-  app_cohort_args +=
-      GetCohortArg("cohorthint",
-                   cohorthint_key,
-                   params->autoupdate_token() /* override_value */);
+  app_cohort_args += GetCohortArg(
+      "cohorthint", cohorthint_key, params->quick_fix_build_token());
 
   string fingerprint_arg;
   if (!params->os_build_fingerprint().empty()) {

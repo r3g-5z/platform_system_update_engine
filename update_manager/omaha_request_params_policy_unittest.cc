@@ -77,4 +77,13 @@ TEST_F(UmOmahaRequestParamsPolicyTest, MarketSegmentDisabledWithPolicy) {
   EXPECT_EQ(FakeSystemState::Get()->request_params()->market_segment(), "");
 }
 
+TEST_F(UmOmahaRequestParamsPolicyTest, QuickFixBuildToken) {
+  constexpr char kToken[] = "token";
+  fake_state_.device_policy_provider()->var_quick_fix_build_token()->reset(
+      new std::string(kToken));
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_EQ(FakeSystemState::Get()->request_params()->quick_fix_build_token(),
+            kToken);
+}
+
 }  // namespace chromeos_update_manager

@@ -171,12 +171,6 @@ EvalStatus EnterpriseDevicePolicyImpl::Evaluate(
     if (release_lts_tag_p) {
       result->lts_tag = *release_lts_tag_p;
     }
-
-    const string* quick_fix_build_token_p =
-        ec->GetValue(dp_provider->var_quick_fix_build_token());
-    if (quick_fix_build_token_p) {
-      result->quick_fix_build_token = *quick_fix_build_token_p;
-    }
   }
   return EvalStatus::kContinue;
 }

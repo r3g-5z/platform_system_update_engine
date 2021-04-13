@@ -2130,16 +2130,6 @@ TEST_F(UpdateAttempterTest, ProcessingDoneInstallError) {
   TestProcessingDone();
 }
 
-TEST_F(UpdateAttempterTest, QuickFixTokenWhenDeviceIsEnterpriseEnrolled) {
-  attempter_.CalculateUpdateParams({.quick_fix_build_token = "token"});
-  EXPECT_EQ("token",
-            FakeSystemState::Get()->request_params()->autoupdate_token());
-
-  attempter_.CalculateUpdateParams({});
-  EXPECT_TRUE(
-      FakeSystemState::Get()->request_params()->autoupdate_token().empty());
-}
-
 TEST_F(UpdateAttempterTest, ScheduleUpdateSpamHandlerTest) {
   EXPECT_TRUE(attempter_.ScheduleUpdates());
   // Now there is an update scheduled which means that all subsequent

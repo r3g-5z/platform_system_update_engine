@@ -286,11 +286,6 @@ TEST_F(OmahaRequestParamsTest, GetDlcAppId) {
   EXPECT_EQ(expected_dlc_app_id, params_.GetDlcAppId(kDlcId));
 }
 
-TEST_F(OmahaRequestParamsTest, AutoUpdateTokenTest) {
-  EXPECT_TRUE(params_.Init("", "", {.quick_fix_build_token = "foo-token"}));
-  EXPECT_EQ("foo-token", params_.autoupdate_token());
-}
-
 TEST_F(OmahaRequestParamsTest, MiniOsParams) {
   FakeSystemState::Get()->fake_hardware()->SetIsRunningFromMiniOs(true);
   EXPECT_TRUE(params_.Init("", "", {}));

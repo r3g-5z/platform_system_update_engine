@@ -218,11 +218,11 @@ class OmahaRequestParams {
   inline void set_is_install(bool is_install) { is_install_ = is_install; }
   inline bool is_install() const { return is_install_; }
 
-  inline void set_autoupdate_token(const std::string& token) {
-    autoupdate_token_ = token;
+  inline void set_quick_fix_build_token(const std::string& token) {
+    quick_fix_build_token_ = token;
   }
-  inline const std::string& autoupdate_token() const {
-    return autoupdate_token_;
+  inline const std::string& quick_fix_build_token() const {
+    return quick_fix_build_token_;
   }
 
   inline void set_market_segment(const std::string& market_segment) {
@@ -428,7 +428,8 @@ class OmahaRequestParams {
   // Token used when making an update request for a specific build.
   // For example: Token for a Quick Fix Build:
   // https://cloud.google.com/docs/chrome-enterprise/policies/?policy=DeviceQuickFixBuildToken
-  std::string autoupdate_token_;
+  // Normally is set by |OmahaRequestParamsPolicy|.
+  std::string quick_fix_build_token_;
 
   // Defines the device's market segment.
   std::string market_segment_;

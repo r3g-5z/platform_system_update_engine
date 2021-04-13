@@ -135,7 +135,7 @@ bool OmahaRequestParams::Init(const string& app_version,
 
   lts_tag_ = params.lts_tag;
 
-  autoupdate_token_ = params.quick_fix_build_token;
+  quick_fix_build_token_.clear();
 
   rollback_allowed_ = params.rollback_allowed;
 
