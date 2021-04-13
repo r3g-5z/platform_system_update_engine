@@ -56,22 +56,6 @@ class UmEnterpriseDevicePolicyImplTest : public UmPolicyTestBase {
         new string("1234."));
   }
 
-  // Sets up a test with the value of RollbackToTargetVersion policy (and
-  // whether it's set), and returns the value of
-  // UpdateCheckParams.rollback_allowed.
-  bool TestRollbackAllowed(bool set_policy,
-                           RollbackToTargetVersion rollback_to_target_version) {
-    if (set_policy) {
-      // Override RollbackToTargetVersion device policy attribute.
-      fake_state_.device_policy_provider()
-          ->var_rollback_to_target_version()
-          ->reset(new RollbackToTargetVersion(rollback_to_target_version));
-    }
-
-    EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
-    return uca_data_->update_check_params.rollback_allowed;
-  }
-
   UpdateCheckAllowedPolicyData* uca_data_;
 };
 
@@ -181,65 +165,6 @@ TEST_F(UmEnterpriseDevicePolicyImplTest, ChannelDowngradeBehaviorRollback) {
 
   EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
   EXPECT_TRUE(uca_data_->update_check_params.rollback_on_channel_downgrade);
-}
-
-TEST_F(UmEnterpriseDevicePolicyImplTest,
-       UpdateCheckAllowedRollbackAndPowerwash) {
-  EXPECT_TRUE(TestRollbackAllowed(
-      true, RollbackToTargetVersion::kRollbackAndPowerwash));
-}
-
-TEST_F(UmEnterpriseDevicePolicyImplTest,
-       UpdateCheckAllowedRollbackAndRestoreIfPossible) {
-  // We're doing rollback even if we don't support data save and restore.
-  EXPECT_TRUE(TestRollbackAllowed(
-      true, RollbackToTargetVersion::kRollbackAndRestoreIfPossible));
-}
-
-TEST_F(UmEnterpriseDevicePolicyImplTest, UpdateCheckAllowedRollbackDisabled) {
-  EXPECT_FALSE(TestRollbackAllowed(true, RollbackToTargetVersion::kDisabled));
-}
-
-TEST_F(UmEnterpriseDevicePolicyImplTest,
-       UpdateCheckAllowedRollbackUnspecified) {
-  EXPECT_FALSE(
-      TestRollbackAllowed(true, RollbackToTargetVersion::kUnspecified));
-}
-
-TEST_F(UmEnterpriseDevicePolicyImplTest, UpdateCheckAllowedRollbackNotSet) {
-  EXPECT_FALSE(
-      TestRollbackAllowed(false, RollbackToTargetVersion::kUnspecified));
-}
-
-TEST_F(UmEnterpriseDevicePolicyImplTest,
-       UpdateCheckAllowedKioskRollbackAllowed) {
-  SetKioskAppControlsChromeOsVersion();
-
-  EXPECT_TRUE(TestRollbackAllowed(
-      true, RollbackToTargetVersion::kRollbackAndPowerwash));
-}
-
-TEST_F(UmEnterpriseDevicePolicyImplTest,
-       UpdateCheckAllowedKioskRollbackDisabled) {
-  SetKioskAppControlsChromeOsVersion();
-
-  EXPECT_FALSE(TestRollbackAllowed(true, RollbackToTargetVersion::kDisabled));
-}
-
-TEST_F(UmEnterpriseDevicePolicyImplTest,
-       UpdateCheckAllowedKioskRollbackUnspecified) {
-  SetKioskAppControlsChromeOsVersion();
-
-  EXPECT_FALSE(
-      TestRollbackAllowed(true, RollbackToTargetVersion::kUnspecified));
-}
-
-TEST_F(UmEnterpriseDevicePolicyImplTest,
-       UpdateCheckAllowedKioskRollbackNotSet) {
-  SetKioskAppControlsChromeOsVersion();
-
-  EXPECT_FALSE(
-      TestRollbackAllowed(false, RollbackToTargetVersion::kUnspecified));
 }
 
 TEST_F(UmEnterpriseDevicePolicyImplTest, UpdateCheckAllowedKioskPin) {

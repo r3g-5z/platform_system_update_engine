@@ -71,6 +71,44 @@ EvalStatus OmahaRequestParamsPolicy::Evaluate(EvaluationContext* ec,
     request_params->set_release_lts_tag(*release_lts_tag_p);
   }
 
+  // Policy always overwrites whether rollback is allowed by the kiosk app
+  // manifest.
+  const RollbackToTargetVersion* rollback_to_target_version_p =
+      ec->GetValue(dp_provider->var_rollback_to_target_version());
+  // Set the default values, just in case.
+  request_params->set_rollback_allowed(false);
+  request_params->set_rollback_data_save_requested(false);
+  if (rollback_to_target_version_p) {
+    switch (*rollback_to_target_version_p) {
+      case RollbackToTargetVersion::kUnspecified:
+        break;
+      case RollbackToTargetVersion::kDisabled:
+        LOG(INFO) << "Policy disables rollbacks.";
+        break;
+      case RollbackToTargetVersion::kRollbackAndPowerwash:
+        LOG(INFO) << "Policy allows rollbacks with powerwash.";
+        request_params->set_rollback_allowed(true);
+        break;
+      case RollbackToTargetVersion::kRollbackAndRestoreIfPossible:
+        LOG(INFO)
+            << "Policy allows rollbacks, also tries to restore if possible.";
+        request_params->set_rollback_allowed(true);
+        request_params->set_rollback_data_save_requested(true);
+        break;
+      case RollbackToTargetVersion::kMaxValue:
+        NOTREACHED();
+        // Don't add a default case to let the compiler warn about newly
+        // added enum values which should be added here.
+    }
+  }
+
+  // Determine allowed milestones for rollback
+  const int* rollback_allowed_milestones_p =
+      ec->GetValue(dp_provider->var_rollback_allowed_milestones());
+  if (rollback_allowed_milestones_p)
+    request_params->set_rollback_allowed_milestones(
+        *rollback_allowed_milestones_p);
+
   return EvalStatus::kSucceeded;
 }
 

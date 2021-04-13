@@ -59,8 +59,6 @@ EvalStatus UpdateCheckAllowedPolicy::Evaluate(EvaluationContext* ec,
   result->updates_enabled = true;
   result->target_channel.clear();
   result->target_version_prefix.clear();
-  result->rollback_allowed = false;
-  result->rollback_allowed_milestones = -1;
   result->rollback_on_channel_downgrade = false;
   result->interactive = false;
 
@@ -121,8 +119,6 @@ EvalStatus UpdateCheckAllowedPolicy::EvaluateDefault(
   result->updates_enabled = true;
   result->target_channel.clear();
   result->target_version_prefix.clear();
-  result->rollback_allowed = false;
-  result->rollback_allowed_milestones = -1;  // No version rolls should happen.
   result->rollback_on_channel_downgrade = false;
   result->interactive = false;
 

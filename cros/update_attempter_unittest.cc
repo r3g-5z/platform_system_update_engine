@@ -1649,27 +1649,6 @@ TEST_F(UpdateAttempterTest, TargetVersionPrefixSetAndReset) {
                   .empty());
 }
 
-TEST_F(UpdateAttempterTest, RollbackAllowedSetAndReset) {
-  attempter_.CalculateUpdateParams({
-      .target_version_prefix = "1234",
-      .rollback_allowed = true,
-      .rollback_allowed_milestones = 4,
-  });
-  EXPECT_TRUE(FakeSystemState::Get()->request_params()->rollback_allowed());
-  EXPECT_EQ(
-      4,
-      FakeSystemState::Get()->request_params()->rollback_allowed_milestones());
-
-  attempter_.CalculateUpdateParams({
-      .target_version_prefix = "1234",
-      .rollback_allowed_milestones = 4,
-  });
-  EXPECT_FALSE(FakeSystemState::Get()->request_params()->rollback_allowed());
-  EXPECT_EQ(
-      4,
-      FakeSystemState::Get()->request_params()->rollback_allowed_milestones());
-}
-
 TEST_F(UpdateAttempterTest, ChannelDowngradeNoRollback) {
   base::ScopedTempDir tempdir;
   ASSERT_TRUE(tempdir.CreateUniqueTempDir());
@@ -1751,20 +1730,6 @@ TEST_F(UpdateAttempterTest, UpdateAttemptFlagsCachedAtUpdateStart) {
   attempter_.OnUpdateScheduled(EvalStatus::kSucceeded);
   EXPECT_EQ(UpdateAttemptFlags::kFlagRestrictDownload,
             attempter_.GetCurrentUpdateAttemptFlags());
-}
-
-TEST_F(UpdateAttempterTest, RollbackNotAllowed) {
-  attempter_.policy_data_.reset(new UpdateCheckAllowedPolicyData(
-      {.updates_enabled = true, .rollback_allowed = false}));
-  attempter_.OnUpdateScheduled(EvalStatus::kSucceeded);
-  EXPECT_FALSE(FakeSystemState::Get()->request_params()->rollback_allowed());
-}
-
-TEST_F(UpdateAttempterTest, RollbackAllowed) {
-  attempter_.policy_data_.reset(new UpdateCheckAllowedPolicyData(
-      {.updates_enabled = true, .rollback_allowed = true}));
-  attempter_.OnUpdateScheduled(EvalStatus::kSucceeded);
-  EXPECT_TRUE(FakeSystemState::Get()->request_params()->rollback_allowed());
 }
 
 TEST_F(UpdateAttempterTest, InteractiveUpdateUsesPassedRestrictions) {

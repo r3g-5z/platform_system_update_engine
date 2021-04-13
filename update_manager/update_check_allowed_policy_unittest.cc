@@ -196,7 +196,6 @@ TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedWithAttributes) {
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
   EXPECT_EQ("1.2", uca_data_->update_check_params.target_version_prefix);
-  EXPECT_EQ(5, uca_data_->update_check_params.rollback_allowed_milestones);
   EXPECT_EQ("foo-channel", uca_data_->update_check_params.target_channel);
   EXPECT_FALSE(uca_data_->update_check_params.interactive);
 }

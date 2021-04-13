@@ -393,13 +393,19 @@ class OmahaRequestParams {
   // to be pinned to. It's empty otherwise.
   std::string target_version_prefix_;
 
-  // Whether the client is accepting rollback images too.
+  // Whether the client is accepting rollback images defined by policy.
+  // Normally ss set by |OmahaRequestParamsPolicy|.
   bool rollback_allowed_;
 
   // Whether rollbacks should preserve some system state during powerwash.
+  // Normally ss set by |OmahaRequestParamsPolicy|.
   bool rollback_data_save_requested_;
 
-  // How many milestones the client can rollback to.
+  // Specifies the number of Chrome milestones rollback should be allowed,
+  // starting from the stable version at any time. Value is -1 if unspecified
+  // (e.g. no device policy is available yet), in this case no version
+  // roll-forward should happen.
+  // Normally ss set by |OmahaRequestParamsPolicy|.
   int rollback_allowed_milestones_;
 
   // True if scattering or staging are enabled, in which case waiting_period_

@@ -34,6 +34,22 @@ class UmOmahaRequestParamsPolicyTest : public UmPolicyTestBase {
     fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
         new bool(true));
   }
+
+  // Sets up a test with the value of RollbackToTargetVersion policy (and
+  // whether it's set), and returns the value of
+  // UpdateCheckParams.rollback_allowed.
+  bool TestRollbackAllowed(bool set_policy,
+                           RollbackToTargetVersion rollback_to_target_version) {
+    if (set_policy) {
+      // Override RollbackToTargetVersion device policy attribute.
+      fake_state_.device_policy_provider()
+          ->var_rollback_to_target_version()
+          ->reset(new RollbackToTargetVersion(rollback_to_target_version));
+    }
+
+    EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+    return FakeSystemState::Get()->request_params()->rollback_allowed();
+  }
 };
 
 TEST_F(UmOmahaRequestParamsPolicyTest, PolicyIsLoaded) {
@@ -93,6 +109,31 @@ TEST_F(UmOmahaRequestParamsPolicyTest, ReleaseLtsTag) {
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_EQ(FakeSystemState::Get()->request_params()->release_lts_tag(),
             kReleaseTag);
+}
+
+TEST_F(UmOmahaRequestParamsPolicyTest, RollbackAndPowerwash) {
+  EXPECT_TRUE(TestRollbackAllowed(
+      true, RollbackToTargetVersion::kRollbackAndPowerwash));
+}
+
+TEST_F(UmOmahaRequestParamsPolicyTest, RollbackAndRestoreIfPossible) {
+  // We're doing rollback even if we don't support data save and restore.
+  EXPECT_TRUE(TestRollbackAllowed(
+      true, RollbackToTargetVersion::kRollbackAndRestoreIfPossible));
+}
+
+TEST_F(UmOmahaRequestParamsPolicyTest, RollbackDisabled) {
+  EXPECT_FALSE(TestRollbackAllowed(true, RollbackToTargetVersion::kDisabled));
+}
+
+TEST_F(UmOmahaRequestParamsPolicyTest, RollbackUnspecified) {
+  EXPECT_FALSE(
+      TestRollbackAllowed(true, RollbackToTargetVersion::kUnspecified));
+}
+
+TEST_F(UmOmahaRequestParamsPolicyTest, RollbackNotSet) {
+  EXPECT_FALSE(
+      TestRollbackAllowed(false, RollbackToTargetVersion::kUnspecified));
 }
 
 }  // namespace chromeos_update_manager

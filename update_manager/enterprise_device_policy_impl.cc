@@ -109,44 +109,6 @@ EvalStatus EnterpriseDevicePolicyImpl::Evaluate(
         result->target_version_prefix = *target_version_prefix_p;
     }
 
-    // Policy always overwrites whether rollback is allowed by the kiosk app
-    // manifest.
-    const RollbackToTargetVersion* rollback_to_target_version_p =
-        ec->GetValue(dp_provider->var_rollback_to_target_version());
-    if (rollback_to_target_version_p) {
-      switch (*rollback_to_target_version_p) {
-        case RollbackToTargetVersion::kUnspecified:
-          // We leave the default or the one specified by the kiosk app.
-          break;
-        case RollbackToTargetVersion::kDisabled:
-          LOG(INFO) << "Policy disables rollbacks.";
-          result->rollback_allowed = false;
-          result->rollback_data_save_requested = false;
-          break;
-        case RollbackToTargetVersion::kRollbackAndPowerwash:
-          LOG(INFO) << "Policy allows rollbacks with powerwash.";
-          result->rollback_allowed = true;
-          result->rollback_data_save_requested = false;
-          break;
-        case RollbackToTargetVersion::kRollbackAndRestoreIfPossible:
-          LOG(INFO)
-              << "Policy allows rollbacks, also tries to restore if possible.";
-          result->rollback_allowed = true;
-          result->rollback_data_save_requested = true;
-          break;
-        case RollbackToTargetVersion::kMaxValue:
-          NOTREACHED();
-          // Don't add a default case to let the compiler warn about newly
-          // added enum values which should be added here.
-      }
-    }
-
-    // Determine allowed milestones for rollback
-    const int* rollback_allowed_milestones_p =
-        ec->GetValue(dp_provider->var_rollback_allowed_milestones());
-    if (rollback_allowed_milestones_p)
-      result->rollback_allowed_milestones = *rollback_allowed_milestones_p;
-
     // Determine whether a target channel is dictated by policy and whether we
     // should rollback in case that channel is more stable.
     const bool* release_channel_delegated_p =

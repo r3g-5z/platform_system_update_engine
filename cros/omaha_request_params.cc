@@ -137,13 +137,9 @@ bool OmahaRequestParams::Init(const string& app_version,
 
   quick_fix_build_token_.clear();
 
-  rollback_allowed_ = params.rollback_allowed;
-
-  // Set whether saving data over rollback is requested.
-  rollback_data_save_requested_ = params.rollback_data_save_requested;
-
-  // Set how many milestones of rollback are allowed.
-  rollback_allowed_milestones_ = params.rollback_allowed_milestones;
+  rollback_allowed_ = false;
+  rollback_data_save_requested_ = false;
+  rollback_allowed_milestones_ = 0;
 
   // Set the target channel, if one was provided.
   if (params.target_channel.empty()) {
