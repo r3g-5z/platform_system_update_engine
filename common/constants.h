@@ -49,6 +49,7 @@ extern const char kPrefsCurrentUrlFailureCount[];
 extern const char kPrefsCurrentUrlIndex[];
 extern const char kPrefsDailyMetricsLastReportedAt[];
 extern const char kPrefsDeltaUpdateFailures[];
+extern const char kPrefsMarketSegmentDisabled[];
 extern const char kPrefsDynamicPartitionMetadataUpdated[];
 extern const char kPrefsFullPayloadAttemptNumber[];
 extern const char kPrefsInstallDateDays[];

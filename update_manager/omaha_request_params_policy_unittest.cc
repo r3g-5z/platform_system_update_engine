@@ -55,4 +55,26 @@ TEST_F(UmOmahaRequestParamsPolicyTest, FooMarketSegment) {
             "foo-segment");
 }
 
+TEST_F(UmOmahaRequestParamsPolicyTest, MarketSegmentDisabledNopolicy) {
+  fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
+      new bool(false));
+  fake_state_.updater_provider()->var_market_segment_disabled()->reset(
+      new bool(true));
+  fake_state_.device_policy_provider()->var_market_segment()->reset(
+      new std::string("foo-segment"));
+
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+  EXPECT_EQ(FakeSystemState::Get()->request_params()->market_segment(), "");
+}
+
+TEST_F(UmOmahaRequestParamsPolicyTest, MarketSegmentDisabledWithPolicy) {
+  fake_state_.updater_provider()->var_market_segment_disabled()->reset(
+      new bool(true));
+  fake_state_.device_policy_provider()->var_market_segment()->reset(
+      new std::string("foo-segment"));
+
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_EQ(FakeSystemState::Get()->request_params()->market_segment(), "");
+}
+
 }  // namespace chromeos_update_manager

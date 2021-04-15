@@ -454,6 +454,18 @@ void OmahaRequestAction::PersistEolInfo(
   }
 }
 
+void OmahaRequestAction::PersistDisableMarketSegment(const string& value) {
+  auto prefs = SystemState::Get()->prefs();
+  if (ParseBool(value)) {
+    if (!prefs->Exists(kPrefsMarketSegmentDisabled))
+      if (!prefs->SetBoolean(kPrefsMarketSegmentDisabled, true))
+        LOG(ERROR) << "Failed to disable sending market segment info.";
+  } else {
+    // Normally the pref doesn't exist, so this becomes just a no-op;
+    prefs->Delete(kPrefsMarketSegmentDisabled);
+  }
+}
+
 bool OmahaRequestAction::ParseResponse(ScopedActionCompleter* completer) {
   if (parser_data_.apps.empty()) {
     completer->set_code(ErrorCode::kOmahaResponseInvalid);
@@ -493,6 +505,9 @@ bool OmahaRequestAction::ParseResponse(ScopedActionCompleter* completer) {
     // Parses the rollback versions of the current image. If the fields do not
     // exist they default to 0xffff for the 4 key versions.
     ParseRollbackVersions(*platform_app, params->rollback_allowed_milestones());
+
+    PersistDisableMarketSegment(
+        platform_app->updatecheck.disable_market_segment);
   }
 
   // Check for the "elapsed_days" attribute in the "daystart"

@@ -393,6 +393,21 @@ TEST_F(UmRealUpdaterProviderTest, GetCellularEnabledOkayPrefReadsTrue) {
   UmTestUtils::ExpectVariableHasValue(true, provider_->var_cellular_enabled());
 }
 
+TEST_F(UmRealUpdaterProviderTest, GetMarketSegmentDisabled) {
+  auto* fake_prefs = FakeSystemState::Get()->fake_prefs();
+  fake_prefs->SetBoolean(chromeos_update_engine::kPrefsMarketSegmentDisabled,
+                         true);
+  UmTestUtils::ExpectVariableHasValue(true,
+                                      provider_->var_market_segment_disabled());
+  fake_prefs->SetBoolean(chromeos_update_engine::kPrefsMarketSegmentDisabled,
+                         false);
+  UmTestUtils::ExpectVariableHasValue(false,
+                                      provider_->var_market_segment_disabled());
+  fake_prefs->Delete(chromeos_update_engine::kPrefsMarketSegmentDisabled);
+  UmTestUtils::ExpectVariableHasValue(false,
+                                      provider_->var_market_segment_disabled());
+}
+
 TEST_F(UmRealUpdaterProviderTest, GetUpdateCompletedTimeOkay) {
   Time expected = SetupUpdateCompletedTime(true);
   UmTestUtils::ExpectVariableHasValue(expected,

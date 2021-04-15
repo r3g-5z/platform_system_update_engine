@@ -298,6 +298,9 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
 
   void PersistEolInfo(const OmahaParserData::App& platform_app);
 
+  // Persist whether we should disable sending market segment info or not.
+  void PersistDisableMarketSegment(const std::string& value);
+
   OmahaParserData parser_data_;
 
   OmahaResponse response_;

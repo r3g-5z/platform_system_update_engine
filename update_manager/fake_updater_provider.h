@@ -67,6 +67,10 @@ class FakeUpdaterProvider : public UpdaterProvider {
     return &var_cellular_enabled_;
   }
 
+  FakeVariable<bool>* var_market_segment_disabled() override {
+    return &var_market_segment_disabled_;
+  }
+
   FakeVariable<unsigned int>* var_consecutive_failed_update_checks() override {
     return &var_consecutive_failed_update_checks_;
   }
@@ -104,6 +108,8 @@ class FakeUpdaterProvider : public UpdaterProvider {
   FakeVariable<bool> var_p2p_enabled_{"p2p_enabled", kVariableModeAsync};
   FakeVariable<bool> var_cellular_enabled_{"cellular_enabled",
                                            kVariableModeAsync};
+  FakeVariable<bool> var_market_segment_disabled_{"market_segment_disabled",
+                                                  kVariableModeAsync};
   FakeVariable<unsigned int> var_consecutive_failed_update_checks_{
       "consecutive_failed_update_checks", kVariableModePoll};
   FakeVariable<unsigned int> var_server_dictated_poll_interval_{

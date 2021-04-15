@@ -18,6 +18,7 @@
 
 #include <string>
 
+#include "update_engine/common/constants.h"
 #include "update_engine/common/system_state.h"
 #include "update_engine/cros/omaha_request_params.h"
 
@@ -35,7 +36,12 @@ EvalStatus OmahaRequestParamsPolicy::Evaluate(EvaluationContext* ec,
                                               string* error,
                                               PolicyDataInterface* data) const {
   auto request_params = SystemState::Get()->request_params();
-  request_params->set_market_segment(kMarketSegmentConsumer);
+
+  const bool* market_segment_disabled_p =
+      ec->GetValue(state->updater_provider()->var_market_segment_disabled());
+  if (market_segment_disabled_p == nullptr || !(*market_segment_disabled_p)) {
+    request_params->set_market_segment(kMarketSegmentConsumer);
+  }
 
   // If no device policy was loaded, nothing else to do.
   DevicePolicyProvider* const dp_provider = state->device_policy_provider();
@@ -45,10 +51,12 @@ EvalStatus OmahaRequestParamsPolicy::Evaluate(EvaluationContext* ec,
     return EvalStatus::kContinue;
   }
 
-  const string* market_segment_p =
-      ec->GetValue(dp_provider->var_market_segment());
-  if (market_segment_p) {
-    request_params->set_market_segment(*market_segment_p);
+  if (market_segment_disabled_p == nullptr || !(*market_segment_disabled_p)) {
+    const string* market_segment_p =
+        ec->GetValue(dp_provider->var_market_segment());
+    if (market_segment_p) {
+      request_params->set_market_segment(*market_segment_p);
+    }
   }
 
   return EvalStatus::kSucceeded;

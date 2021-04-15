@@ -45,6 +45,7 @@ extern const char kAttrRollback[];
 extern const char kAttrFirmwareVersion[];
 extern const char kAttrKernelVersion[];
 extern const char kAttrStatus[];
+extern const char kAttrDisableMarketSegment[];
 
 // |package| attributes.
 extern const char kAttrFp[];
@@ -106,6 +107,7 @@ struct OmahaParserData {
       std::string kernel_version;
       std::string past_firmware_version;
       std::string past_kernel_version;
+      std::string disable_market_segment;
     } updatecheck;
 
     struct PostInstallAction {

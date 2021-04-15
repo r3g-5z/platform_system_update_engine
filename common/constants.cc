@@ -43,6 +43,7 @@ const char kPrefsCurrentUrlIndex[] = "current-url-index";
 const char kPrefsDailyMetricsLastReportedAt[] =
     "daily-metrics-last-reported-at";
 const char kPrefsDeltaUpdateFailures[] = "delta-update-failures";
+const char kPrefsMarketSegmentDisabled[] = "market-segment-disabled";
 const char kPrefsDynamicPartitionMetadataUpdated[] =
     "dynamic-partition-metadata-updated";
 const char kPrefsFullPayloadAttemptNumber[] = "full-payload-attempt-number";

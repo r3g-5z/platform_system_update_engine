@@ -488,6 +488,10 @@ RealUpdaterProvider::RealUpdaterProvider()
           "cellular_enabled",
           chromeos_update_engine::kPrefsUpdateOverCellularPermission,
           false)),
+      var_market_segment_disabled_(new BooleanPrefVariable(
+          "market_segment_disabled",
+          chromeos_update_engine::kPrefsMarketSegmentDisabled,
+          false)),
       var_consecutive_failed_update_checks_(
           new ConsecutiveFailedUpdateChecksVariable(
               "consecutive_failed_update_checks")),

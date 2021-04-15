@@ -101,6 +101,9 @@ class UpdaterProvider : public Provider {
   // network.
   virtual Variable<bool>* var_cellular_enabled() = 0;
 
+  // A variable indicating whether sending market segment is disabled.
+  virtual Variable<bool>* var_market_segment_disabled() = 0;
+
   // A variable returning the number of consecutive failed update checks.
   virtual Variable<unsigned int>* var_consecutive_failed_update_checks() = 0;
 

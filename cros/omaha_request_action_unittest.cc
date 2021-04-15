@@ -126,7 +126,9 @@ struct FakeUpdateResponse {
                 : "") +
            " status=\"ok\">"
            "<ping status=\"ok\"/>"
-           "<updatecheck status=\"noupdate\"/></app>" +
+           "<updatecheck status=\"noupdate\"" +
+           (disable_market_segment ? " _disable_dms=\"true\" " : "") +
+           "/></app>" +
            (multi_app_no_update
                 ? "<app appid=\"" + app_id2 +
                       "\"><updatecheck status=\"noupdate\"/></app>"
@@ -151,8 +153,9 @@ struct FakeUpdateResponse {
                 : "") +
            " status=\"ok\">"
            "<ping status=\"ok\"/><updatecheck status=\"ok\"" +
-           GetRollbackVersionAttributes() + ">" + "<urls><url codebase=\"" +
-           codebase +
+           GetRollbackVersionAttributes() +
+           (disable_market_segment ? " _disable_dms=\"true\" " : "") + ">" +
+           "<urls><url codebase=\"" + codebase +
            "\"/></urls>"
            "<manifest version=\"" +
            version +
@@ -266,6 +269,7 @@ struct FakeUpdateResponse {
   // Hash checks default to allowed.
   bool disable_hash_checks = false;
   bool disable_repeated_updates = false;
+  bool disable_market_segment = false;
 
   bool powerwash = false;
 
@@ -1960,6 +1964,32 @@ TEST_F(OmahaRequestActionTest, FooMarketSegment) {
   ASSERT_TRUE(TestUpdateCheck());
 
   EXPECT_NE(string::npos, post_str_.find("market_segment=\"foo-segment\""));
+}
+
+TEST_F(OmahaRequestActionTest, DisableMarketSegmentWithUpdate) {
+  fake_update_response_.disable_market_segment = true;
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+
+  EXPECT_TRUE(TestUpdateCheck());
+  EXPECT_TRUE(response_.update_exists);
+  bool market_segment_disabled = false;
+  FakeSystemState::Get()->prefs()->GetBoolean(kPrefsMarketSegmentDisabled,
+                                              &market_segment_disabled);
+  EXPECT_TRUE(market_segment_disabled);
+}
+
+TEST_F(OmahaRequestActionTest, DisableMarketSegmentNoUpdate) {
+  fake_update_response_.disable_market_segment = true;
+  tuc_params_.http_response = fake_update_response_.GetNoUpdateResponse();
+  tuc_params_.expected_check_result = metrics::CheckResult::kNoUpdateAvailable;
+  tuc_params_.expected_check_reaction = metrics::CheckReaction::kUnset;
+
+  EXPECT_TRUE(TestUpdateCheck());
+  EXPECT_FALSE(response_.update_exists);
+  bool market_segment_disabled = false;
+  FakeSystemState::Get()->prefs()->GetBoolean(kPrefsMarketSegmentDisabled,
+                                              &market_segment_disabled);
+  EXPECT_TRUE(market_segment_disabled);
 }
 
 TEST_F(OmahaRequestActionTest, TargetChannelHintTest) {

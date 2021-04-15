@@ -76,6 +76,10 @@ class RealUpdaterProvider : public UpdaterProvider {
     return var_cellular_enabled_.get();
   }
 
+  Variable<bool>* var_market_segment_disabled() override {
+    return var_market_segment_disabled_.get();
+  }
+
   Variable<unsigned int>* var_consecutive_failed_update_checks() override {
     return var_consecutive_failed_update_checks_.get();
   }
@@ -109,6 +113,7 @@ class RealUpdaterProvider : public UpdaterProvider {
   std::unique_ptr<Variable<std::string>> var_new_channel_;
   std::unique_ptr<Variable<bool>> var_p2p_enabled_;
   std::unique_ptr<Variable<bool>> var_cellular_enabled_;
+  std::unique_ptr<Variable<bool>> var_market_segment_disabled_;
   std::unique_ptr<Variable<unsigned int>> var_consecutive_failed_update_checks_;
   std::unique_ptr<Variable<unsigned int>> var_server_dictated_poll_interval_;
   std::unique_ptr<Variable<UpdateRequestStatus>> var_forced_update_requested_;
