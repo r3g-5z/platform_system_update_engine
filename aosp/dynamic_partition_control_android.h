@@ -104,9 +104,9 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
       const std::string& unsuffixed_partition_name,
       const std::optional<std::string>& source_path,
       bool is_append) override;
-  FileDescriptorPtr OpenCowReader(const std::string& unsuffixed_partition_name,
-                                  const std::optional<std::string>&,
-                                  bool is_append = false) override;
+  FileDescriptorPtr OpenCowFd(const std::string& unsuffixed_partition_name,
+                              const std::optional<std::string>&,
+                              bool is_append = false) override;
 
   bool UnmapAllPartitions() override;
 
@@ -257,6 +257,13 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
                                           uint32_t target_slot,
                                           const DeltaArchiveManifest& manifest,
                                           uint64_t* required_size);
+
+  // Returns true if the allocatable space in super partition is larger than
+  // the size of dynamic partition groups in the manifest.
+  bool CheckSuperPartitionAllocatableSpace(
+      android::fs_mgr::MetadataBuilder* builder,
+      const DeltaArchiveManifest& manifest,
+      bool use_snapshot);
 
   enum class DynamicPartitionDeviceStatus {
     SUCCESS,

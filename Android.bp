@@ -224,6 +224,7 @@ cc_library_static {
         "payload_consumer/bzip_extent_writer.cc",
         "payload_consumer/cached_file_descriptor.cc",
         "payload_consumer/certificate_parser_android.cc",
+        "payload_consumer/cow_writer_file_descriptor.cc",
         "payload_consumer/delta_performer.cc",
         "payload_consumer/extent_reader.cc",
         "payload_consumer/extent_writer.cc",
@@ -762,6 +763,7 @@ cc_test {
 
     srcs: [
         "aosp/apex_handler_android_unittest.cc",
+        "aosp/cleanup_previous_update_action_unittest.cc",
         "aosp/dynamic_partition_control_android_unittest.cc",
         "aosp/update_attempter_android_unittest.cc",
         "certificate_checker_unittest.cc",

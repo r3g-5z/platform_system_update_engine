@@ -49,6 +49,7 @@
 #include "update_engine/common/dynamic_partition_control_interface.h"
 #include "update_engine/common/platform_constants.h"
 #include "update_engine/common/utils.h"
+#include "update_engine/payload_consumer/cow_writer_file_descriptor.h"
 #include "update_engine/payload_consumer/delta_performer.h"
 
 using android::base::GetBoolProperty;
@@ -283,6 +284,7 @@ bool DynamicPartitionControlAndroid::UnmapPartitionOnDeviceMapper(
 }
 
 bool DynamicPartitionControlAndroid::UnmapAllPartitions() {
+  snapshot_->UnmapAllSnapshots();
   if (mapped_devices_.empty()) {
     return false;
   }
@@ -803,9 +805,7 @@ bool DynamicPartitionControlAndroid::PrepareDynamicPartitionsForUpdate(
   }
 
   std::string device_dir_str;
-  if (!GetDeviceDir(&device_dir_str)) {
-    return false;
-  }
+  TEST_AND_RETURN_FALSE(GetDeviceDir(&device_dir_str));
   base::FilePath device_dir(device_dir_str);
   auto source_device =
       device_dir.Append(GetSuperPartitionName(source_slot)).value();
@@ -822,13 +822,44 @@ bool DynamicPartitionControlAndroid::PrepareDynamicPartitionsForUpdate(
         DeleteSourcePartitions(builder.get(), source_slot, manifest));
   }
 
-  if (!UpdatePartitionMetadata(builder.get(), target_slot, manifest)) {
-    return false;
-  }
+  TEST_AND_RETURN_FALSE(
+      UpdatePartitionMetadata(builder.get(), target_slot, manifest));
 
   auto target_device =
       device_dir.Append(GetSuperPartitionName(target_slot)).value();
   return StoreMetadata(target_device, builder.get(), target_slot);
+}
+
+bool DynamicPartitionControlAndroid::CheckSuperPartitionAllocatableSpace(
+    android::fs_mgr::MetadataBuilder* builder,
+    const DeltaArchiveManifest& manifest,
+    bool use_snapshot) {
+  uint64_t total_size = 0;
+  for (const auto& group : manifest.dynamic_partition_metadata().groups()) {
+    total_size += group.size();
+  }
+
+  std::string expr;
+  uint64_t allocatable_space = builder->AllocatableSpace();
+  // On device retrofitting dynamic partitions, allocatable_space = super.
+  // On device launching dynamic partitions w/o VAB,
+  //   allocatable_space = super / 2.
+  // On device launching dynamic partitions with VAB, allocatable_space = super.
+  // For recovery sideload, allocatable_space = super.
+  if (!GetDynamicPartitionsFeatureFlag().IsRetrofit() && !use_snapshot &&
+      !IsRecovery()) {
+    allocatable_space /= 2;
+    expr = "half of ";
+  }
+  if (total_size > allocatable_space) {
+    LOG(ERROR) << "The maximum size of all groups for the target slot"
+               << " (" << total_size << ") has exceeded " << expr
+               << "allocatable space for dynamic partitions "
+               << allocatable_space << ".";
+    return false;
+  }
+
+  return true;
 }
 
 bool DynamicPartitionControlAndroid::PrepareSnapshotPartitionsForUpdate(
@@ -837,6 +868,22 @@ bool DynamicPartitionControlAndroid::PrepareSnapshotPartitionsForUpdate(
     const DeltaArchiveManifest& manifest,
     uint64_t* required_size) {
   TEST_AND_RETURN_FALSE(ExpectMetadataMounted());
+
+  std::string device_dir_str;
+  TEST_AND_RETURN_FALSE(GetDeviceDir(&device_dir_str));
+  base::FilePath device_dir(device_dir_str);
+  auto super_device =
+      device_dir.Append(GetSuperPartitionName(source_slot)).value();
+  auto builder = LoadMetadataBuilder(super_device, source_slot);
+  if (builder == nullptr) {
+    LOG(ERROR) << "No metadata at "
+               << BootControlInterface::SlotName(source_slot);
+    return false;
+  }
+
+  TEST_AND_RETURN_FALSE(
+      CheckSuperPartitionAllocatableSpace(builder.get(), manifest, true));
+
   if (!snapshot_->BeginUpdate()) {
     LOG(ERROR) << "Cannot begin new update.";
     return false;
@@ -875,29 +922,8 @@ bool DynamicPartitionControlAndroid::UpdatePartitionMetadata(
   const std::string target_suffix = SlotSuffixForSlotNumber(target_slot);
   DeleteGroupsWithSuffix(builder, target_suffix);
 
-  uint64_t total_size = 0;
-  for (const auto& group : manifest.dynamic_partition_metadata().groups()) {
-    total_size += group.size();
-  }
-
-  std::string expr;
-  uint64_t allocatable_space = builder->AllocatableSpace();
-  // On device retrofitting dynamic partitions, allocatable_space = super.
-  // On device launching dynamic partitions w/o VAB,
-  //   allocatable_space = super / 2.
-  // On device launching dynamic partitions with VAB, allocatable_space = super.
-  if (!GetDynamicPartitionsFeatureFlag().IsRetrofit() &&
-      !GetVirtualAbFeatureFlag().IsEnabled()) {
-    allocatable_space /= 2;
-    expr = "half of ";
-  }
-  if (total_size > allocatable_space) {
-    LOG(ERROR) << "The maximum size of all groups with suffix " << target_suffix
-               << " (" << total_size << ") has exceeded " << expr
-               << "allocatable space for dynamic partitions "
-               << allocatable_space << ".";
-    return false;
-  }
+  TEST_AND_RETURN_FALSE(
+      CheckSuperPartitionAllocatableSpace(builder, manifest, false));
 
   // name of partition(e.g. "system") -> size in bytes
   std::map<std::string, uint64_t> partition_sizes;
@@ -1165,7 +1191,7 @@ bool DynamicPartitionControlAndroid::DeleteSourcePartitions(
 
   LOG(INFO) << "Will overwrite existing partitions. Slot "
             << BootControlInterface::SlotName(source_slot)
-            << "may be unbootable until update finishes!";
+            << " may be unbootable until update finishes!";
   const std::string source_suffix = SlotSuffixForSlotNumber(source_slot);
   DeleteGroupsWithSuffix(builder, source_suffix);
 
@@ -1328,7 +1354,7 @@ DynamicPartitionControlAndroid::OpenCowWriter(
   return snapshot_->OpenSnapshotWriter(params, std::move(source_path));
 }  // namespace chromeos_update_engine
 
-FileDescriptorPtr DynamicPartitionControlAndroid::OpenCowReader(
+FileDescriptorPtr DynamicPartitionControlAndroid::OpenCowFd(
     const std::string& unsuffixed_partition_name,
     const std::optional<std::string>& source_path,
     bool is_append) {
@@ -1337,8 +1363,10 @@ FileDescriptorPtr DynamicPartitionControlAndroid::OpenCowReader(
   if (cow_writer == nullptr) {
     return nullptr;
   }
-  cow_writer->InitializeAppend(kEndOfInstallLabel);
-  return cow_writer->OpenReader();
+  if (!cow_writer->InitializeAppend(kEndOfInstallLabel)) {
+    return nullptr;
+  }
+  return std::make_shared<CowWriterFileDescriptor>(std::move(cow_writer));
 }
 
 std::optional<base::FilePath> DynamicPartitionControlAndroid::GetSuperDevice() {
