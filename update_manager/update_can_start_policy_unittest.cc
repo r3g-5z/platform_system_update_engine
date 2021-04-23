@@ -869,33 +869,6 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedNoUsableUrlsButP2PEnabled) {
   EXPECT_FALSE(ucs_data_->result.do_increment_failures);
 }
 
-TEST_F(UmUpdateCanStartPolicyTest, AllowedNoUsableUrlsButEnterpriseEnrolled) {
-  // The UpdateCanStart policy returns true; there's a single HTTP URL but its
-  // use is forbidden by policy, and P2P is unset on the policy, however the
-  // device is enterprise-enrolled so P2P is allowed. The result indicates that
-  // no URL can be used.
-  //
-  // Note: The number of failed attempts should not increase in this case (see
-  // above test).
-
-  // Override specific device policy attributes.
-  fake_state_.device_policy_provider()->var_au_p2p_enabled()->reset(nullptr);
-  fake_state_.device_policy_provider()->var_has_owner()->reset(new bool(false));
-  fake_state_.device_policy_provider()->var_http_downloads_enabled()->reset(
-      new bool(false));
-
-  // Check that the UpdateCanStart returns true.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
-  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
-  EXPECT_TRUE(ucs_data_->result.update_can_start);
-  EXPECT_TRUE(ucs_data_->result.p2p_downloading_allowed);
-  EXPECT_TRUE(ucs_data_->result.p2p_sharing_allowed);
-  EXPECT_GT(0, ucs_data_->result.download_url_idx);
-  EXPECT_TRUE(ucs_data_->result.download_url_allowed);
-  EXPECT_EQ(0, ucs_data_->result.download_url_num_errors);
-  EXPECT_FALSE(ucs_data_->result.do_increment_failures);
-}
-
 TEST_F(UmUpdateCanStartPolicyTest, AllowedScatteringSupressedDueToP2P) {
   // The UpdateCanStart policy returns true; scattering should have applied, but
   // P2P download is allowed. Scattering values are nonetheless returned, and so

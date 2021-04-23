@@ -59,14 +59,6 @@ TEST_F(UmP2PEnabledPolicyTest, AllowedByUpdater) {
   EXPECT_TRUE(p2p_data_->enabled());
 }
 
-TEST_F(UmP2PEnabledPolicyTest, DeviceEnterpriseEnrolled) {
-  fake_state_.device_policy_provider()->var_au_p2p_enabled()->reset(nullptr);
-  fake_state_.device_policy_provider()->var_has_owner()->reset(new bool(false));
-
-  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
-  EXPECT_TRUE(p2p_data_->enabled());
-}
-
 class UmP2PEnabledChangedPolicyTest : public UmPolicyTestBase {
  protected:
   UmP2PEnabledChangedPolicyTest() : UmPolicyTestBase() {

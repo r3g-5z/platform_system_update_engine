@@ -42,11 +42,6 @@ EvalStatus P2PEnabledPolicy::Evaluate(EvaluationContext* ec,
         ec->GetValue(dp_provider->var_au_p2p_enabled());
     if (policy_au_p2p_enabled_p) {
       enabled = *policy_au_p2p_enabled_p;
-    } else {
-      const bool* policy_has_owner_p =
-          ec->GetValue(dp_provider->var_has_owner());
-      if (!policy_has_owner_p || !*policy_has_owner_p)
-        enabled = true;
     }
   }
 
