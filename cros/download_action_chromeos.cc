@@ -267,8 +267,7 @@ void DownloadActionChromeos::StartDownloading() {
       // that we should write to the file.
       p2p_file_id_ = file_id;
       LOG(INFO) << "Sharing p2p file with id: " << p2p_file_id_;
-      if (!SetupP2PSharingFd())
-        return;
+      SetupP2PSharingFd();
     } else {
       // Even if we're not sharing the update, it could be that
       // there's a partial file from a previous attempt with the same
