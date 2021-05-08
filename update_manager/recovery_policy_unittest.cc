@@ -32,10 +32,22 @@ class UmRecoveryPolicyTest : public UmPolicyTestBase {
   }
 };
 
-TEST_F(UmRecoveryPolicyTest, RecoveryMode) {
+TEST_F(UmRecoveryPolicyTest, RecoveryModeInteractive) {
   fake_state_.config_provider()->var_is_running_from_minios()->reset(
       new bool(true));
+  // Allow interactive updates to happen.
+  fake_state_.updater_provider()->var_forced_update_requested()->reset(
+      new UpdateRequestStatus{UpdateRequestStatus::kInteractive});
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+}
+
+TEST_F(UmRecoveryPolicyTest, RecoveryModeNonInteractive) {
+  fake_state_.config_provider()->var_is_running_from_minios()->reset(
+      new bool(true));
+  // Ignore a non interactive update.
+  fake_state_.updater_provider()->var_forced_update_requested()->reset(
+      new UpdateRequestStatus{UpdateRequestStatus::kNone});
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 }
 
 TEST_F(UmRecoveryPolicyTest, NotRecoveryMode) {

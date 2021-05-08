@@ -16,6 +16,8 @@
 
 #include "update_engine/update_manager/recovery_policy.h"
 
+#include "update_engine/update_manager/interactive_update_policy_impl.h"
+
 namespace chromeos_update_manager {
 
 EvalStatus RecoveryPolicy::Evaluate(EvaluationContext* ec,
@@ -25,8 +27,15 @@ EvalStatus RecoveryPolicy::Evaluate(EvaluationContext* ec,
   const bool* running_in_minios =
       ec->GetValue(state->config_provider()->var_is_running_from_minios());
   if (running_in_minios && (*running_in_minios)) {
-    LOG(INFO) << "In Recovery Mode, always allow update check.";
-    return EvalStatus::kSucceeded;
+    InteractiveUpdateCanBeAppliedPolicyImpl interactive_update_policy;
+    EvalStatus status =
+        interactive_update_policy.Evaluate(ec, state, error, data);
+    if (status != EvalStatus::kContinue) {
+      LOG(INFO) << "In Recovery Mode, allowing interactive update checks.";
+      return status;
+    }
+    LOG(INFO) << "In Recovery Mode, ignoring non-interactive update checks.";
+    return EvalStatus::kAskMeAgainLater;
   }
   return EvalStatus::kContinue;
 }
