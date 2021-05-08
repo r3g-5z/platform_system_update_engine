@@ -34,6 +34,7 @@
 #include "update_engine/cros/omaha_request_params.h"
 #include "update_engine/cros/p2p_manager.h"
 #include "update_engine/cros/payload_state_interface.h"
+#include "update_engine/cros/update_attempter.h"
 #include "update_engine/update_manager/update_manager.h"
 
 using base::FilePath;
@@ -193,6 +194,16 @@ void DownloadActionChromeos::PerformAction() {
   // TODO(senj): check that install plan has at least one payload.
   if (!payload_)
     payload_ = &install_plan_.payloads[0];
+
+  // Reset the active boot slot to the current slot before the previous slot is
+  // marked unbootable.
+  // We want to make sure the current slot is active everytime a new consecutive
+  // update starts in the inactive partition so that the active slot always has
+  // a valid image.
+  if (!SystemState::Get()->update_attempter()->ResetBootSlot()) {
+    LOG(WARNING) << "Unable to reset the active slot to the current slot. "
+                    "Proceeding with the update anyway.";
+  }
 
   LOG(INFO) << "Marking new slot as unbootable";
   if (!boot_control_->MarkSlotUnbootable(install_plan_.target_slot)) {

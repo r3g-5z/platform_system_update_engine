@@ -1452,6 +1452,25 @@ void UpdateAttempter::ResetInteractivityFlags() {
     forced_update_pending_callback_->Run(false, false);
 }
 
+bool UpdateAttempter::ResetBootSlot() {
+  bool success = true;
+  // Update the boot flags so the current slot has higher priority.
+  BootControlInterface* boot_control = SystemState::Get()->boot_control();
+  if (!boot_control->SetActiveBootSlot(boot_control->GetCurrentSlot())) {
+    LOG(WARNING) << "Unable to set the current slot as active.";
+    success = false;
+  }
+
+  // Mark the current slot as successful again, since marking it as active
+  // may reset the successful bit. We ignore the result of whether marking
+  // the current slot as successful worked.
+  if (!boot_control->MarkBootSuccessfulAsync(Bind([](bool successful) {}))) {
+    LOG(WARNING) << "Unable to mark the current slot as successfully booted.";
+    success = false;
+  }
+  return success;
+}
+
 bool UpdateAttempter::ResetStatus() {
   LOG(INFO) << "Attempting to reset state from "
             << UpdateStatusToString(status_) << " to UpdateStatus::IDLE";
@@ -1474,16 +1493,7 @@ bool UpdateAttempter::ResetStatus() {
       ret_value = prefs_->Delete(kPrefsLastFp, {kDlcPrefsSubDir}) && ret_value;
       ret_value = prefs_->Delete(kPrefsConsecutiveUpdateCount) && ret_value;
 
-      // Update the boot flags so the current slot has higher priority.
-      BootControlInterface* boot_control = SystemState::Get()->boot_control();
-      if (!boot_control->SetActiveBootSlot(boot_control->GetCurrentSlot()))
-        ret_value = false;
-
-      // Mark the current slot as successful again, since marking it as active
-      // may reset the successful bit. We ignore the result of whether marking
-      // the current slot as successful worked.
-      if (!boot_control->MarkBootSuccessfulAsync(Bind([](bool successful) {})))
-        ret_value = false;
+      ret_value = ResetBootSlot() && ret_value;
 
       // Notify the PayloadState that the successful payload was canceled.
       SystemState::Get()->payload_state()->ResetUpdateStatus();

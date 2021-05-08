@@ -90,6 +90,9 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // PostinstallRunnerAction::DelegateInterface
   void ProgressUpdate(double progress) override;
 
+  // Resets the active boot slot to be the current boot slot.
+  bool ResetBootSlot();
+
   // Resets the current state to UPDATE_STATUS_IDLE.
   // Used by update_engine_client for restarting a new update without
   // having to reboot once the previous update has reached
