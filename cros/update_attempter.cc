@@ -46,7 +46,6 @@
 #include "update_engine/common/boot_control_interface.h"
 #include "update_engine/common/constants.h"
 #include "update_engine/common/dlcservice_interface.h"
-#include "update_engine/common/download_action.h"
 #include "update_engine/common/excluder_interface.h"
 #include "update_engine/common/hardware_interface.h"
 #include "update_engine/common/metrics_reporter_interface.h"
@@ -794,18 +793,14 @@ void UpdateAttempter::BuildUpdateActions(bool interactive) {
       false,
       session_id_);
 
-  LibcurlHttpFetcher* download_fetcher = new LibcurlHttpFetcher(
+  auto download_fetcher = std::make_unique<LibcurlHttpFetcher>(
       GetProxyResolver(), SystemState::Get()->hardware());
   download_fetcher->set_server_to_check(ServerToCheck::kDownload);
   if (interactive)
     download_fetcher->set_max_retry_count(kDownloadMaxRetryCountInteractive);
   download_fetcher->SetHeader(kXGoogleUpdateSessionId, session_id_);
   auto download_action = std::make_unique<DownloadActionChromeos>(
-      prefs_,
-      SystemState::Get()->boot_control(),
-      SystemState::Get()->hardware(),
-      download_fetcher,  // passes ownership
-      interactive);
+      std::move(download_fetcher), interactive);
   download_action->set_delegate(this);
 
   auto download_finished_action = std::make_unique<OmahaRequestAction>(

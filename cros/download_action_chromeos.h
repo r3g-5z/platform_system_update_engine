@@ -25,7 +25,6 @@
 #include <string>
 
 #include "update_engine/common/action.h"
-#include "update_engine/common/boot_control_interface.h"
 #include "update_engine/common/download_action.h"
 #include "update_engine/common/http_fetcher.h"
 #include "update_engine/common/multi_range_http_fetcher.h"
@@ -48,16 +47,9 @@ class DownloadActionChromeos
  public:
   static std::string StaticType() { return "DownloadActionChromeos"; }
 
-  // Takes ownership of the passed in HttpFetcher. Useful for testing.
-  // A good calling pattern is:
-  // DownloadActionChromeos(prefs, boot_contol, hardware, system_state,
-  //                new WhateverHttpFetcher, false);
-  DownloadActionChromeos(PrefsInterface* prefs,
-                         BootControlInterface* boot_control,
-                         HardwareInterface* hardware,
-                         HttpFetcher* http_fetcher,
+  DownloadActionChromeos(std::unique_ptr<HttpFetcher> http_fetcher,
                          bool interactive);
-  ~DownloadActionChromeos() override;
+  ~DownloadActionChromeos() override = default;
 
   // InstallPlanAction overrides.
   void PerformAction() override;
@@ -122,10 +114,6 @@ class DownloadActionChromeos
 
   // Pointer to the current payload in install_plan_.payloads.
   InstallPlan::Payload* payload_{nullptr};
-
-  PrefsInterface* prefs_;
-  BootControlInterface* boot_control_;
-  HardwareInterface* hardware_;
 
   // Pointer to the MultiRangeHttpFetcher that does the http work.
   std::unique_ptr<MultiRangeHttpFetcher> http_fetcher_;

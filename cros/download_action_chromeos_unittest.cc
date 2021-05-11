@@ -169,16 +169,11 @@ void TestWithData(const brillo::Blob& data,
 
   auto feeder_action = std::make_unique<ObjectFeederAction<InstallPlan>>();
   feeder_action->set_obj(install_plan);
-  MockPrefs prefs;
-  MockHttpFetcher* http_fetcher =
-      new MockHttpFetcher(data.data(), data.size(), nullptr);
-  // takes ownership of passed in HttpFetcher
+  auto http_fetcher =
+      std::make_unique<MockHttpFetcher>(data.data(), data.size(), nullptr);
+  auto http_fetcher_ptr = http_fetcher.get();
   auto download_action = std::make_unique<DownloadActionChromeos>(
-      &prefs,
-      FakeSystemState::Get()->boot_control(),
-      FakeSystemState::Get()->hardware(),
-      http_fetcher,
-      false /* interactive */);
+      std::move(http_fetcher), /*interactive=*/false);
   download_action->SetTestFileWriter(&writer);
   BondActions(feeder_action.get(), download_action.get());
   MockDownloadActionDelegate download_delegate;
@@ -202,8 +197,9 @@ void TestWithData(const brillo::Blob& data,
   processor.EnqueueAction(std::move(feeder_action));
   processor.EnqueueAction(std::move(download_action));
 
-  loop.PostTask(FROM_HERE,
-                base::Bind(&StartProcessorInRunLoop, &processor, http_fetcher));
+  loop.PostTask(
+      FROM_HERE,
+      base::Bind(&StartProcessorInRunLoop, &processor, http_fetcher_ptr));
   loop.Run();
   EXPECT_FALSE(loop.PendingTasks());
 
@@ -287,16 +283,11 @@ TEST(DownloadActionTest, MultiPayloadProgressTest) {
   }
   auto feeder_action = std::make_unique<ObjectFeederAction<InstallPlan>>();
   feeder_action->set_obj(install_plan);
-  MockPrefs prefs;
-  MockHttpFetcher* http_fetcher = new MockHttpFetcher(
-      payload_datas[0].data(), payload_datas[0].size(), nullptr);
-  // takes ownership of passed in HttpFetcher
+
   auto download_action = std::make_unique<DownloadActionChromeos>(
-      &prefs,
-      FakeSystemState::Get()->boot_control(),
-      FakeSystemState::Get()->hardware(),
-      http_fetcher,
-      false /* interactive */);
+      std::make_unique<MockHttpFetcher>(
+          payload_datas[0].data(), payload_datas[0].size(), nullptr),
+      /*interactive=*/false);
   download_action->SetTestFileWriter(&mock_file_writer);
   BondActions(feeder_action.get(), download_action.get());
   MockDownloadActionDelegate download_delegate;
@@ -379,13 +370,9 @@ void TestTerminateEarly(bool use_download_delegate) {
     install_plan.payloads.resize(1);
     feeder_action->set_obj(install_plan);
 
-    MockPrefs prefs;
     auto download_action = std::make_unique<DownloadActionChromeos>(
-        &prefs,
-        FakeSystemState::Get()->boot_control(),
-        FakeSystemState::Get()->hardware(),
-        new MockHttpFetcher(data.data(), data.size(), nullptr),
-        false /* interactive */);
+        std::make_unique<MockHttpFetcher>(data.data(), data.size(), nullptr),
+        /*interactive=*/false);
     download_action->SetTestFileWriter(&writer);
     MockDownloadActionDelegate download_delegate;
     if (use_download_delegate) {
@@ -490,13 +477,10 @@ TEST(DownloadActionTest, PassObjectOutTest) {
       HashCalculator::RawHashOfData({'x'}, &install_plan.payloads[0].hash));
   auto feeder_action = std::make_unique<ObjectFeederAction<InstallPlan>>();
   feeder_action->set_obj(install_plan);
-  MockPrefs prefs;
+
   auto download_action = std::make_unique<DownloadActionChromeos>(
-      &prefs,
-      FakeSystemState::Get()->boot_control(),
-      FakeSystemState::Get()->hardware(),
-      new MockHttpFetcher("x", 1, nullptr),
-      false /* interactive */);
+      std::make_unique<MockHttpFetcher>("x", 1, nullptr),
+      /*interactive=*/false);
   download_action->SetTestFileWriter(&writer);
 
   auto test_action = std::make_unique<DownloadActionTestAction>();
@@ -574,14 +558,10 @@ class P2PDownloadActionTest : public testing::Test {
     auto feeder_action = std::make_unique<ObjectFeederAction<InstallPlan>>();
     feeder_action->set_obj(install_plan);
     MockPrefs prefs;
-    // Note that DownloadActionChromeos takes ownership of the passed in
-    // HttpFetcher.
     auto download_action = std::make_unique<DownloadActionChromeos>(
-        &prefs,
-        FakeSystemState::Get()->boot_control(),
-        FakeSystemState::Get()->hardware(),
-        new MockHttpFetcher(data_.c_str(), data_.length(), nullptr),
-        false /* interactive */);
+        std::make_unique<MockHttpFetcher>(
+            data_.c_str(), data_.length(), nullptr),
+        /*interactive=*/false);
     auto http_fetcher = download_action->http_fetcher();
     download_action->SetTestFileWriter(&writer);
     BondActions(feeder_action.get(), download_action.get());
@@ -740,10 +720,7 @@ TEST_F(P2PDownloadActionTest, MultiplePayload) {
   auto feeder_action = std::make_unique<ObjectFeederAction<InstallPlan>>();
   feeder_action->set_obj(install_plan);
   auto download_action = std::make_unique<DownloadActionChromeos>(
-      FakeSystemState::Get()->prefs(),
-      FakeSystemState::Get()->boot_control(),
-      FakeSystemState::Get()->hardware(),
-      new MockHttpFetcher(data_.c_str(), data_.length(), nullptr),
+      std::make_unique<MockHttpFetcher>(data_.c_str(), data_.length(), nullptr),
       /*interactive=*/false);
 
   download_action->SetTestFileWriter(&mock_file_writer);
@@ -855,16 +832,12 @@ void RestrictedTimeIntervalDownloadActionTest::StartDownloadAction(
   auto feeder_action = std::make_unique<ObjectFeederAction<InstallPlan>>();
   feeder_action->set_obj(install_plan);
 
-  MockPrefs prefs;
-  MockHttpFetcher* http_fetcher =
-      new MockHttpFetcher(data.data(), data.size(), nullptr);
-  // Takes ownership of passed in |HttpFetcher|.
-  auto download_action = std::make_unique<DownloadActionChromeos>(
-      &prefs,
-      FakeSystemState::Get()->boot_control(),
-      FakeSystemState::Get()->hardware(),
-      http_fetcher,
-      /*interactive=*/false);
+  auto http_fetcher =
+      std::make_unique<MockHttpFetcher>(data.data(), data.size(), nullptr);
+  auto http_fetcher_ptr = http_fetcher.get();
+  auto download_action =
+      std::make_unique<DownloadActionChromeos>(std::move(http_fetcher),
+                                               /*interactive=*/false);
   download_action->SetTestFileWriter(&writer);
   BondActions(feeder_action.get(), download_action.get());
 
@@ -879,9 +852,9 @@ void RestrictedTimeIntervalDownloadActionTest::StartDownloadAction(
   processor.EnqueueAction(std::move(download_action));
   processor.StartProcessing();
 
-  http_fetcher->Pause();
+  http_fetcher_ptr->Pause();
   AdvanceTime(advance_time);
-  http_fetcher->Unpause();
+  http_fetcher_ptr->Unpause();
   fake_loop_.Run();
 }
 

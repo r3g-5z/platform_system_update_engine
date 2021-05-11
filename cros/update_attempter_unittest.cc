@@ -491,10 +491,9 @@ TEST_F(UpdateAttempterTest, SessionIdTestInDownloadAction) {
 }
 
 TEST_F(UpdateAttempterTest, ActionCompletedDownloadTest) {
-  unique_ptr<MockHttpFetcher> fetcher(new MockHttpFetcher("", 0, nullptr));
+  auto fetcher = std::make_unique<MockHttpFetcher>("", 0, nullptr);
   fetcher->FailTransfer(503);  // Sets the HTTP response code.
-  DownloadActionChromeos action(
-      prefs_, nullptr, nullptr, fetcher.release(), false /* interactive */);
+  DownloadActionChromeos action(std::move(fetcher), /*interactive=*/false);
   attempter_.ActionCompleted(nullptr, &action, ErrorCode::kSuccess);
   EXPECT_FALSE(prefs_->Exists(kPrefsDeltaUpdateFailures));
   EXPECT_EQ(UpdateStatus::FINALIZING, attempter_.status());

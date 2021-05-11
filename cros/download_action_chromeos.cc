@@ -43,23 +43,14 @@ using std::string;
 namespace chromeos_update_engine {
 
 DownloadActionChromeos::DownloadActionChromeos(
-    PrefsInterface* prefs,
-    BootControlInterface* boot_control,
-    HardwareInterface* hardware,
-    HttpFetcher* http_fetcher,
-    bool interactive)
-    : prefs_(prefs),
-      boot_control_(boot_control),
-      hardware_(hardware),
-      http_fetcher_(new MultiRangeHttpFetcher(http_fetcher)),
+    std::unique_ptr<HttpFetcher> http_fetcher, bool interactive)
+    : http_fetcher_(new MultiRangeHttpFetcher(http_fetcher.release())),
       interactive_(interactive),
       writer_(nullptr),
       code_(ErrorCode::kSuccess),
       delegate_(nullptr),
       p2p_sharing_fd_(-1),
       p2p_visible_(true) {}
-
-DownloadActionChromeos::~DownloadActionChromeos() {}
 
 void DownloadActionChromeos::CloseP2PSharingFd(bool delete_p2p_file) {
   if (p2p_sharing_fd_ != -1) {
@@ -182,7 +173,8 @@ void DownloadActionChromeos::PerformAction() {
 
   if (install_plan_.is_resume) {
     int64_t payload_index = 0;
-    if (prefs_->GetInt64(kPrefsUpdateStatePayloadIndex, &payload_index) &&
+    if (SystemState::Get()->prefs()->GetInt64(kPrefsUpdateStatePayloadIndex,
+                                              &payload_index) &&
         static_cast<size_t>(payload_index) < install_plan_.payloads.size()) {
       // Save the index for the resume payload before downloading any previous
       // payload, otherwise it will be overwritten.
@@ -214,7 +206,8 @@ void DownloadActionChromeos::PerformAction() {
                     "Proceeding with the update anyway.";
   }
 
-  if (!boot_control_->MarkSlotUnbootable(install_plan_.target_slot)) {
+  if (!SystemState::Get()->boot_control()->MarkSlotUnbootable(
+          install_plan_.target_slot)) {
     LOG(WARNING) << "Unable to mark new slot "
                  << BootControlInterface::SlotName(install_plan_.target_slot)
                  << ". Proceeding with the update anyway.";
@@ -227,21 +220,22 @@ void DownloadActionChromeos::PerformAction() {
 void DownloadActionChromeos::StartDownloading() {
   download_active_ = true;
   http_fetcher_->ClearRanges();
+  auto prefs = SystemState::Get()->prefs();
 
   if (install_plan_.is_resume &&
       payload_ == &install_plan_.payloads[resume_payload_index_]) {
     // Resuming an update so fetch the update manifest metadata first.
     int64_t manifest_metadata_size = 0;
     int64_t manifest_signature_size = 0;
-    prefs_->GetInt64(kPrefsManifestMetadataSize, &manifest_metadata_size);
-    prefs_->GetInt64(kPrefsManifestSignatureSize, &manifest_signature_size);
+    prefs->GetInt64(kPrefsManifestMetadataSize, &manifest_metadata_size);
+    prefs->GetInt64(kPrefsManifestSignatureSize, &manifest_signature_size);
     http_fetcher_->AddRange(base_offset_,
                             manifest_metadata_size + manifest_signature_size);
     // If there're remaining unprocessed data blobs, fetch them. Be careful not
     // to request data beyond the end of the payload to avoid 416 HTTP response
     // error codes.
     int64_t next_data_offset = 0;
-    prefs_->GetInt64(kPrefsUpdateStateNextDataOffset, &next_data_offset);
+    prefs->GetInt64(kPrefsUpdateStateNextDataOffset, &next_data_offset);
     uint64_t resume_offset =
         manifest_metadata_size + manifest_signature_size + next_data_offset;
     if (!payload_->size) {
@@ -263,13 +257,14 @@ void DownloadActionChromeos::StartDownloading() {
   if (writer_ && writer_ != delta_performer_.get()) {
     LOG(INFO) << "Using writer for test.";
   } else {
-    delta_performer_.reset(new DeltaPerformer(prefs_,
-                                              boot_control_,
-                                              hardware_,
-                                              delegate_,
-                                              &install_plan_,
-                                              payload_,
-                                              interactive_));
+    delta_performer_.reset(
+        new DeltaPerformer(prefs,
+                           SystemState::Get()->boot_control(),
+                           SystemState::Get()->hardware(),
+                           delegate_,
+                           &install_plan_,
+                           payload_,
+                           interactive_));
     writer_ = delta_performer_.get();
   }
 
@@ -411,7 +406,8 @@ void DownloadActionChromeos::TransferComplete(HttpFetcher* fetcher,
         LOG(INFO) << "Incrementing to next payload";
         // No need to reset if this payload was already applied.
         if (delta_performer_ && !payload_->already_applied)
-          DeltaPerformer::ResetUpdateProgress(prefs_, false);
+          DeltaPerformer::ResetUpdateProgress(SystemState::Get()->prefs(),
+                                              false);
         // Start downloading next payload.
         bytes_received_previous_payloads_ += payload_->size;
         payload_++;
