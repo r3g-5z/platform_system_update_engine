@@ -596,7 +596,7 @@ class PayloadApplier(object):
 
     part_names = set(new_part_info.keys())  # Equivalently, old_part_info.keys()
 
-    # Make sure the arguments are sane and match the payload.
+    # Make sure the arguments make sense and match the payload.
     new_part_names = set(new_parts.keys())
     if new_part_names != part_names:
       raise PayloadError('missing dst partition(s) %s' %
