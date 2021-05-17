@@ -1074,7 +1074,7 @@ void UpdateAttempter::OnUpdateScheduled(EvalStatus status) {
       // re-schedule a check in this case as updates are permanently disabled;
       // further (forced) checks may still initiate a scheduling call.
       SetStatusAndNotify(UpdateStatus::DISABLED);
-      SetStatusAndNotify(UpdateStatus::IDLE);
+      ResetUpdateStatus();
       return;
     }
 
@@ -1137,7 +1137,7 @@ void UpdateAttempter::ProcessingDoneInternal(const ActionProcessor* processor,
     LOG(INFO) << "Error event sent.";
 
     // Inform scheduler of new status.
-    SetStatusAndNotify(UpdateStatus::IDLE);
+    ResetUpdateStatus();
     ScheduleUpdates();
 
     if (!fake_update_success_) {
@@ -1154,7 +1154,7 @@ void UpdateAttempter::ProcessingDoneInternal(const ActionProcessor* processor,
       return;
     }
     LOG(INFO) << "No update.";
-    SetStatusAndNotify(UpdateStatus::IDLE);
+    ResetUpdateStatus();
     ScheduleUpdates();
     return;
   }
@@ -1277,7 +1277,7 @@ void UpdateAttempter::ProcessingStopped(const ActionProcessor* processor) {
 
   ResetInteractivityFlags();
 
-  SetStatusAndNotify(UpdateStatus::IDLE);
+  ResetUpdateStatus();
   ScheduleUpdates();
   error_event_.reset(nullptr);
 }
@@ -1365,8 +1365,8 @@ void UpdateAttempter::ActionCompleted(ActionProcessor* processor,
         case UpdateStatus::NEED_PERMISSION_TO_UPDATE:
           // Errored out before partition marked unbootable.
           // If there was a previous valid update. Reset status to NEED_REBOOT.
-          if (allow_repeated_updates_ && GetBootTimeAtUpdate(nullptr))
-            status_ = UpdateStatus::UPDATED_NEED_REBOOT;
+          if (allow_repeated_updates_)
+            ResetUpdateStatus();
           break;
         case UpdateStatus::DOWNLOADING:
         case UpdateStatus::VERIFYING:
@@ -1425,6 +1425,31 @@ void UpdateAttempter::BytesReceived(uint64_t bytes_progressed,
   } else {
     ProgressUpdate(progress);
   }
+}
+
+void UpdateAttempter::ResetUpdateStatus() {
+  // If `GetBootTimeAtUpdate` is true, then the update complete markers exist
+  // and there is an update in the inactive partition waiting to be applied.
+  if (GetBootTimeAtUpdate(nullptr)) {
+    LOG(INFO)
+        << "Cancelling current update but going back to need reboot as there "
+           "is an update in the inactive partition that can be applied.";
+    SetStatusAndNotify(UpdateStatus::UPDATED_NEED_REBOOT);
+    return;
+  }
+  // One full update never completed or there no longer an inactive partition
+  // from a previous update with a higher boot priority to reboot to. No choice
+  // but to go back to idle.
+  SetStatusAndNotify(UpdateStatus::IDLE);
+}
+
+bool UpdateAttempter::ResetUpdatePrefs() {
+  auto* prefs = SystemState::Get()->prefs();
+  bool ret_value = prefs->Delete(kPrefsUpdateCompletedOnBootId);
+  ret_value = prefs->Delete(kPrefsUpdateCompletedBootTime) && ret_value;
+  ret_value = prefs->Delete(kPrefsLastFp, {kDlcPrefsSubDir}) && ret_value;
+  ret_value = prefs->Delete(kPrefsPreviousVersion) && ret_value;
+  return ret_value;
 }
 
 void UpdateAttempter::DownloadComplete() {
@@ -1488,9 +1513,7 @@ bool UpdateAttempter::ResetStatus() {
       // Remove the reboot marker so that if the machine is rebooted
       // after resetting to idle state, it doesn't go back to
       // UpdateStatus::UPDATED_NEED_REBOOT state.
-      ret_value = prefs_->Delete(kPrefsUpdateCompletedOnBootId) && ret_value;
-      ret_value = prefs_->Delete(kPrefsUpdateCompletedBootTime) && ret_value;
-      ret_value = prefs_->Delete(kPrefsLastFp, {kDlcPrefsSubDir}) && ret_value;
+      ret_value = ResetUpdatePrefs() && ret_value;
       ret_value = prefs_->Delete(kPrefsConsecutiveUpdateCount) && ret_value;
 
       ret_value = ResetBootSlot() && ret_value;

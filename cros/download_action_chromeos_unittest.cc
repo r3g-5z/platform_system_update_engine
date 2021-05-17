@@ -162,6 +162,11 @@ void TestWithData(const brillo::Blob& data,
       install_plan.source_slot, true);
   FakeSystemState::Get()->fake_boot_control()->SetSlotBootable(
       install_plan.target_slot, true);
+  auto* fake_prefs = FakeSystemState::Get()->prefs();
+  fake_prefs->SetString(kPrefsUpdateCompletedOnBootId, "boot-id");
+  fake_prefs->SetString(kPrefsLastFp, "last-fp");
+  fake_prefs->SetString(kPrefsPreviousVersion, "prev-version");
+
   auto feeder_action = std::make_unique<ObjectFeederAction<InstallPlan>>();
   feeder_action->set_obj(install_plan);
   MockPrefs prefs;
@@ -206,6 +211,10 @@ void TestWithData(const brillo::Blob& data,
       install_plan.source_slot));
   EXPECT_FALSE(FakeSystemState::Get()->fake_boot_control()->IsSlotBootable(
       install_plan.target_slot));
+
+  EXPECT_FALSE(fake_prefs->Exists(kPrefsUpdateCompletedOnBootId));
+  EXPECT_FALSE(fake_prefs->Exists(kPrefsLastFp));
+  EXPECT_FALSE(fake_prefs->Exists(kPrefsPreviousVersion));
 }
 }  // namespace
 

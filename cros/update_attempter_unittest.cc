@@ -2040,6 +2040,33 @@ TEST_F(UpdateAttempterTest, ProcessingDoneNoInstall) {
   TestProcessingDone();
 }
 
+TEST_F(UpdateAttempterTest, ProcessingDoneNoUpdateReboot) {
+  // GIVEN an update finished.
+  pd_params_.code = ErrorCode::kNoUpdate;
+  pd_params_.status = UpdateStatus::CHECKING_FOR_UPDATE;
+  pd_params_.expected_exit_status = UpdateStatus::UPDATED_NEED_REBOOT;
+
+  // Waiting to reboot.
+  FakeSystemState::Get()->fake_clock()->SetBootTime(Time::FromTimeT(42));
+  attempter_.WriteUpdateCompletedMarker();
+  EXPECT_TRUE(attempter_.GetBootTimeAtUpdate(nullptr));
+
+  // Since there is an update on the inactive slot with higher priority, set
+  // status to |UPDATED_NEED_REBOOT|.
+  TestProcessingDone();
+}
+
+TEST_F(UpdateAttempterTest, ProcessingDoneIdle) {
+  // GIVEN an update finished.
+  pd_params_.code = ErrorCode::kNoUpdate;
+  pd_params_.status = UpdateStatus::CHECKING_FOR_UPDATE;
+  pd_params_.expected_exit_status = UpdateStatus::IDLE;
+
+  // Since there is no bootable slot with higher priority, the status resets to
+  // |IDLE|.
+  TestProcessingDone();
+}
+
 TEST_F(UpdateAttempterTest, ProcessingDoneUpdateError) {
   // GIVEN an update finished.
   // GIVEN an action error occured.
@@ -2539,6 +2566,22 @@ TEST_F(UpdateAttempterTest, MoveToPrefs) {
   // they are written to prefs.
   EXPECT_FALSE(FakeSystemState::Get()->powerwash_safe_prefs()->Exists(key1));
   EXPECT_FALSE(FakeSystemState::Get()->powerwash_safe_prefs()->Exists(key2));
+}
+
+TEST_F(UpdateAttempterTest, ResetUpdatePrefs) {
+  // Write update prefs.
+  FakeSystemState::Get()->fake_clock()->SetBootTime(Time::FromTimeT(42));
+  attempter_.WriteUpdateCompletedMarker();
+  auto* fake_prefs = FakeSystemState::Get()->prefs();
+  fake_prefs->SetString(kPrefsLastFp, "3.14");
+  fake_prefs->SetString(kPrefsPreviousVersion, "prev-version");
+
+  // Make sure prefs are deleted.
+  EXPECT_TRUE(attempter_.ResetUpdatePrefs());
+  EXPECT_FALSE(fake_prefs->Exists(kPrefsUpdateCompletedOnBootId));
+  EXPECT_FALSE(fake_prefs->Exists(kPrefsUpdateCompletedBootTime));
+  EXPECT_FALSE(fake_prefs->Exists(kPrefsLastFp));
+  EXPECT_FALSE(fake_prefs->Exists(kPrefsPreviousVersion));
 }
 
 }  // namespace chromeos_update_engine

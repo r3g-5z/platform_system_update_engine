@@ -205,7 +205,15 @@ void DownloadActionChromeos::PerformAction() {
                     "Proceeding with the update anyway.";
   }
 
-  LOG(INFO) << "Marking new slot as unbootable";
+  LOG(INFO) << "Marking new slot as unbootable and deleting update completed "
+               "markers and prefs from previous update.";
+  if (!SystemState::Get()->update_attempter()->ResetUpdatePrefs()) {
+    // Update completed markers are re-written to prefs after every successful
+    // update.
+    LOG(WARNING) << "Unable to delete update complete markers and prefs. "
+                    "Proceeding with the update anyway.";
+  }
+
   if (!boot_control_->MarkSlotUnbootable(install_plan_.target_slot)) {
     LOG(WARNING) << "Unable to mark new slot "
                  << BootControlInterface::SlotName(install_plan_.target_slot)

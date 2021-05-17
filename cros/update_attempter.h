@@ -165,6 +165,15 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // changed.
   bool ShouldCancel(ErrorCode* cancel_reason) override;
 
+  // Resets the update status. If there is an a valid update complete marker,
+  // resets to `UPDATED_NEED_REBOOT`. Otherwise goes back to `IDLE`.
+  void ResetUpdateStatus();
+
+  // Resets update prefs which are no longer up to date after the inactive
+  // partition is marked unbootable. Update related prefs are re-written after
+  // a successful update.
+  bool ResetUpdatePrefs();
+
   void DownloadComplete() override;
 
   // Broadcasts the current status to all observers.
@@ -276,6 +285,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest, CriticalUpdate);
   FRIEND_TEST(UpdateAttempterTest, MarkDeltaUpdateFailureTest);
   FRIEND_TEST(UpdateAttempterTest, PingOmahaTest);
+  FRIEND_TEST(UpdateAttempterTest, ProcessingDoneNoUpdateReboot);
   FRIEND_TEST(UpdateAttempterTest, ProcessingDoneInstallError);
   FRIEND_TEST(UpdateAttempterTest, ProcessingDoneUpdateError);
   FRIEND_TEST(UpdateAttempterTest, ReportDailyMetrics);
@@ -307,6 +317,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest, FirstUpdateBeforeReboot);
   FRIEND_TEST(UpdateAttempterTest, ConsecutiveUpdateBeforeRebootSuccess);
   FRIEND_TEST(UpdateAttempterTest, ConsecutiveUpdateFailureMetric);
+  FRIEND_TEST(UpdateAttempterTest, ResetUpdatePrefs);
 
   // Returns the special flags to be added to ErrorCode values based on the
   // parameters used in the current update attempt.
