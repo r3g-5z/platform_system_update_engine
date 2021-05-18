@@ -102,7 +102,6 @@ class OmahaRequestParams {
     image_props_.product_id = app_id;
     image_props_.canary_product_id = app_id;
   }
-  inline std::string app_lang() const { return app_lang_; }
   inline std::string hwid() const { return hwid_; }
   inline std::string device_requisition() const { return device_requisition_; }
 
@@ -301,7 +300,6 @@ class OmahaRequestParams {
   void set_os_board(const std::string& os_board) {
     image_props_.board = os_board;
   }
-  void set_app_lang(const std::string& app_lang) { app_lang_ = app_lang; }
   void set_hwid(const std::string& hwid) { hwid_ = hwid; }
   void set_is_powerwash_allowed(bool powerwash_allowed) {
     mutable_image_props_.is_powerwash_allowed = powerwash_allowed;
@@ -349,7 +347,6 @@ class OmahaRequestParams {
   std::string os_platform_;
   std::string os_version_;
   std::string os_sp_;
-  std::string app_lang_;
 
   // There are three channel values we deal with:
   // * The channel we got the image we are running from or "current channel"

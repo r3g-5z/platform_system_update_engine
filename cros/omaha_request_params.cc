@@ -86,7 +86,6 @@ bool OmahaRequestParams::Init(const string& app_version,
     image_props_.version = app_version;
 
   os_sp_ = image_props_.version + "_" + GetMachineType();
-  app_lang_ = "en-US";
   hwid_ = SystemState::Get()->hardware()->GetHardwareClass();
   device_requisition_ = SystemState::Get()->hardware()->GetDeviceRequisition();
   if (SystemState::Get()->hardware()->IsRunningFromMiniOs()) {

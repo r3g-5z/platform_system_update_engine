@@ -396,7 +396,6 @@ class OmahaRequestActionTest : public ::testing::Test {
     request_params_.set_os_board("x86-generic");
     request_params_.set_app_id(kTestAppId);
     request_params_.set_app_version(kCurrentVersion);
-    request_params_.set_app_lang("en-US");
     request_params_.set_current_channel("unittest");
     request_params_.set_target_channel("unittest");
     request_params_.set_hwid("OEM MODEL 09235 7471");

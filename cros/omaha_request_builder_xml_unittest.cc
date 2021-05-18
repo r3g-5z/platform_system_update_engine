@@ -113,7 +113,6 @@ TEST_F(OmahaRequestBuilderXmlTest, PlatformGetAppTest) {
   // Verify that the attributes that shouldn't be missing for Platform AppID are
   // in fact present in the <app ...></app>.
   const string app = omaha_request.GetApp(dlc_app_data);
-  EXPECT_NE(string::npos, app.find("lang="));
   EXPECT_NE(string::npos, app.find("requisition="));
 }
 
@@ -148,7 +147,6 @@ TEST_F(OmahaRequestBuilderXmlTest, DlcGetAppTest) {
   // Verify that the attributes that should be missing for DLC AppIDs are in
   // fact not present in the <app ...></app>.
   const string app = omaha_request.GetApp(dlc_app_data);
-  EXPECT_EQ(string::npos, app.find("lang="));
   EXPECT_EQ(string::npos, app.find("requisition="));
 }
 
