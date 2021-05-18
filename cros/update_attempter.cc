@@ -1220,15 +1220,12 @@ void UpdateAttempter::ProcessingDoneUpdate(const ActionProcessor* processor,
   // |install_plan_| is null during rollback operations, and the stats don't
   // make much sense then anyway.
   if (install_plan_) {
-    if (SystemState::Get()->prefs()->Exists(kPrefsLastFp)) {
       int64_t num_consecutive_updates = 0;
       SystemState::Get()->prefs()->GetInt64(kPrefsConsecutiveUpdateCount,
                                             &num_consecutive_updates);
-      // If last fingerprint exists, then this is a consecutive update.
-      // Increment pref.
+      // Increment pref after every update.
       SystemState::Get()->prefs()->SetInt64(kPrefsConsecutiveUpdateCount,
                                             ++num_consecutive_updates);
-    }
     // Generate an unique payload identifier.
     string target_version_uid;
     for (const auto& payload : install_plan_->payloads) {
@@ -1378,9 +1375,12 @@ void UpdateAttempter::ActionCompleted(ActionProcessor* processor,
         case UpdateStatus::CLEANUP_PREVIOUS_UPDATE:
           MarkDeltaUpdateFailure();
           // Errored out after partition was marked unbootable.
-          if (SystemState::Get()->prefs()->Exists(kPrefsLastFp)) {
-            // Last fingerprint exists so this is a consecutive update that
-            // failed. Send Metric.
+          int64_t num_consecutive_updates = 0;
+          SystemState::Get()->prefs()->GetInt64(kPrefsConsecutiveUpdateCount,
+                                                &num_consecutive_updates);
+          if (num_consecutive_updates >= 1) {
+            // There has already been at least 1 update, so this is a
+            // consecutive update that failed. Send Metric.
             SystemState::Get()
                 ->metrics_reporter()
                 ->ReportFailedConsecutiveUpdate();

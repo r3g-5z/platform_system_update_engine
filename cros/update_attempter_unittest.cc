@@ -2426,22 +2426,6 @@ TEST_F(UpdateAttempterTest, CalculateDlcParamsValidValuesTest) {
   EXPECT_EQ("3.75", dlc_app_params.last_fp);
 }
 
-TEST_F(UpdateAttempterTest, FirstUpdateBeforeReboot) {
-  attempter_.is_install_ = false;
-  attempter_.install_plan_.reset(new InstallPlan);
-  attempter_.install_plan_->payloads.push_back(
-      {.size = 1234ULL, .type = InstallPayloadType::kFull});
-
-  // Call |ProcessingDoneUpdate|.
-  pd_params_.should_update_completed_be_called = true;
-  pd_params_.expected_exit_status = UpdateStatus::UPDATED_NEED_REBOOT;
-  TestProcessingDone();
-
-  // Consecutive update metric should not be updated on the first update.
-  EXPECT_FALSE(
-      FakeSystemState::Get()->prefs()->Exists(kPrefsConsecutiveUpdateCount));
-}
-
 TEST_F(UpdateAttempterTest, ConsecutiveUpdateBeforeRebootSuccess) {
   FakeSystemState::Get()->prefs()->SetString(kPrefsLastFp, "3.75");
   attempter_.is_install_ = false;
@@ -2463,7 +2447,8 @@ TEST_F(UpdateAttempterTest, ConsecutiveUpdateBeforeRebootSuccess) {
 
 TEST_F(UpdateAttempterTest, ConsecutiveUpdateFailureMetric) {
   MockAction action;
-  FakeSystemState::Get()->prefs()->SetString(kPrefsLastFp, "3.75");
+  // Two previous consecutive updates.
+  FakeSystemState::Get()->prefs()->SetInt64(kPrefsConsecutiveUpdateCount, 2);
 
   // Fail an update.
   EXPECT_CALL(action, Type()).WillRepeatedly(Return("MockAction"));
