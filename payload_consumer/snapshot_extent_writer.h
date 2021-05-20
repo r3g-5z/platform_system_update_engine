@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+#ifndef UPDATE_ENGINE_SNAPSHOT_EXTENT_WRITER_H_
+#define UPDATE_ENGINE_SNAPSHOT_EXTENT_WRITER_H_
+
 #include <cstdint>
 #include <vector>
 
@@ -29,8 +32,7 @@ class SnapshotExtentWriter : public chromeos_update_engine::ExtentWriter {
   explicit SnapshotExtentWriter(android::snapshot::ICowWriter* cow_writer);
   ~SnapshotExtentWriter();
   // Returns true on success.
-  bool Init(FileDescriptorPtr fd,
-            const google::protobuf::RepeatedPtrField<Extent>& extents,
+  bool Init(const google::protobuf::RepeatedPtrField<Extent>& extents,
             uint32_t block_size) override;
   // Returns true on success.
   // This will construct a COW_REPLACE operation and forward it to CowWriter. It
@@ -53,3 +55,5 @@ class SnapshotExtentWriter : public chromeos_update_engine::ExtentWriter {
 };
 
 }  // namespace chromeos_update_engine
+
+#endif
