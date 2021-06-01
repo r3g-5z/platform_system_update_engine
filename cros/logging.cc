@@ -86,6 +86,26 @@ void SetupLogging(bool log_to_system, bool log_to_file) {
 #endif
   }
   logging::InitLogging(log_settings);
+
+  // There are libraries that are linked into updage_engine that print into
+  // stderr. Doing so causes the printouts to be lost as stderr isn't redirected
+  // to update_engine's log file.
+  if (log_to_file) {
+    FILE* log_file_dupe = logging::DuplicateLogFILE();
+    if (log_file_dupe == nullptr) {
+      LOG(ERROR) << "Failed to duplicate log file desriptor. "
+                    "Skipping stderr redirection";
+    } else {
+      // Change the file descriptor number for stderr, so writes into
+      // fileno(2/stderr) get written into the log file.
+      dup2(fileno(log_file_dupe), fileno(stderr));
+      // Change the value for those that directly use stderr `FILE*`, so writes
+      // into stderr get written into the log file.
+      stderr = log_file_dupe;
+      // Make it unbuffered so flushing isn't required.
+      setbuf(stderr, NULL);
+    }
+  }
 }
 
 }  // namespace chromeos_update_engine
