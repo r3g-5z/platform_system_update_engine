@@ -53,6 +53,8 @@ const char kPartitionNameDlcA[] = "dlc_a";
 const char kPartitionNameDlcB[] = "dlc_b";
 const char kPartitionNameDlcImage[] = "dlc.img";
 
+constexpr char kSetGoodKernel[] = "/usr/sbin/chromeos-setgoodkernel";
+
 // Returns the currently booted rootfs partition. "/dev/sda3", for example.
 string GetBootDevice() {
   char boot_path[PATH_MAX];
@@ -344,10 +346,22 @@ bool BootControlChromeOS::SetActiveBootSlot(Slot slot) {
   return true;
 }
 
+bool BootControlChromeOS::MarkBootSuccessful() {
+  int ret;
+  string out, err;
+  if (!Subprocess::Get().SynchronousExec({kSetGoodKernel}, &ret, &out, &err) ||
+      ret != 0) {
+    LOG(ERROR) << "Failed to setgoodkernel, returncode=" << ret
+               << " stdout=" << out << " stderr=" << err;
+    return false;
+  }
+  return true;
+}
+
 bool BootControlChromeOS::MarkBootSuccessfulAsync(
     base::Callback<void(bool)> callback) {
   return Subprocess::Get().Exec(
-             {"/usr/sbin/chromeos-setgoodkernel"},
+             {kSetGoodKernel},
              base::Bind(&OnMarkBootSuccessfulDone, callback)) != 0;
 }
 

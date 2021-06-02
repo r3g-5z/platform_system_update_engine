@@ -1488,8 +1488,9 @@ bool UpdateAttempter::ResetBootSlot() {
 
   // Mark the current slot as successful again, since marking it as active
   // may reset the successful bit. We ignore the result of whether marking
-  // the current slot as successful worked.
-  if (!boot_control->MarkBootSuccessfulAsync(Bind([](bool successful) {}))) {
+  // the current slot as successful worked. This call must be synchronous as
+  // concurrent calls into `cgpt` can cause corrupt GPT headers.
+  if (!boot_control->MarkBootSuccessful()) {
     LOG(WARNING) << "Unable to mark the current slot as successfully booted.";
     success = false;
   }

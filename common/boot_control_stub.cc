@@ -66,6 +66,10 @@ bool BootControlStub::SetActiveBootSlot(Slot slot) {
   return false;
 }
 
+bool BootControlStub::MarkBootSuccessful() {
+  return false;
+}
+
 bool BootControlStub::MarkBootSuccessfulAsync(
     base::Callback<void(bool)> callback) {
   // This is expected to be called on update_engine startup.

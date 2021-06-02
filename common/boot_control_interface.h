@@ -89,6 +89,10 @@ class BootControlInterface {
   // method doesn't change the value of GetCurrentSlot() on the current boot.
   virtual bool SetActiveBootSlot(Slot slot) = 0;
 
+  // Mark the current slot as successfully booted synchronously. No other slot
+  // flags are modified. Returns false on failure.
+  virtual bool MarkBootSuccessful() = 0;
+
   // Mark the current slot as successfully booted asynchronously. No other slot
   // flags are modified. Returns false if it was not able to schedule the
   // operation, otherwise, returns true and calls the |callback| with the result
