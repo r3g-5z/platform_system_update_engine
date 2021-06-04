@@ -32,6 +32,7 @@
 #include <brillo/strings/string_utils.h>
 #include <policy/device_policy.h>
 
+#include "update_engine/common/boot_control_interface.h"
 #include "update_engine/common/constants.h"
 #include "update_engine/common/hardware_interface.h"
 #include "update_engine/common/platform_constants.h"
@@ -53,11 +54,11 @@ const char* kChannelsByStability[] = {
     "beta-channel",
     "stable-channel",
 };
-
 }  // namespace
 
 constexpr char OmahaRequestParams::kOsVersion[] = "Indy";
 const char kNoVersion[] = "0.0.0.0";
+const char kMiniOsAppIdSuffix[] = "_minios";
 
 OmahaRequestParams::~OmahaRequestParams() {
   if (!root_.empty())
@@ -125,6 +126,20 @@ bool OmahaRequestParams::Init(const string& app_version,
   interactive_ = params.interactive;
 
   dlc_apps_params_.clear();
+
+  auto boot_control = SystemState::Get()->boot_control();
+  if (boot_control->SupportsMiniOSPartitions()) {
+    // Get the MiniOS version from kernel command line.
+    std::string kernel_configs;
+    if (!boot_control->GetMiniOSKernelConfig(&kernel_configs) ||
+        !boot_control->GetMiniOSVersion(kernel_configs,
+                                        &minios_app_params_.version)) {
+      minios_app_params_.version = kNoVersion;
+      LOG(WARNING) << "Unable to get MiniOS version from kernel. Defaulting to "
+                   << kNoVersion;
+    }
+  }
+
   // Set false so it will do update by default.
   is_install_ = false;
 
@@ -297,6 +312,15 @@ void OmahaRequestParams::SetDlcNoUpdate(const string& app_id) {
   if (itr == dlc_apps_params_.end())
     return;
   itr->second.updated = false;
+}
+
+bool OmahaRequestParams::IsMiniOSAppId(const std::string& app_id) const {
+  return base::EndsWith(
+      app_id, kMiniOsAppIdSuffix, base::CompareCase::SENSITIVE);
+}
+
+void OmahaRequestParams::SetMiniOSUpdate(bool updated) {
+  minios_app_params_.updated = updated;
 }
 
 }  // namespace chromeos_update_engine

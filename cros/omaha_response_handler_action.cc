@@ -118,6 +118,9 @@ void OmahaResponseHandlerAction::PerformAction() {
          .fp = package.fp,
          .app_id = package.app_id});
     update_check_response_hash += package.hash + ":";
+    if (params->IsMiniOSAppId(package.app_id)) {
+      install_plan_.switch_minios_slot = true;
+    }
   }
   install_plan_.public_key_rsa = response.public_key_rsa;
 
@@ -162,6 +165,14 @@ void OmahaResponseHandlerAction::PerformAction() {
     install_plan_.source_slot =
         SystemState::Get()->boot_control()->GetCurrentSlot();
     install_plan_.target_slot = install_plan_.source_slot == 0 ? 1 : 0;
+  }
+
+  if (install_plan_.switch_minios_slot) {
+    // One of the packages is updating MiniOS. Need to set the correct slot.
+    install_plan_.minios_src_slot =
+        SystemState::Get()->hardware()->GetActiveMiniOsPartition();
+    install_plan_.minios_target_slot =
+        install_plan_.minios_src_slot == 0 ? 1 : 0;
   }
 
   // The Omaha response doesn't include the channel name for this image, so we

@@ -314,6 +314,14 @@ void PostinstallRunnerAction::CompletePostinstall(ErrorCode error_code) {
   // We only attempt to mark the new slot as active if all the postinstall
   // steps succeeded.
   if (error_code == ErrorCode::kSuccess) {
+    if (install_plan_.switch_minios_slot) {
+      if (!hardware_->SetActiveMiniOsPartition(
+              install_plan_.minios_target_slot)) {
+        LOG(ERROR) << "Update completed but unable to change the MiniOS "
+                      "active slot to "
+                   << install_plan_.minios_target_slot;
+      }
+    }
     if (install_plan_.switch_slot_on_reboot) {
       if (!boot_control_->GetDynamicPartitionControl()->FinishUpdate(
               install_plan_.powerwash_required) ||

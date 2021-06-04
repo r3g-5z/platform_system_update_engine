@@ -252,6 +252,22 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlDlcInstallationTest) {
   }
 }
 
+TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlMiniOsTest) {
+  FakeSystemState::Get()->fake_boot_control()->SetSupportsMiniOSPartitions(
+      true);
+  params_.set_minios_app_params({});
+  OmahaRequestBuilderXml omaha_request{nullptr, false, false, 0, 0, 0, ""};
+  const string request_xml = omaha_request.GetRequest();
+  EXPECT_EQ(2, CountSubstringInString(request_xml, "<updatecheck"))
+      << request_xml;
+
+  auto FindAppId = [request_xml](size_t pos) -> size_t {
+    return request_xml.find("<app appid=\"_minios\"", pos);
+  };
+
+  EXPECT_EQ(FindAppId(1), FindAppId(0));
+}
+
 TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlDlcNoPing) {
   params_.set_dlc_apps_params(
       {{params_.GetDlcAppId("dlc_no_0"), {.name = "dlc_no_0"}}});
@@ -387,6 +403,29 @@ TEST_F(OmahaRequestBuilderXmlTest,
       << request_xml;
   EXPECT_EQ(
       2,
+      CountSubstringInString(
+          request_xml,
+          "<event eventtype=\"3\" eventresult=\"0\" errorcode=\"62\"></event>"))
+      << request_xml;
+}
+
+TEST_F(OmahaRequestBuilderXmlTest,
+       GetRequestXmlUpdateCompleteEventMiniOsExcluded) {
+  FakeSystemState::Get()->fake_boot_control()->SetSupportsMiniOSPartitions(
+      true);
+  params_.set_minios_app_params({.updated = false});
+
+  OmahaEvent event(OmahaEvent::kTypeUpdateComplete);
+  OmahaRequestBuilderXml omaha_request{&event, false, false, 0, 0, 0, ""};
+  const string request_xml = omaha_request.GetRequest();
+  EXPECT_EQ(
+      1,
+      CountSubstringInString(
+          request_xml, "<event eventtype=\"3\" eventresult=\"1\"></event>"))
+      << request_xml;
+  // MiniOS package is not updated due to exclusions. Send corresponding event.
+  EXPECT_EQ(
+      1,
       CountSubstringInString(
           request_xml,
           "<event eventtype=\"3\" eventresult=\"0\" errorcode=\"62\"></event>"))

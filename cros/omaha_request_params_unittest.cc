@@ -279,6 +279,16 @@ TEST_F(OmahaRequestParamsTest, GetDlcAppId) {
   EXPECT_EQ(expected_dlc_app_id, params_.GetDlcAppId(kDlcId));
 }
 
+TEST_F(OmahaRequestParamsTest, IsMiniOSAppId) {
+  EXPECT_TRUE(params_.IsMiniOSAppId("test_minios"));
+  // Does not end with valid suffix.
+  EXPECT_FALSE(params_.IsMiniOSAppId("test_minios_"));
+  EXPECT_FALSE(params_.IsMiniOSAppId("testminios"));
+
+  // Case sensitive.
+  EXPECT_FALSE(params_.IsMiniOSAppId("test_MINIOS"));
+}
+
 TEST_F(OmahaRequestParamsTest, MiniOsParams) {
   FakeSystemState::Get()->fake_hardware()->SetIsRunningFromMiniOs(true);
   EXPECT_TRUE(params_.Init("", "", {}));

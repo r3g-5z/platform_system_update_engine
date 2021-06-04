@@ -85,6 +85,10 @@ struct InstallPlan {
   // The partition slots used for the update.
   BootControlInterface::Slot source_slot{BootControlInterface::kInvalidSlot};
   BootControlInterface::Slot target_slot{BootControlInterface::kInvalidSlot};
+  BootControlInterface::Slot minios_target_slot{
+      BootControlInterface::kInvalidSlot};
+  BootControlInterface::Slot minios_src_slot{
+      BootControlInterface::kInvalidSlot};
 
   // The vector below is used for partition verification. The flow is:
   //
@@ -147,6 +151,9 @@ struct InstallPlan {
   // True if the updated slot should be marked active on success.
   // False otherwise.
   bool switch_slot_on_reboot{true};
+
+  // True if MiniOS is being updated and the active slot is changing.
+  bool switch_minios_slot{false};
 
   // True if the update should run its post-install step.
   // False otherwise.

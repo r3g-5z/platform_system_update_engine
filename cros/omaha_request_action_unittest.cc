@@ -85,6 +85,7 @@ const char kTestAppId2[] = "test-app2-id";
 const char kTestAppIdSkipUpdatecheck[] = "test-app-id-skip-updatecheck";
 const char kDlcId1[] = "dlc-id-1";
 const char kDlcId2[] = "dlc-id-2";
+const char kMiniosAppId[] = "test-app-id_minios";
 
 // This is a helper struct to allow unit tests build an update response with the
 // values they care about.
@@ -240,6 +241,19 @@ struct FakeUpdateResponse {
                            : "") +
                       "><updatecheck status=\"noupdate\"/></app>"
                 : "") +
+           (minios_app_update
+                ? "<app appid=\"" + app_id_minios + "\" " +
+                      "status=\"ok\">"
+                      "<updatecheck status=\"ok\"><urls><url codebase=\"" +
+                      codebase + "\"/></urls><manifest version=\"" + version +
+                      "\"><packages><package name=\"package3\" size=\"333\" "
+                      "fp=\"" +
+                      fp2 +
+                      "\" hash_sha256=\"hash3\"/></packages>"
+                      "<actions><action event=\"install\" run=\".signed\"/>"
+                      "<action event=\"postinstall\" MetadataSize=\"33\"/>"
+                      "</actions></manifest></updatecheck></app>"
+                : "") +
            "</response>";
   }
 
@@ -248,6 +262,7 @@ struct FakeUpdateResponse {
 
   string app_id = kTestAppId;
   string app_id2 = kTestAppId2;
+  string app_id_minios = kMiniosAppId;
   string app_id_skip_updatecheck = kTestAppIdSkipUpdatecheck;
   string version = "1.2.3.4";
   string version2 = "2.3.4.5";
@@ -304,6 +319,8 @@ struct FakeUpdateResponse {
   bool dlc_app_update = false;
   // Whether to include a DLC app with no updatecheck tag.
   bool dlc_app_no_update = false;
+  // Whether to include a MiniOS app with updatecheck tag.
+  bool minios_app_update = false;
 
   // Whether the payload is a rollback.
   bool rollback = false;
@@ -1109,7 +1126,7 @@ TEST_F(OmahaRequestActionTest, SkipNonCriticalUpdatesInOOBEOverCellular) {
   EXPECT_FALSE(response_.update_exists);
 }
 
-// Verify when running from MiniOs, the update can continue even if OOBE is
+// Verify when running from MiniOS, the update can continue even if OOBE is
 // enabled and uncompleted.
 TEST_F(OmahaRequestActionTest, AllowMiniOsWithoutOOBE) {
   FakeSystemState::Get()->fake_hardware()->SetIsRunningFromMiniOs(true);
@@ -2889,6 +2906,19 @@ TEST_F(OmahaRequestActionTest, UpdateWithExcludedDlcTest) {
   EXPECT_FALSE(request_params_.dlc_apps_params().at(kDlcAppId).updated);
 }
 
+TEST_F(OmahaRequestActionTest, UpdateWithExcludedMiniOsTest) {
+  request_params_.set_minios_app_params({});
+  fake_update_response_.minios_app_update = true;
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+  // MiniOS candidate URL is excluded.
+  EXPECT_CALL(mock_excluder_, IsExcluded(_)).WillOnce(Return(true));
+  ASSERT_TRUE(TestUpdateCheck());
+
+  EXPECT_EQ(response_.packages.size(), 1u);
+  EXPECT_TRUE(response_.update_exists);
+  EXPECT_FALSE(request_params_.minios_app_params().updated);
+}
+
 TEST_F(OmahaRequestActionTest, UpdateWithDeprecatedDlcTest) {
   request_params_.set_dlc_apps_params(
       {{request_params_.GetDlcAppId(kDlcId2), {.name = kDlcId2}}});
@@ -3149,6 +3179,21 @@ TEST_F(OmahaRequestActionTest, OmahaResponseInstallCannotExcludeCheck) {
 
   EXPECT_FALSE(packages[0].can_exclude);
   EXPECT_FALSE(packages[1].can_exclude);
+}
+
+TEST_F(OmahaRequestActionTest, MiniosCanExcludeCheck) {
+  request_params_.set_minios_app_params({});
+  fake_update_response_.minios_app_update = true;
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+
+  EXPECT_CALL(mock_excluder_, IsExcluded(_)).WillRepeatedly(Return(false));
+  ASSERT_TRUE(TestUpdateCheck());
+  ASSERT_TRUE(delegate_.omaha_response_);
+  const auto& packages = delegate_.omaha_response_->packages;
+  ASSERT_EQ(packages.size(), 2);
+
+  EXPECT_FALSE(packages[0].can_exclude);
+  EXPECT_TRUE(packages[1].can_exclude);
 }
 
 TEST_F(OmahaRequestActionTest, OmahaResponseDifferentFp) {

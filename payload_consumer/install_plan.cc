@@ -34,6 +34,9 @@ using std::vector;
 namespace chromeos_update_engine {
 
 namespace {
+
+constexpr char kMiniOsPartitionName[] = "minios";
+
 string PayloadUrlsToString(
     const decltype(InstallPlan::Payload::payload_urls)& payload_urls) {
   return "(" + base::JoinString(payload_urls, ",") + ")";
@@ -50,6 +53,7 @@ string VectorToString(const vector<std::pair<string, string>>& input,
                  });
   return base::JoinString(vec, separator);
 }
+
 }  // namespace
 
 string InstallPayloadTypeToString(InstallPayloadType type) {
@@ -94,12 +98,17 @@ string InstallPlan::ToString() const {
           {"version", version},
           {"source_slot", BootControlInterface::SlotName(source_slot)},
           {"target_slot", BootControlInterface::SlotName(target_slot)},
+          {"minios_target_slot",
+           BootControlInterface::SlotName(minios_target_slot)},
+          {"minios_source_slot",
+           BootControlInterface::SlotName(minios_src_slot)},
           {"initial url", url_str},
           {"hash_checks_mandatory", utils::ToString(hash_checks_mandatory)},
           {"signature_checks_mandatory",
            utils::ToString(signature_checks_mandatory)},
           {"powerwash_required", utils::ToString(powerwash_required)},
           {"switch_slot_on_reboot", utils::ToString(switch_slot_on_reboot)},
+          {"switch_minios_slot", utils::ToString(switch_minios_slot)},
           {"run_post_install", utils::ToString(run_post_install)},
           {"is_rollback", utils::ToString(is_rollback)},
           {"rollback_data_save_requested",
@@ -155,20 +164,31 @@ string InstallPlan::ToString() const {
 bool InstallPlan::LoadPartitionsFromSlots(BootControlInterface* boot_control) {
   bool result = true;
   for (Partition& partition : partitions) {
-    if (source_slot != BootControlInterface::kInvalidSlot &&
+    auto current_target_slot = target_slot;
+    auto current_source_slot = source_slot;
+
+    if (base::ToLowerASCII(partition.name) == kMiniOsPartitionName) {
+      current_target_slot = minios_target_slot;
+      current_source_slot = minios_src_slot;
+    }
+
+    if (current_source_slot != BootControlInterface::kInvalidSlot &&
         partition.source_size > 0) {
-      result = boot_control->GetPartitionDevice(
-                   partition.name, source_slot, &partition.source_path) &&
-               result;
+      result =
+          boot_control->GetPartitionDevice(
+              partition.name, current_source_slot, &partition.source_path) &&
+          result;
     } else {
       partition.source_path.clear();
     }
 
-    if (target_slot != BootControlInterface::kInvalidSlot &&
+    if (current_target_slot != BootControlInterface::kInvalidSlot &&
         partition.target_size > 0) {
-      result = boot_control->GetPartitionDevice(
-                   partition.name, target_slot, &partition.target_path) &&
-               result;
+      result =
+          boot_control->GetPartitionDevice(
+              partition.name, current_target_slot, &partition.target_path) &&
+          result;
+
     } else {
       partition.target_path.clear();
     }

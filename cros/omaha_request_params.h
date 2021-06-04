@@ -40,6 +40,7 @@
 namespace chromeos_update_engine {
 
 extern const char kNoVersion[];
+extern const char kMiniOsAppIdSuffix[];
 
 // This class encapsulates the data Omaha gets for the request, along with
 // essential state needed for the processing of the request/response.  The
@@ -79,12 +80,24 @@ class OmahaRequestParams {
     int64_t ping_date_last_active;
     int64_t ping_date_last_rollcall;
     bool send_ping;
-    // |updated| is only used for DLCs to decide sending DBus message to
+    // |updated| is used for DLCs to decide sending DBus message to
     // dlcservice on an install/update completion.
     bool updated = true;
     // |last_fp| is used for DLCs to store the fingerprint value of previous
     // update.
     std::string last_fp;
+  };
+
+  struct MiniOSAppParam {
+    // |updated| is used for MiniOS to keep track of whether the package was
+    // installed or excluded.
+    bool updated = true;
+    // |last_fp| is used for MiniOS to store the fingerprint value of previous
+    // update.
+    std::string last_fp;
+    // Version is used to store the MiniOS version, which is different from
+    // platform.
+    std::string version;
   };
 
   // Setters and getters for the various properties.
@@ -217,6 +230,15 @@ class OmahaRequestParams {
   inline const std::map<std::string, AppParams>& dlc_apps_params() const {
     return dlc_apps_params_;
   }
+
+  inline const MiniOSAppParam& minios_app_params() const {
+    return minios_app_params_;
+  }
+
+  inline void set_minios_app_params(MiniOSAppParam minios_app_params) {
+    minios_app_params_ = minios_app_params;
+  }
+
   inline void set_is_install(bool is_install) { is_install_ = is_install; }
   inline bool is_install() const { return is_install_; }
 
@@ -249,6 +271,12 @@ class OmahaRequestParams {
 
   // If the App ID is a DLC App ID will set to no update.
   void SetDlcNoUpdate(const std::string& app_id);
+
+  // Returns true if the App ID is a MiniOS App ID.
+  bool IsMiniOSAppId(const std::string& app_id) const;
+
+  // Set `minios_app_params` update field.
+  void SetMiniOSUpdate(bool updated);
 
   // Suggested defaults
   static const char kOsVersion[];
@@ -426,6 +454,8 @@ class OmahaRequestParams {
 
   // A list of DLC modules to install. A mapping from DLC App ID to |AppParams|.
   std::map<std::string, AppParams> dlc_apps_params_;
+
+  MiniOSAppParam minios_app_params_;
 
   // This variable defines whether the payload is being installed in the current
   // partition. At the moment, this is used for installing DLC modules on the

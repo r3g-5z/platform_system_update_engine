@@ -286,6 +286,27 @@ TEST_F(PostinstallRunnerActionTest, RunAsRootSimpleTest) {
   EXPECT_FALSE(fake_hardware_.GetIsRollbackPowerwashScheduled());
 }
 
+TEST_F(PostinstallRunnerActionTest, RunAsRootMiniOSTest) {
+  ScopedLoopbackDeviceBinder loop(postinstall_image_, false, nullptr);
+  InstallPlan::Partition part;
+  part.name = "part";
+  part.target_path = loop.dev();
+  part.run_postinstall = true;
+  part.postinstall_path = kPostinstallDefaultScript;
+  InstallPlan install_plan;
+  install_plan.partitions = {part};
+  install_plan.download_url = "http://127.0.0.1:8080/update";
+  install_plan.powerwash_required = false;
+  install_plan.is_rollback = false;
+  install_plan.rollback_data_save_requested = false;
+  install_plan.minios_target_slot = 0;
+
+  RunPostinstallActionWithInstallPlan(install_plan);
+
+  EXPECT_EQ(ErrorCode::kSuccess, processor_delegate_.code_);
+  EXPECT_TRUE(processor_delegate_.processing_done_called_);
+}
+
 TEST_F(PostinstallRunnerActionTest, RunAsRootRunSymlinkFileTest) {
   ScopedLoopbackDeviceBinder loop(postinstall_image_, false, nullptr);
   RunPostinstallAction(loop.dev(), "bin/postinst_link", false, false, false);

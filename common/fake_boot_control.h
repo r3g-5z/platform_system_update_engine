@@ -136,7 +136,10 @@ class FakeBootControl : public BootControlInterface {
 
   std::string GetMiniOSPartitionName() override { return ""; }
 
-  bool SupportsMiniOSPartitions() override { return false; }
+  void SetSupportsMiniOSPartitions(bool is_supported) {
+    supports_minios_ = is_supported;
+  }
+  bool SupportsMiniOSPartitions() override { return supports_minios_; }
 
  private:
   BootControlInterface::Slot num_slots_{2};
@@ -145,6 +148,8 @@ class FakeBootControl : public BootControlInterface {
   std::vector<bool> is_bootable_;
   std::vector<bool> is_marked_successful_;
   std::vector<std::map<std::string, std::string>> devices_;
+
+  bool supports_minios_{false};
 
   std::unique_ptr<DynamicPartitionControlInterface> dynamic_partition_control_;
 };

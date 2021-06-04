@@ -168,7 +168,6 @@ string OmahaRequestBuilderXml::GetAppBody(const OmahaAppData& app_data) const {
                 ->IsRepeatedUpdatesEnabled()) {
           string last_fp =
               app_data.is_dlc ? app_data.app_params.last_fp : params->last_fp();
-
           if (!last_fp.empty()) {
             app_body += base::StringPrintf(
                 " last_fp=\"%s\"", XmlEncodeWithDefault(last_fp).c_str());
@@ -211,10 +210,11 @@ string OmahaRequestBuilderXml::GetAppBody(const OmahaAppData& app_data) const {
     if (event_result != OmahaEvent::kResultSuccess) {
       error_code = base::StringPrintf(" errorcode=\"%d\"",
                                       static_cast<int>(event_->error_code));
-    } else if (app_data.is_dlc && !app_data.app_params.updated) {
+    } else if ((app_data.is_dlc || app_data.is_minios) &&
+               !app_data.app_params.updated) {
       // On a |OmahaEvent::kResultSuccess|, if the event is for an update
-      // completion and the App is a DLC, send error for excluded DLCs as they
-      // did not update.
+      // completion and the App is a DLC or MiniOS, send error for excluded
+      // packages as they did not update.
       event_result = OmahaEvent::Result::kResultError;
       error_code = base::StringPrintf(
           " errorcode=\"%d\"",
@@ -453,7 +453,7 @@ string OmahaRequestBuilderXml::GetApps() const {
       // Skips updatecheck for platform app in case of an install operation.
       .skip_update = params->is_install(),
       .is_dlc = false,
-
+      .is_minios = false,
       .app_params = {.active_counting_type = OmahaRequestParams::kDayBased,
                      .send_ping = include_ping_}};
   app_xml += GetApp(product_app);
@@ -463,9 +463,31 @@ string OmahaRequestBuilderXml::GetApps() const {
         .version = params->is_install() ? kNoVersion : params->app_version(),
         .skip_update = false,
         .is_dlc = true,
+        .is_minios = false,
         .app_params = it.second};
     app_xml += GetApp(dlc_app_data);
   }
+
+  // TODO(b/190666289): Enable MiniOS partition updates during recovery.
+  // Do not do MiniOS updates when in recovery yet. Do not send MiniOS update
+  // checks if there is no MiniOS marker in the kernel partitions. This means
+  // the device does not support MiniOS.
+  std::string value;
+  if (!SystemState::Get()->hardware()->IsRunningFromMiniOs() &&
+      SystemState::Get()->boot_control()->SupportsMiniOSPartitions()) {
+    OmahaAppData minios_app = {
+        .id = params->GetAppId() + kMiniOsAppIdSuffix,
+        .version = params->minios_app_params().version,
+        .product_components = params->product_components(),
+        .skip_update = false,
+        .is_dlc = false,
+        .is_minios = true,
+        .app_params = {.active_counting_type = OmahaRequestParams::kDateBased,
+                       .send_ping = include_ping_,
+                       .updated = params->minios_app_params().updated}};
+    app_xml += GetApp(minios_app);
+  }
+
   return app_xml;
 }
 

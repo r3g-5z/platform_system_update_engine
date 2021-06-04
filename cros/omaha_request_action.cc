@@ -404,7 +404,11 @@ void OmahaRequestAction::ProcessExclusions(OmahaRequestParams* params,
       LOG(INFO) << "Excluding payload hash=" << package_it->hash;
       // Need to set DLC as not updated so correct metrics can be sent when an
       // update is completed.
-      params->SetDlcNoUpdate(package_it->app_id);
+      if (params->IsDlcAppId(package_it->app_id)) {
+        params->SetDlcNoUpdate(package_it->app_id);
+      } else if (params->IsMiniOSAppId(package_it->app_id)) {
+        params->SetMiniOSUpdate(false);
+      }
       package_it = response_.packages.erase(package_it);
       continue;
     }
@@ -543,7 +547,8 @@ bool OmahaRequestAction::ParseResponse(ScopedActionCompleter* completer) {
     // non-critical package installations, let the errors propagate instead
     // of being handled inside update_engine as installations are a dlcservice
     // specific feature.
-    bool can_exclude = !params->is_install() && params->IsDlcAppId(app.id);
+    bool can_exclude = (!params->is_install() && params->IsDlcAppId(app.id)) ||
+                       params->IsMiniOSAppId(app.id);
     if (!ParsePackage(&app, can_exclude, completer))
       return false;
   }
@@ -564,6 +569,12 @@ bool OmahaRequestAction::ParseStatus(ScopedActionCompleter* completer) {
                   << " but update continuing since a DLC.";
         params->SetDlcNoUpdate(app.id);
         continue;
+      } else if (params->IsMiniOSAppId(app.id)) {
+        // Platform updates can happen even when MiniOS is "noupdate" so do not
+        // modify `update_exists`.
+        LOG(INFO) << "Ignoring noupdate for MiniOS App ID: " << app.id;
+        params->SetMiniOSUpdate(false);
+        continue;
       }
       // Don't update if any app has status="noupdate".
       LOG(INFO) << "No update for App " << app.id;
@@ -581,6 +592,11 @@ bool OmahaRequestAction::ParseStatus(ScopedActionCompleter* completer) {
                params->GetAppId() == app.id) {
       // Skips the platform app for install operation.
       LOG(INFO) << "No payload (and ignore) for App " << app.id;
+    } else if (status.empty() && params->IsMiniOSAppId(app.id)) {
+      // MiniOS errors should not block updates.
+      LOG(INFO) << "No payload for MiniOS partition.";
+      params->SetMiniOSUpdate(false);
+      continue;
     } else {
       LOG(ERROR) << "Unknown Omaha response status: " << status;
       completer->set_code(ErrorCode::kOmahaResponseInvalid);
@@ -1221,7 +1237,7 @@ void OmahaRequestAction::ActionCompleted(ErrorCode code) {
 }
 
 bool OmahaRequestAction::ShouldIgnoreUpdate(ErrorCode* error) const {
-  // Never ignore valid update when running from MiniOs.
+  // Never ignore valid update when running from MiniOS.
   if (SystemState::Get()->hardware()->IsRunningFromMiniOs())
     return false;
 

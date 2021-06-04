@@ -90,6 +90,7 @@ struct OmahaAppData {
   std::string product_components;
   bool skip_update;
   bool is_dlc;
+  bool is_minios;
   OmahaRequestParams::AppParams app_params;
 };
 

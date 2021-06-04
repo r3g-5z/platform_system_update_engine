@@ -49,11 +49,14 @@ TEST(InstallPlanTest, Dump) {
 version: foo-version
 source_slot: INVALID
 target_slot: INVALID
+minios_target_slot: INVALID
+minios_source_slot: INVALID
 initial url: foo-download-url
 hash_checks_mandatory: true
 signature_checks_mandatory: true
 powerwash_required: false
 switch_slot_on_reboot: true
+switch_minios_slot: false
 run_post_install: true
 is_rollback: false
 rollback_data_save_requested: false

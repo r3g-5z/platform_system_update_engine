@@ -119,6 +119,7 @@ const char* const kPayloadHashHex = "486173682b";
 const char* const kPayloadFp1 = "1.755aff78ec73dfc7f590893ac";
 const char* const kPayloadFp2 = "1.98ba213e0ccec0d0e8cdc74a5";
 const char* const kPayloadAppId = "test_app_id";
+const char* const kMiniOsAppId = "test_app_id_minios";
 }  // namespace
 
 bool OmahaResponseHandlerActionTest::DoTest(const OmahaResponse& in,
@@ -265,6 +266,11 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
                            .hash = kPayloadHashHex,
                            .app_id = kPayloadAppId,
                            .fp = kPayloadFp1});
+    in.packages.push_back(
+        {.payload_urls = {"http://foo/the_update_a.b.c.d.tgz"},
+         .size = 5,
+         .hash = kPayloadHashHex,
+         .app_id = kMiniOsAppId});
     in.more_info_url = "http://more/info";
     in.prompt = true;
     in.deadline = kDeadlineNow;
@@ -279,6 +285,7 @@ TEST_F(OmahaResponseHandlerActionTest, SimpleTest) {
     EXPECT_EQ(in.packages[0].app_id, install_plan.payloads[0].app_id);
     EXPECT_EQ(in.packages[0].fp, install_plan.payloads[0].fp);
     EXPECT_EQ(1U, install_plan.target_slot);
+    EXPECT_EQ(1, install_plan.minios_target_slot);
     EXPECT_EQ(install_plan.update_urgency,
               update_engine::UpdateUrgencyInternal::CRITICAL);
     EXPECT_EQ(in.version, install_plan.version);
