@@ -36,6 +36,7 @@ extern "C" {
 #include "update_engine/common/boot_control.h"
 #include "update_engine/common/dynamic_partition_control_stub.h"
 #include "update_engine/common/subprocess.h"
+#include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
 
 using std::string;
@@ -45,8 +46,11 @@ namespace {
 
 const char* kChromeOSPartitionNameKernel = "kernel";
 const char* kChromeOSPartitionNameRoot = "root";
+const char* kChromeOSPartitionNameMiniOS = "minios";
 const char* kAndroidPartitionNameKernel = "boot";
 const char* kAndroidPartitionNameRoot = "system";
+
+const int kMiniOsPartitionANum = 9;
 
 const char kPartitionNamePrefixDlc[] = "dlc";
 const char kPartitionNameDlcA[] = "dlc_a";
@@ -396,7 +400,7 @@ int BootControlChromeOS::GetPartitionNumber(
   }
 
   // In Chrome OS, the partition numbers are hard-coded:
-  //   KERNEL-A=2, ROOT-A=3, KERNEL-B=4, ROOT-B=4, ...
+  // KERNEL-A=2, ROOT-A=3, KERNEL-B=4, ROOT-B=4, MINIOS-A=9, MINIOS-B=10
   // To help compatibility between different we accept both lowercase and
   // uppercase names in the ChromeOS or Brillo standard names.
   // See http://www.chromium.org/chromium-os/chromiumos-design-docs/disk-format
@@ -408,6 +412,9 @@ int BootControlChromeOS::GetPartitionNumber(
   if (partition_lower == kChromeOSPartitionNameRoot ||
       partition_lower == kAndroidPartitionNameRoot)
     return base_part_num + 1;
+  if (partition_lower == kChromeOSPartitionNameMiniOS) {
+    return slot + kMiniOsPartitionANum;
+  }
   LOG(ERROR) << "Unknown Chrome OS partition name \"" << partition_name << "\"";
   return -1;
 }

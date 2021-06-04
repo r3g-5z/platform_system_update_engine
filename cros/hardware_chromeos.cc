@@ -84,6 +84,9 @@ const char* kConfigOptsIsOOBEEnabled = "is_oobe_enabled";
 
 const char* kActivePingKey = "first_active_omaha_ping_sent";
 
+// Vboot MiniOS booting priority flag.
+const char kMiniOsPriorityFlag[] = "minios_priority";
+
 }  // namespace
 
 namespace chromeos_update_engine {
@@ -348,6 +351,23 @@ bool HardwareChromeOS::SetFirstActiveOmahaPingSent() {
     LOG(INFO) << "dump_vpd_log succeeded but with error logs: " << error;
   }
   return true;
+}
+
+int HardwareChromeOS::GetActiveMiniOsPartition() const {
+  char value_buffer[VB_MAX_STRING_PROPERTY];
+  const char* rv = VbGetSystemPropertyString(
+      kMiniOsPriorityFlag, value_buffer, sizeof(value_buffer));
+  if (rv == nullptr) {
+    LOG(WARNING) << "Unable to get the active MiniOS partition from "
+                 << kMiniOsPriorityFlag << ", defaulting to MINIOS-A.";
+    return 0;
+  }
+  return (std::string(rv) == "A") ? 0 : 1;
+}
+
+bool HardwareChromeOS::SetActiveMiniOsPartition(int active_partition) {
+  std::string partition = active_partition == 0 ? "A" : "B";
+  return VbSetSystemPropertyString(kMiniOsPriorityFlag, partition.c_str()) == 0;
 }
 
 void HardwareChromeOS::SetWarmReset(bool warm_reset) {}

@@ -65,6 +65,8 @@ class HardwareChromeOS final : public HardwareInterface {
   bool AllowDowngrade() const override { return false; }
   bool GetFirstActiveOmahaPingSent() const override;
   bool SetFirstActiveOmahaPingSent() override;
+  int GetActiveMiniOsPartition() const override;
+  bool SetActiveMiniOsPartition(int active_partition) override;
   void SetWarmReset(bool warm_reset) override;
   std::string GetVersionForLogging(
       const std::string& partition_name) const override;

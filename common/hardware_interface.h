@@ -136,6 +136,13 @@ class HardwareInterface {
   // if failed to persist it.
   virtual bool SetFirstActiveOmahaPingSent() = 0;
 
+  // Returns the MINIOS partition with the higher priority. 0 for A and 1 for B.
+  virtual int GetActiveMiniOsPartition() const = 0;
+
+  // Sets the active partition for MINIOS. 0 for MINIOS-A and 1 for MINIOS B.
+  // Returns true if it was successfully set, false otherwise.
+  virtual bool SetActiveMiniOsPartition(int active_partition) = 0;
+
   // If |warm_reset| is true, sets the warm reset to indicate a warm reset is
   // needed on the next reboot. Otherwise, clears the flag.
   virtual void SetWarmReset(bool warm_reset) = 0;

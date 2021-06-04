@@ -64,6 +64,12 @@ TEST_F(BootControlChromeOSTest, GetPartitionNumberTest) {
   EXPECT_EQ(-1, bootctl_.GetPartitionNumber("KERNEL", 2));
   EXPECT_EQ(-1, bootctl_.GetPartitionNumber("ROOT", 2));
 
+  // MiniOS slots.
+  EXPECT_EQ(10, bootctl_.GetPartitionNumber("minios", 1));
+  EXPECT_EQ(10, bootctl_.GetPartitionNumber("MINIOS", 1));
+  EXPECT_EQ(9, bootctl_.GetPartitionNumber("minios", 0));
+  EXPECT_EQ(9, bootctl_.GetPartitionNumber("MINIOS", 0));
+
   // Non A/B partitions are ignored.
   EXPECT_EQ(-1, bootctl_.GetPartitionNumber("OEM", 0));
   EXPECT_EQ(-1, bootctl_.GetPartitionNumber("A little panda", 0));

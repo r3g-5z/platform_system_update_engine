@@ -146,6 +146,10 @@ class FakeHardware : public HardwareInterface {
     return true;
   }
 
+  int GetActiveMiniOsPartition() const override { return 0; }
+
+  bool SetActiveMiniOsPartition(int active_partition) override { return true; }
+
   // Setters
   void SetIsOfficialBuild(bool is_official_build) {
     is_official_build_ = is_official_build;
