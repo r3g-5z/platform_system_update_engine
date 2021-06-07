@@ -158,19 +158,19 @@ void MetricsReporterOmaha::ReportUpdateCheckMetrics(
     metrics::DownloadErrorCode download_error_code) {
   string metric;
   int value;
-  int max_value;
+  int exclusive_max;
 
   if (result != metrics::CheckResult::kUnset) {
     metric = metrics::kMetricCheckResult;
     value = static_cast<int>(result);
-    max_value = static_cast<int>(metrics::CheckResult::kNumConstants) - 1;
-    metrics_lib_->SendEnumToUMA(metric, value, max_value);
+    exclusive_max = static_cast<int>(metrics::CheckResult::kNumConstants);
+    metrics_lib_->SendEnumToUMA(metric, value, exclusive_max);
   }
   if (reaction != metrics::CheckReaction::kUnset) {
     metric = metrics::kMetricCheckReaction;
     value = static_cast<int>(reaction);
-    max_value = static_cast<int>(metrics::CheckReaction::kNumConstants) - 1;
-    metrics_lib_->SendEnumToUMA(metric, value, max_value);
+    exclusive_max = static_cast<int>(metrics::CheckReaction::kNumConstants);
+    metrics_lib_->SendEnumToUMA(metric, value, exclusive_max);
   }
   if (download_error_code != metrics::DownloadErrorCode::kUnset) {
     metric = metrics::kMetricCheckDownloadErrorCode;
