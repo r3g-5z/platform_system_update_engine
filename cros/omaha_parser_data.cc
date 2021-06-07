@@ -43,6 +43,7 @@ const char kAttrKernelVersion[] = "_kernel_version";
 const char kAttrStatus[] = "status";
 // Disables sending the device market segment. Only valid for platform app.
 const char kAttrDisableMarketSegment[] = "_disable_dms";
+const char kAttrInvalidateLastUpdate[] = "_invalidate_last_update";
 
 // |package| attributes.
 const char kAttrFp[] = "fp";

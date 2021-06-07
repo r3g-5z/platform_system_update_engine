@@ -55,6 +55,11 @@ void OmahaResponseHandlerAction::PerformAction() {
   ScopedActionCompleter completer(processor_, this);
   const OmahaResponse& response = GetInputObject();
   if (!response.update_exists) {
+    if (response.invalidate_last_update) {
+      LOG(INFO) << "Invalidating previous update.";
+      completer.set_code(ErrorCode::kInvalidateLastUpdate);
+      return;
+    }
     LOG(INFO) << "There are no updates. Aborting.";
     completer.set_code(ErrorCode::kNoUpdate);
     return;

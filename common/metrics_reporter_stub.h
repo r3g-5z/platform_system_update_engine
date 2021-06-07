@@ -81,6 +81,8 @@ class MetricsReporterStub : public MetricsReporterInterface {
 
   void ReportTimeToReboot(int time_to_reboot_minutes) override {}
 
+  void ReportInvalidatedUpdate(bool success) override {}
+
   void ReportInstallDateProvisioningSource(int source, int max) override {}
 
   void ReportInternalErrorCode(ErrorCode error_code) override {}

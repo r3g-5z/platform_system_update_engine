@@ -505,6 +505,9 @@ bool OmahaRequestAction::ParseResponse(ScopedActionCompleter* completer) {
 
     PersistDisableMarketSegment(
         platform_app->updatecheck.disable_market_segment);
+
+    response_.invalidate_last_update =
+        ParseBool(platform_app->updatecheck.invalidate_last_update);
   }
 
   // Check for the "elapsed_days" attribute in the "daystart"

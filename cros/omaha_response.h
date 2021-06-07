@@ -90,6 +90,10 @@ struct OmahaResponse {
   // Whether we continue checking for updates.
   bool disable_repeated_updates = false;
 
+  // Whether we need to invalidate the previous update. This only applies to
+  // OS updates.
+  bool invalidate_last_update = false;
+
   // If not blank, a base-64 encoded representation of the PEM-encoded
   // public key in the response.
   std::string public_key_rsa;

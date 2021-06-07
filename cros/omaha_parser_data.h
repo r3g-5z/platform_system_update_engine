@@ -46,6 +46,7 @@ extern const char kAttrFirmwareVersion[];
 extern const char kAttrKernelVersion[];
 extern const char kAttrStatus[];
 extern const char kAttrDisableMarketSegment[];
+extern const char kAttrInvalidateLastUpdate[];
 
 // |package| attributes.
 extern const char kAttrFp[];
@@ -108,6 +109,7 @@ struct OmahaParserData {
       std::string past_firmware_version;
       std::string past_kernel_version;
       std::string disable_market_segment;
+      std::string invalidate_last_update;
     } updatecheck;
 
     struct PostInstallAction {

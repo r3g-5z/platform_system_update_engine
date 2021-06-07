@@ -194,6 +194,13 @@ class MetricsReporterInterface {
   // |kMetricTimeToRebootMinutes|
   virtual void ReportTimeToReboot(int time_to_reboot_minutes) = 0;
 
+  // Reported when the `kAttrInvalidateLastUpdate` is sent in the
+  // updatecheck. Reports true if all parts of the invalidation were completed
+  // successfully, false otherwise.
+  //
+  // |UpdateEngine.UpdateInvalidated|
+  virtual void ReportInvalidatedUpdate(bool success) = 0;
+
   // Helper function to report the source of installation data. The following
   // metrics are reported:
   //

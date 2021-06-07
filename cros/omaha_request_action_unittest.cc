@@ -122,11 +122,17 @@ struct FakeUpdateResponse {
            " status=\"ok\">"
            "<ping status=\"ok\"/>"
            "<updatecheck status=\"noupdate\"" +
+           (invalidate_last_update ? " _invalidate_last_update=\"true\" "
+                                   : "") +
            (disable_market_segment ? " _disable_dms=\"true\" " : "") +
            "/></app>" +
            (multi_app_no_update
                 ? "<app appid=\"" + app_id2 +
-                      "\"><updatecheck status=\"noupdate\"/></app>"
+                      "\"><updatecheck status=\"noupdate\"" +
+                      (invalidate_non_platform_last_update
+                           ? " _invalidate_last_update=\"true\" "
+                           : "") +
+                      "/></app>"
                 : "") +
            "</response>";
   }
@@ -265,6 +271,8 @@ struct FakeUpdateResponse {
   bool disable_hash_checks = false;
   bool disable_repeated_updates = false;
   bool disable_market_segment = false;
+  bool invalidate_last_update = false;
+  bool invalidate_non_platform_last_update = false;
 
   bool powerwash = false;
 
@@ -1971,6 +1979,29 @@ TEST_F(OmahaRequestActionTest, DisableMarketSegmentNoUpdate) {
   FakeSystemState::Get()->prefs()->GetBoolean(kPrefsMarketSegmentDisabled,
                                               &market_segment_disabled);
   EXPECT_TRUE(market_segment_disabled);
+}
+
+TEST_F(OmahaRequestActionTest, InvalidateLastUpdate) {
+  fake_update_response_.invalidate_last_update = true;
+  tuc_params_.http_response = fake_update_response_.GetNoUpdateResponse();
+  tuc_params_.expected_check_result = metrics::CheckResult::kNoUpdateAvailable;
+  tuc_params_.expected_check_reaction = metrics::CheckReaction::kUnset;
+
+  EXPECT_TRUE(TestUpdateCheck());
+  EXPECT_FALSE(response_.update_exists);
+  EXPECT_TRUE(response_.invalidate_last_update);
+}
+
+TEST_F(OmahaRequestActionTest, DoNotInvalidateLastUpdate) {
+  fake_update_response_.invalidate_non_platform_last_update = true;
+  fake_update_response_.multi_app_no_update = true;
+  tuc_params_.http_response = fake_update_response_.GetNoUpdateResponse();
+  tuc_params_.expected_check_result = metrics::CheckResult::kNoUpdateAvailable;
+  tuc_params_.expected_check_reaction = metrics::CheckReaction::kUnset;
+
+  EXPECT_TRUE(TestUpdateCheck());
+  EXPECT_FALSE(response_.update_exists);
+  EXPECT_FALSE(response_.invalidate_last_update);
 }
 
 TEST_F(OmahaRequestActionTest, TargetChannelHintTest) {

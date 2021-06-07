@@ -103,6 +103,10 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // for testing purposes.
   virtual bool ResetStatus();
 
+  // Resets the boot slot and update markers to invalidate a previously existing
+  // update if one is available.
+  void InvalidateUpdate();
+
   // Returns the current status in the out param. Returns true on success.
   virtual bool GetStatus(update_engine::UpdateEngineStatus* out_status);
 
@@ -318,6 +322,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest, QuickFixTokenWhenDeviceIsEnterpriseEnrolled);
   FRIEND_TEST(UpdateAttempterTest, MoveToPrefs);
   FRIEND_TEST(UpdateAttempterTest, FirstUpdateBeforeReboot);
+  FRIEND_TEST(UpdateAttempterTest, InvalidateLastUpdate);
   FRIEND_TEST(UpdateAttempterTest, ConsecutiveUpdateBeforeRebootSuccess);
   FRIEND_TEST(UpdateAttempterTest, ConsecutiveUpdateFailureMetric);
   FRIEND_TEST(UpdateAttempterTest, ResetUpdatePrefs);

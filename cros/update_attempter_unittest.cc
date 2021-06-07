@@ -2458,6 +2458,20 @@ TEST_F(UpdateAttempterTest, ConsecutiveUpdateFailureMetric) {
   ASSERT_NE(nullptr, attempter_.error_event_.get());
 }
 
+TEST_F(UpdateAttempterTest, InvalidateLastUpdate) {
+  // Mock a previous update.
+  FakeSystemState::Get()->fake_clock()->SetBootTime(Time::FromTimeT(42));
+  attempter_.WriteUpdateCompletedMarker();
+  EXPECT_TRUE(attempter_.GetBootTimeAtUpdate(nullptr));
+  attempter_.status_ = UpdateStatus::UPDATED_NEED_REBOOT;
+
+  // Invalidate an update.
+  MockAction action;
+  attempter_.ActionCompleted(
+      nullptr, &action, ErrorCode::kInvalidateLastUpdate);
+  EXPECT_FALSE(attempter_.GetBootTimeAtUpdate(nullptr));
+}
+
 TEST_F(UpdateAttempterTest, CalculateDlcParamsRemoveStaleMetadata) {
   string dlc_id = "dlc0";
   auto active_key =

@@ -1346,6 +1346,13 @@ void UpdateAttempter::ActionCompleted(ActionProcessor* processor,
   }
   // General failure cases.
   if (code != ErrorCode::kSuccess) {
+    // Best effort to invalidate the previous update by resetting the active
+    // boot slot and update complete markers. Status will go back to 'IDLE'.
+    if (code == ErrorCode::kInvalidateLastUpdate) {
+      InvalidateUpdate();
+      return;
+    }
+
     // If the current state is at or past the download phase, count the failure
     // in case a switch to full update becomes necessary. Ignore network
     // transfer timeouts and failures.
@@ -1445,6 +1452,28 @@ bool UpdateAttempter::ResetUpdatePrefs() {
   ret_value = prefs->Delete(kPrefsLastFp, {kDlcPrefsSubDir}) && ret_value;
   ret_value = prefs->Delete(kPrefsPreviousVersion) && ret_value;
   return ret_value;
+}
+
+void UpdateAttempter::InvalidateUpdate() {
+  if (!GetBootTimeAtUpdate(nullptr)) {
+    LOG(INFO) << "No previous update available to invalidate.";
+    return;
+  }
+
+  LOG(INFO) << "Invalidating previous update.";
+  bool success = true;
+  if (!ResetBootSlot()) {
+    LOG(WARNING) << "Could not reset boot slot to active partition. "
+                    "Continuing anyway.";
+    success = false;
+  }
+  if (!ResetUpdatePrefs()) {
+    LOG(WARNING)
+        << "Could not delete update completed markers. Continuing anyway.";
+    success = false;
+  }
+
+  SystemState::Get()->metrics_reporter()->ReportInvalidatedUpdate(success);
 }
 
 void UpdateAttempter::DownloadComplete() {
@@ -1569,6 +1598,7 @@ ErrorCode UpdateAttempter::GetLastUpdateError() {
   switch (attempt_error_code_) {
     case ErrorCode::kSuccess:
     case ErrorCode::kNoUpdate:
+    case ErrorCode::kInvalidateLastUpdate:
     case ErrorCode::kOmahaErrorInHTTPResponse:
       return attempt_error_code_;
     case ErrorCode::kInternalLibCurlError:
