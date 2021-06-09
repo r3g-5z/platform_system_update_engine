@@ -110,8 +110,7 @@ bool HardwareChromeOS::IsOfficialBuild() const {
 }
 
 bool HardwareChromeOS::IsNormalBootMode() const {
-  bool dev_mode = VbGetSystemPropertyInt("devsw_boot") != 0;
-  return !dev_mode;
+  return VbGetSystemPropertyInt("devsw_boot") == 0;
 }
 
 bool HardwareChromeOS::IsRunningFromMiniOs() const {
