@@ -181,7 +181,7 @@ bool SquashfsFilesystem::Init(const string& map,
     // If size is zero do not add the file.
     if (cur_offset - start > 0) {
       File file;
-      file.name = splits[0].as_string();
+      file.name = std::string(splits[0]);
       file.extents = {ExtentForBytes(kBlockSize, start, cur_offset - start)};
       file.is_compressed = is_compressed;
       files_.emplace_back(file);

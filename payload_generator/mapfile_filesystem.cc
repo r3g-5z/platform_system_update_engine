@@ -96,7 +96,7 @@ bool MapfileFilesystem::GetFiles(vector<File>* files) const {
     size_t delim, last_delim = line.size();
     while ((delim = line.rfind(' ', last_delim - 1)) != string::npos) {
       string blocks =
-          line.substr(delim + 1, last_delim - (delim + 1)).as_string();
+          std::string(line.substr(delim + 1, last_delim - (delim + 1)));
       size_t dash = blocks.find('-', 0);
       uint64_t block_start, block_end;
       if (dash == string::npos && base::StringToUint64(blocks, &block_start)) {
@@ -133,7 +133,7 @@ bool MapfileFilesystem::GetFiles(vector<File>* files) const {
 
     if (last_delim == string::npos)
       continue;
-    mapped_file.name = line.substr(0, last_delim).as_string();
+    mapped_file.name = std::string(line.substr(0, last_delim));
 
     files->push_back(mapped_file);
   }
