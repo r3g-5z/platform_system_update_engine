@@ -1282,6 +1282,8 @@ class BsdiffExtentFile : public bsdiff::FileInterface {
       : BsdiffExtentFile(std::move(reader), nullptr, size) {}
   BsdiffExtentFile(std::unique_ptr<ExtentWriter> writer, size_t size)
       : BsdiffExtentFile(nullptr, std::move(writer), size) {}
+  BsdiffExtentFile(const BsdiffExtentFile&) = delete;
+  BsdiffExtentFile& operator=(const BsdiffExtentFile&) = delete;
 
   ~BsdiffExtentFile() override = default;
 
@@ -1331,8 +1333,6 @@ class BsdiffExtentFile : public bsdiff::FileInterface {
   std::unique_ptr<ExtentWriter> writer_;
   uint64_t size_;
   uint64_t offset_;
-
-  DISALLOW_COPY_AND_ASSIGN(BsdiffExtentFile);
 };
 
 }  // namespace
@@ -1386,6 +1386,9 @@ class PuffinExtentStream : public puffin::StreamInterface {
   // Constructor for creating a stream for writing to an |ExtentWriter|.
   PuffinExtentStream(std::unique_ptr<ExtentWriter> writer, uint64_t size)
       : PuffinExtentStream(nullptr, std::move(writer), size) {}
+
+  PuffinExtentStream(const PuffinExtentStream&) = delete;
+  PuffinExtentStream& operator=(const PuffinExtentStream&) = delete;
 
   ~PuffinExtentStream() override = default;
 
@@ -1442,8 +1445,6 @@ class PuffinExtentStream : public puffin::StreamInterface {
   uint64_t size_;
   uint64_t offset_;
   bool is_read_;
-
-  DISALLOW_COPY_AND_ASSIGN(PuffinExtentStream);
 };
 
 }  // namespace

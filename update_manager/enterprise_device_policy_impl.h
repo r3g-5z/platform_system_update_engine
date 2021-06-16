@@ -28,6 +28,10 @@ namespace chromeos_update_manager {
 class EnterpriseDevicePolicyImpl : public PolicyInterface {
  public:
   EnterpriseDevicePolicyImpl() = default;
+  EnterpriseDevicePolicyImpl(const EnterpriseDevicePolicyImpl&) = delete;
+  EnterpriseDevicePolicyImpl& operator=(const EnterpriseDevicePolicyImpl&) =
+      delete;
+
   ~EnterpriseDevicePolicyImpl() override = default;
 
   std::string PolicyName() const override {
@@ -38,9 +42,6 @@ class EnterpriseDevicePolicyImpl : public PolicyInterface {
                       State* state,
                       std::string* error,
                       PolicyDataInterface* data) const override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(EnterpriseDevicePolicyImpl);
 };
 
 }  // namespace chromeos_update_manager

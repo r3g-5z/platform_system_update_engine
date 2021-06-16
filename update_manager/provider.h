@@ -24,13 +24,12 @@ namespace chromeos_update_manager {
 // Abstract base class for a policy provider.
 class Provider {
  public:
+  Provider(const Provider&) = delete;
+  Provider& operator=(const Provider&) = delete;
   virtual ~Provider() {}
 
  protected:
   Provider() {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Provider);
 };
 
 }  // namespace chromeos_update_manager

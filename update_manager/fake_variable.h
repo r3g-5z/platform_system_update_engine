@@ -33,6 +33,9 @@ class FakeVariable : public Variable<T> {
       : Variable<T>(name, mode) {}
   FakeVariable(const std::string& name, base::TimeDelta poll_interval)
       : Variable<T>(name, poll_interval) {}
+  FakeVariable(const FakeVariable&) = delete;
+  FakeVariable& operator=(const FakeVariable&) = delete;
+
   ~FakeVariable() override {}
 
   // Sets the next value of this variable to the passed |p_value| pointer. Once
@@ -61,8 +64,6 @@ class FakeVariable : public Variable<T> {
  private:
   // The pointer returned by GetValue().
   std::unique_ptr<const T> ptr_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeVariable);
 };
 
 }  // namespace chromeos_update_manager

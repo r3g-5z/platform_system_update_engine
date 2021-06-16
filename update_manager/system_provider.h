@@ -30,6 +30,8 @@ namespace chromeos_update_manager {
 // reported by crossystem, the kernel boot command line and the partition table.
 class SystemProvider : public Provider {
  public:
+  SystemProvider(const SystemProvider&) = delete;
+  SystemProvider& operator=(const SystemProvider&) = delete;
   ~SystemProvider() override {}
 
   // Returns true if the boot mode is normal or if it's unable to
@@ -55,9 +57,6 @@ class SystemProvider : public Provider {
 
  protected:
   SystemProvider() {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(SystemProvider);
 };
 
 }  // namespace chromeos_update_manager

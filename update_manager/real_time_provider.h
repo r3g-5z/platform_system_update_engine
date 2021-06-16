@@ -29,6 +29,8 @@ namespace chromeos_update_manager {
 class RealTimeProvider : public TimeProvider {
  public:
   RealTimeProvider() = default;
+  RealTimeProvider(const RealTimeProvider&) = delete;
+  RealTimeProvider& operator=(const RealTimeProvider&) = delete;
 
   // Initializes the provider and returns whether it succeeded.
   bool Init();
@@ -45,8 +47,6 @@ class RealTimeProvider : public TimeProvider {
   std::unique_ptr<Variable<base::Time>> var_curr_date_;
   std::unique_ptr<Variable<int>> var_curr_hour_;
   std::unique_ptr<Variable<int>> var_curr_minute_;
-
-  DISALLOW_COPY_AND_ASSIGN(RealTimeProvider);
 };
 
 }  // namespace chromeos_update_manager

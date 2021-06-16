@@ -39,6 +39,8 @@ class FakeBootControl : public BootControlInterface {
 
     dynamic_partition_control_.reset(new DynamicPartitionControlStub());
   }
+  FakeBootControl(const FakeBootControl&) = delete;
+  FakeBootControl& operator=(const FakeBootControl&) = delete;
 
   // BootControlInterface overrides.
   unsigned int GetNumSlots() const override { return num_slots_; }
@@ -134,8 +136,6 @@ class FakeBootControl : public BootControlInterface {
   std::vector<std::map<std::string, std::string>> devices_;
 
   std::unique_ptr<DynamicPartitionControlInterface> dynamic_partition_control_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeBootControl);
 };
 
 }  // namespace chromeos_update_engine

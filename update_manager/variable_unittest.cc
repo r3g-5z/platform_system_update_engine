@@ -39,15 +39,15 @@ class DefaultVariable : public Variable<T> {
       : Variable<T>(name, mode) {}
   DefaultVariable(const string& name, const TimeDelta& poll_interval)
       : Variable<T>(name, poll_interval) {}
+  DefaultVariable(const DefaultVariable&) = delete;
+  DefaultVariable& operator=(const DefaultVariable&) = delete;
+
   ~DefaultVariable() override {}
 
  protected:
   const T* GetValue(TimeDelta /* timeout */, string* /* errmsg */) override {
     return new T();
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DefaultVariable);
 };
 
 class UmBaseVariableTest : public ::testing::Test {

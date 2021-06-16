@@ -110,12 +110,12 @@ bool IsValidComponentID(const std::string& id);
 class OmahaRequestBuilder {
  public:
   OmahaRequestBuilder() = default;
+  OmahaRequestBuilder(const OmahaRequestBuilder&) = delete;
+  OmahaRequestBuilder& operator=(const OmahaRequestBuilder&) = delete;
+
   virtual ~OmahaRequestBuilder() = default;
 
   virtual std::string GetRequest() const = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(OmahaRequestBuilder);
 };
 
 class OmahaRequestBuilderXml : OmahaRequestBuilder {
@@ -134,6 +134,8 @@ class OmahaRequestBuilderXml : OmahaRequestBuilder {
         ping_roll_call_days_(ping_roll_call_days),
         install_date_in_days_(install_date_in_days),
         session_id_(session_id) {}
+  OmahaRequestBuilderXml(const OmahaRequestBuilderXml&) = delete;
+  OmahaRequestBuilderXml& operator=(const OmahaRequestBuilderXml&) = delete;
 
   ~OmahaRequestBuilderXml() override = default;
 
@@ -184,8 +186,6 @@ class OmahaRequestBuilderXml : OmahaRequestBuilder {
   int ping_roll_call_days_;
   int install_date_in_days_;
   std::string session_id_;
-
-  DISALLOW_COPY_AND_ASSIGN(OmahaRequestBuilderXml);
 };
 
 }  // namespace chromeos_update_engine

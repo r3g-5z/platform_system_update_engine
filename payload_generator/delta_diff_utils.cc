@@ -161,6 +161,8 @@ class FileDeltaProcessor : public base::DelegateSimpleThread::Delegate {
         name_(name),
         chunk_blocks_(chunk_blocks),
         blob_file_(blob_file) {}
+  FileDeltaProcessor(const FileDeltaProcessor&) = delete;
+  FileDeltaProcessor& operator=(const FileDeltaProcessor&) = delete;
 
   bool operator>(const FileDeltaProcessor& other) const {
     return new_extents_blocks_ > other.new_extents_blocks_;
@@ -196,8 +198,6 @@ class FileDeltaProcessor : public base::DelegateSimpleThread::Delegate {
   vector<AnnotatedOperation> file_aops_;
 
   bool failed_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(FileDeltaProcessor);
 };
 
 void FileDeltaProcessor::Run() {

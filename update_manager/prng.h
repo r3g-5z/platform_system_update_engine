@@ -29,6 +29,8 @@ class PRNG {
  public:
   // Initializes the generator with the passed |seed| value.
   explicit PRNG(uint32_t seed) : gen_(seed) {}
+  PRNG(const PRNG&) = delete;
+  PRNG& operator=(const PRNG&) = delete;
 
   // Returns a random unsigned 32-bit integer.
   uint32_t Rand() { return gen_(); }
@@ -42,8 +44,6 @@ class PRNG {
  private:
   // A pseudo-random number generator.
   std::mt19937 gen_;
-
-  DISALLOW_COPY_AND_ASSIGN(PRNG);
 };
 
 }  // namespace chromeos_update_manager

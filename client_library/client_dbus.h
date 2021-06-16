@@ -34,6 +34,9 @@ namespace internal {
 class DBusUpdateEngineClient : public UpdateEngineClient {
  public:
   DBusUpdateEngineClient() = default;
+  DBusUpdateEngineClient(const DBusUpdateEngineClient&) = delete;
+  DBusUpdateEngineClient& operator=(const DBusUpdateEngineClient&) = delete;
+
   bool Init();
 
   virtual ~DBusUpdateEngineClient() = default;
@@ -97,8 +100,6 @@ class DBusUpdateEngineClient : public UpdateEngineClient {
   std::unique_ptr<org::chromium::UpdateEngineInterfaceProxy> proxy_;
   std::vector<update_engine::StatusUpdateHandler*> handlers_;
   bool dbus_handler_registered_{false};
-
-  DISALLOW_COPY_AND_ASSIGN(DBusUpdateEngineClient);
 };  // class DBusUpdateEngineClient
 
 }  // namespace internal

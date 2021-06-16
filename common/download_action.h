@@ -77,6 +77,9 @@ class DownloadAction : public InstallPlanAction, public HttpFetcherDelegate {
                  HardwareInterface* hardware,
                  HttpFetcher* http_fetcher,
                  bool interactive);
+  DownloadAction(const DownloadAction&) = delete;
+  DownloadAction& operator=(const DownloadAction&) = delete;
+
   ~DownloadAction() override;
 
   // InstallPlanAction overrides.
@@ -185,8 +188,6 @@ class DownloadAction : public InstallPlanAction, public HttpFetcherDelegate {
 
   // Offset of the payload in the download URL, used by UpdateAttempterAndroid.
   int64_t base_offset_{0};
-
-  DISALLOW_COPY_AND_ASSIGN(DownloadAction);
 };
 
 // We want to be sure that we're compiled with large file support on linux,

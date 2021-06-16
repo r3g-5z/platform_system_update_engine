@@ -29,6 +29,8 @@ namespace chromeos_update_manager {
 class FakeSystemProvider : public SystemProvider {
  public:
   FakeSystemProvider() {}
+  FakeSystemProvider(const FakeSystemProvider&) = delete;
+  FakeSystemProvider& operator=(const FakeSystemProvider&) = delete;
 
   FakeVariable<bool>* var_is_normal_boot_mode() override {
     return &var_is_normal_boot_mode_;
@@ -66,8 +68,6 @@ class FakeSystemProvider : public SystemProvider {
       "kiosk_required_platform_version", kVariableModePoll};
   FakeVariable<base::Version> var_version_{"chromeos_version",
                                            kVariableModePoll};
-
-  DISALLOW_COPY_AND_ASSIGN(FakeSystemProvider);
 };
 
 }  // namespace chromeos_update_manager

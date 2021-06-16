@@ -54,6 +54,8 @@ class Action;
 template <typename ObjectType>
 class ActionPipe {
  public:
+  ActionPipe(const ActionPipe&) = delete;
+  ActionPipe& operator=(const ActionPipe&) = delete;
   virtual ~ActionPipe() {}
 
   // This should be called by an Action on its input pipe.
@@ -85,7 +87,6 @@ class ActionPipe {
   // The ctor is private. This is because this class should construct itself
   // via the static Bond() method.
   ActionPipe() {}
-  DISALLOW_COPY_AND_ASSIGN(ActionPipe);
 };
 
 // Utility function

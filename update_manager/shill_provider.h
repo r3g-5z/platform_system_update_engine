@@ -28,6 +28,8 @@ namespace chromeos_update_manager {
 // Provider for networking related information.
 class ShillProvider : public Provider {
  public:
+  ShillProvider(const ShillProvider&) = delete;
+  ShillProvider& operator=(const ShillProvider&) = delete;
   ~ShillProvider() override {}
 
   // A variable returning whether we currently have network connectivity.
@@ -48,9 +50,6 @@ class ShillProvider : public Provider {
 
  protected:
   ShillProvider() {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ShillProvider);
 };
 
 }  // namespace chromeos_update_manager

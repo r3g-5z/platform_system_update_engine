@@ -30,6 +30,11 @@ namespace chromeos_update_manager {
 class UpdateTimeRestrictionsPolicyImpl : public PolicyInterface {
  public:
   UpdateTimeRestrictionsPolicyImpl() = default;
+  UpdateTimeRestrictionsPolicyImpl(const UpdateTimeRestrictionsPolicyImpl&) =
+      delete;
+  UpdateTimeRestrictionsPolicyImpl& operator=(
+      const UpdateTimeRestrictionsPolicyImpl&) = delete;
+
   ~UpdateTimeRestrictionsPolicyImpl() override = default;
 
   // When the current time is inside one of the intervals returns
@@ -45,9 +50,6 @@ class UpdateTimeRestrictionsPolicyImpl : public PolicyInterface {
   std::string PolicyName() const override {
     return "UpdateTimeRestrictionsPolicyImpl";
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UpdateTimeRestrictionsPolicyImpl);
 };
 
 }  // namespace chromeos_update_manager

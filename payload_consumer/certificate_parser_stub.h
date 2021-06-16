@@ -29,14 +29,13 @@ namespace chromeos_update_engine {
 class CertificateParserStub : public CertificateParserInterface {
  public:
   CertificateParserStub() = default;
+  CertificateParserStub(const CertificateParserStub&) = delete;
+  CertificateParserStub& operator=(const CertificateParserStub&) = delete;
 
   bool ReadPublicKeysFromCertificates(
       const std::string& path,
       std::vector<std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)>>*
           out_public_keys) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CertificateParserStub);
 };
 
 }  // namespace chromeos_update_engine

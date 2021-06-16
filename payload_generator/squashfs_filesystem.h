@@ -53,6 +53,8 @@ class SquashfsFilesystem : public FilesystemInterface {
     uint16_t major_version;
   };
 
+  SquashfsFilesystem(const SquashfsFilesystem&) = delete;
+  SquashfsFilesystem& operator=(const SquashfsFilesystem&) = delete;
   ~SquashfsFilesystem() override = default;
 
   // Creates the file system from the Squashfs file itself. If
@@ -115,8 +117,6 @@ class SquashfsFilesystem : public FilesystemInterface {
 
   // The content of /etc/update_engine.conf.
   std::string update_engine_config_;
-
-  DISALLOW_COPY_AND_ASSIGN(SquashfsFilesystem);
 };
 
 }  // namespace chromeos_update_engine

@@ -33,6 +33,9 @@ namespace chromeos_update_engine {
 class FakeShillProxy : public ShillProxyInterface {
  public:
   FakeShillProxy();
+  FakeShillProxy(const FakeShillProxy&) = delete;
+  FakeShillProxy& operator=(const FakeShillProxy&) = delete;
+
   ~FakeShillProxy() override = default;
 
   // ShillProxyInterface overrides.
@@ -57,8 +60,6 @@ class FakeShillProxy : public ShillProxyInterface {
   std::map<std::string,
            std::unique_ptr<org::chromium::flimflam::ServiceProxyInterface>>
       service_proxy_mocks_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeShillProxy);
 };
 
 }  // namespace chromeos_update_engine

@@ -27,6 +27,11 @@ namespace chromeos_update_manager {
 class OnlyUpdateOfficialBuildsPolicyImpl : public PolicyInterface {
  public:
   OnlyUpdateOfficialBuildsPolicyImpl() = default;
+  OnlyUpdateOfficialBuildsPolicyImpl(
+      const OnlyUpdateOfficialBuildsPolicyImpl&) = delete;
+  OnlyUpdateOfficialBuildsPolicyImpl& operator=(
+      const OnlyUpdateOfficialBuildsPolicyImpl&) = delete;
+
   ~OnlyUpdateOfficialBuildsPolicyImpl() override = default;
 
   // Policy overrides.
@@ -39,9 +44,6 @@ class OnlyUpdateOfficialBuildsPolicyImpl : public PolicyInterface {
   std::string PolicyName() const override {
     return "OnlyUpdateOfficialBuildsPolicyImpl";
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(OnlyUpdateOfficialBuildsPolicyImpl);
 };
 
 }  // namespace chromeos_update_manager

@@ -49,6 +49,9 @@ class NextUpdateCheckTimePolicyImpl : public PolicyInterface {
   NextUpdateCheckTimePolicyImpl();
   NextUpdateCheckTimePolicyImpl(
       const NextUpdateCheckPolicyConstants& constants);
+  NextUpdateCheckTimePolicyImpl(const NextUpdateCheckTimePolicyImpl&) = delete;
+  NextUpdateCheckTimePolicyImpl& operator=(
+      const NextUpdateCheckTimePolicyImpl&) = delete;
 
   // Policy overrides.
   EvalStatus Evaluate(EvaluationContext* ec,
@@ -92,8 +95,6 @@ class NextUpdateCheckTimePolicyImpl : public PolicyInterface {
 
  private:
   const NextUpdateCheckPolicyConstants policy_constants_;
-
-  DISALLOW_COPY_AND_ASSIGN(NextUpdateCheckTimePolicyImpl);
 };
 
 }  // namespace chromeos_update_manager

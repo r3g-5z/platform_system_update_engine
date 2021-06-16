@@ -62,6 +62,8 @@ class Subprocess {
   using ExecCallback = base::Callback<void(int, const std::string&)>;
 
   Subprocess() = default;
+  Subprocess(const Subprocess&) = delete;
+  Subprocess& operator=(const Subprocess&) = delete;
 
   // Destroy and unregister the Subprocess singleton.
   ~Subprocess();
@@ -151,8 +153,6 @@ class Subprocess {
 
   // Used to watch for child processes.
   brillo::ProcessReaper process_reaper_;
-
-  DISALLOW_COPY_AND_ASSIGN(Subprocess);
 };
 
 }  // namespace chromeos_update_engine

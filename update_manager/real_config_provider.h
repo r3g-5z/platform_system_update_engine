@@ -31,6 +31,8 @@ class RealConfigProvider : public ConfigProvider {
   explicit RealConfigProvider(
       chromeos_update_engine::HardwareInterface* hardware)
       : hardware_(hardware) {}
+  RealConfigProvider(const RealConfigProvider&) = delete;
+  RealConfigProvider& operator=(const RealConfigProvider&) = delete;
 
   // Initializes the provider and returns whether it succeeded.
   bool Init();
@@ -48,8 +50,6 @@ class RealConfigProvider : public ConfigProvider {
   std::unique_ptr<ConstCopyVariable<bool>> var_is_running_from_minios_;
 
   chromeos_update_engine::HardwareInterface* hardware_;
-
-  DISALLOW_COPY_AND_ASSIGN(RealConfigProvider);
 };
 
 }  // namespace chromeos_update_manager

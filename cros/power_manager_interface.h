@@ -25,6 +25,9 @@ namespace chromeos_update_engine {
 
 class PowerManagerInterface {
  public:
+  PowerManagerInterface(const PowerManagerInterface&) = delete;
+  PowerManagerInterface& operator=(const PowerManagerInterface&) = delete;
+
   virtual ~PowerManagerInterface() = default;
 
   // Request the power manager to restart the device. Returns true on success.
@@ -32,9 +35,6 @@ class PowerManagerInterface {
 
  protected:
   PowerManagerInterface() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(PowerManagerInterface);
 };
 
 namespace power_manager {

@@ -27,6 +27,11 @@ namespace chromeos_update_manager {
 class ApiRestrictedDownloadsPolicyImpl : public PolicyInterface {
  public:
   ApiRestrictedDownloadsPolicyImpl() = default;
+  ApiRestrictedDownloadsPolicyImpl(const ApiRestrictedDownloadsPolicyImpl&) =
+      delete;
+  ApiRestrictedDownloadsPolicyImpl& operator=(
+      const ApiRestrictedDownloadsPolicyImpl&) = delete;
+
   ~ApiRestrictedDownloadsPolicyImpl() override = default;
 
   // Policy overrides.
@@ -39,9 +44,6 @@ class ApiRestrictedDownloadsPolicyImpl : public PolicyInterface {
   std::string PolicyName() const override {
     return "ApiRestrictedDownloadsPolicyImpl";
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ApiRestrictedDownloadsPolicyImpl);
 };
 
 }  // namespace chromeos_update_manager

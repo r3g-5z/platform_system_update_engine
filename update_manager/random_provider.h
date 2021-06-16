@@ -25,6 +25,8 @@ namespace chromeos_update_manager {
 // Provider of random values.
 class RandomProvider : public Provider {
  public:
+  RandomProvider(const RandomProvider&) = delete;
+  RandomProvider& operator=(const RandomProvider&) = delete;
   ~RandomProvider() override {}
 
   // Return a random number every time it is requested. Note that values
@@ -35,9 +37,6 @@ class RandomProvider : public Provider {
 
  protected:
   RandomProvider() {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(RandomProvider);
 };
 
 }  // namespace chromeos_update_manager

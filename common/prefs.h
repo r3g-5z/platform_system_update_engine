@@ -36,6 +36,9 @@ class PrefsBase : public PrefsInterface {
   class StorageInterface {
    public:
     StorageInterface() = default;
+    StorageInterface(const StorageInterface&) = delete;
+    StorageInterface& operator=(const StorageInterface&) = delete;
+
     virtual ~StorageInterface() = default;
 
     // Get the key named |key| and store its value in the referenced |value|.
@@ -57,12 +60,11 @@ class PrefsBase : public PrefsInterface {
     // Deletes the value associated with the key name |key|. Returns whether the
     // key was deleted.
     virtual bool DeleteKey(const std::string& key) = 0;
-
-   private:
-    DISALLOW_COPY_AND_ASSIGN(StorageInterface);
   };
 
   explicit PrefsBase(StorageInterface* storage) : storage_(storage) {}
+  PrefsBase(const PrefsBase&) = delete;
+  PrefsBase& operator=(const PrefsBase&) = delete;
 
   // PrefsInterface methods.
   bool GetString(const std::string& key, std::string* value) const override;
@@ -91,8 +93,6 @@ class PrefsBase : public PrefsInterface {
 
   // The concrete implementation of the storage used for the keys.
   StorageInterface* storage_;
-
-  DISALLOW_COPY_AND_ASSIGN(PrefsBase);
 };
 
 // Implements a preference store by storing the value associated with
@@ -102,6 +102,8 @@ class PrefsBase : public PrefsInterface {
 class Prefs : public PrefsBase {
  public:
   Prefs() : PrefsBase(&file_storage_) {}
+  Prefs(const Prefs&) = delete;
+  Prefs& operator=(const Prefs&) = delete;
 
   // Initializes the store by associating this object with |prefs_dir|
   // as the preference store directory. Returns true on success, false
@@ -143,8 +145,6 @@ class Prefs : public PrefsBase {
 
   // The concrete file storage implementation.
   FileStorage file_storage_;
-
-  DISALLOW_COPY_AND_ASSIGN(Prefs);
 };
 
 // Implements a preference store in memory. The stored values are lost when the
@@ -153,6 +153,8 @@ class Prefs : public PrefsBase {
 class MemoryPrefs : public PrefsBase {
  public:
   MemoryPrefs() : PrefsBase(&mem_storage_) {}
+  MemoryPrefs(const MemoryPrefs&) = delete;
+  MemoryPrefs& operator=(const MemoryPrefs&) = delete;
 
  private:
   class MemoryStorage : public PrefsBase::StorageInterface {
@@ -174,8 +176,6 @@ class MemoryPrefs : public PrefsBase {
 
   // The concrete memory storage implementation.
   MemoryStorage mem_storage_;
-
-  DISALLOW_COPY_AND_ASSIGN(MemoryPrefs);
 };
 }  // namespace chromeos_update_engine
 

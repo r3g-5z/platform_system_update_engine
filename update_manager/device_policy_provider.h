@@ -35,6 +35,8 @@ namespace chromeos_update_manager {
 // Provides access to the current DevicePolicy.
 class DevicePolicyProvider : public Provider {
  public:
+  DevicePolicyProvider(const DevicePolicyProvider&) = delete;
+  DevicePolicyProvider& operator=(const DevicePolicyProvider&) = delete;
   ~DevicePolicyProvider() override {}
 
   // Variable stating whether the DevicePolicy was loaded.
@@ -102,9 +104,6 @@ class DevicePolicyProvider : public Provider {
 
  protected:
   DevicePolicyProvider() {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DevicePolicyProvider);
 };
 
 }  // namespace chromeos_update_manager

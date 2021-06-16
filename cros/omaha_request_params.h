@@ -61,6 +61,8 @@ class OmahaRequestParams {
         min_update_checks_needed_(kDefaultMinUpdateChecks),
         max_update_checks_allowed_(kDefaultMaxUpdateChecks),
         is_install_(false) {}
+  OmahaRequestParams(const OmahaRequestParams&) = delete;
+  OmahaRequestParams& operator=(const OmahaRequestParams&) = delete;
 
   virtual ~OmahaRequestParams();
 
@@ -438,8 +440,6 @@ class OmahaRequestParams {
 
   // Defines the device's market segment.
   std::string market_segment_;
-
-  DISALLOW_COPY_AND_ASSIGN(OmahaRequestParams);
 };
 
 }  // namespace chromeos_update_engine

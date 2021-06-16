@@ -44,6 +44,9 @@ class ActionTraits<OmahaResponseHandlerAction> {
 class OmahaResponseHandlerAction : public Action<OmahaResponseHandlerAction> {
  public:
   OmahaResponseHandlerAction() = default;
+  OmahaResponseHandlerAction(const OmahaResponseHandlerAction&) = delete;
+  OmahaResponseHandlerAction& operator=(const OmahaResponseHandlerAction&) =
+      delete;
 
   typedef ActionTraits<OmahaResponseHandlerAction>::InputObjectType
       InputObjectType;
@@ -79,8 +82,6 @@ class OmahaResponseHandlerAction : public Action<OmahaResponseHandlerAction> {
   FRIEND_TEST(UpdateAttempterTest, SetRollbackHappenedNotRollback);
   FRIEND_TEST(UpdateAttempterTest, SetRollbackHappenedRollback);
   FRIEND_TEST(UpdateAttempterTest, UpdateDeferredByPolicyTest);
-
-  DISALLOW_COPY_AND_ASSIGN(OmahaResponseHandlerAction);
 };
 
 }  // namespace chromeos_update_engine

@@ -31,14 +31,13 @@ namespace chromeos_update_engine {
 class CertificateParserAndroid : public CertificateParserInterface {
  public:
   CertificateParserAndroid() = default;
+  CertificateParserAndroid(const CertificateParserAndroid&) = delete;
+  CertificateParserAndroid& operator=(const CertificateParserAndroid&) = delete;
 
   bool ReadPublicKeysFromCertificates(
       const std::string& path,
       std::vector<std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)>>*
           out_public_keys) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CertificateParserAndroid);
 };
 
 }  // namespace chromeos_update_engine

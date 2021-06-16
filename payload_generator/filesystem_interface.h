@@ -74,6 +74,9 @@ class FilesystemInterface {
     std::vector<puffin::BitExtent> deflates;
   };
 
+  FilesystemInterface(const FilesystemInterface&) = delete;
+  FilesystemInterface& operator=(const FilesystemInterface&) = delete;
+
   virtual ~FilesystemInterface() = default;
 
   // Returns the size of a block in the filesystem.
@@ -95,9 +98,6 @@ class FilesystemInterface {
 
  protected:
   FilesystemInterface() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FilesystemInterface);
 };
 
 }  // namespace chromeos_update_engine

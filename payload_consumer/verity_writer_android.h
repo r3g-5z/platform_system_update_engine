@@ -29,6 +29,9 @@ namespace chromeos_update_engine {
 class VerityWriterAndroid : public VerityWriterInterface {
  public:
   VerityWriterAndroid() = default;
+  VerityWriterAndroid(const VerityWriterAndroid&) = delete;
+  VerityWriterAndroid& operator=(const VerityWriterAndroid&) = delete;
+
   ~VerityWriterAndroid() override = default;
 
   bool Init(const InstallPlan::Partition& partition) override;
@@ -53,8 +56,6 @@ class VerityWriterAndroid : public VerityWriterInterface {
   const InstallPlan::Partition* partition_ = nullptr;
 
   std::unique_ptr<HashTreeBuilder> hash_tree_builder_;
-
-  DISALLOW_COPY_AND_ASSIGN(VerityWriterAndroid);
 };
 
 }  // namespace chromeos_update_engine

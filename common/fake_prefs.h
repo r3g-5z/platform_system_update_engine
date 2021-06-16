@@ -36,6 +36,9 @@ namespace chromeos_update_engine {
 class FakePrefs : public PrefsInterface {
  public:
   FakePrefs() = default;
+  FakePrefs(const FakePrefs&) = delete;
+  FakePrefs& operator=(const FakePrefs&) = delete;
+
   ~FakePrefs();
 
   // PrefsInterface methods.
@@ -109,8 +112,6 @@ class FakePrefs : public PrefsInterface {
 
   // The registered observers watching for changes.
   std::map<std::string, std::vector<ObserverInterface*>> observers_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakePrefs);
 };
 
 }  // namespace chromeos_update_engine

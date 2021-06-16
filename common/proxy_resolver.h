@@ -48,6 +48,9 @@ extern const ProxyRequestId kProxyRequestIdNull;
 class ProxyResolver {
  public:
   ProxyResolver() {}
+  ProxyResolver(const ProxyResolver&) = delete;
+  ProxyResolver& operator=(const ProxyResolver&) = delete;
+
   virtual ~ProxyResolver() {}
 
   // Finds proxies for the given URL and returns them via the callback.
@@ -59,15 +62,15 @@ class ProxyResolver {
   // Cancel the proxy resolution request initiated by GetProxiesForUrl(). The
   // |request| value must be the one provided by GetProxiesForUrl().
   virtual bool CancelProxyRequest(ProxyRequestId request) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ProxyResolver);
 };
 
 // Always says to not use a proxy
 class DirectProxyResolver : public ProxyResolver {
  public:
   DirectProxyResolver() = default;
+  DirectProxyResolver(const DirectProxyResolver&) = delete;
+  DirectProxyResolver& operator=(const DirectProxyResolver&) = delete;
+
   ~DirectProxyResolver() override;
   ProxyRequestId GetProxiesForUrl(const std::string& url,
                                   const ProxiesResolvedFn& callback) override;
@@ -90,7 +93,6 @@ class DirectProxyResolver : public ProxyResolver {
 
   // The MainLoop callback, from here we return to the client.
   void ReturnCallback(const ProxiesResolvedFn& callback);
-  DISALLOW_COPY_AND_ASSIGN(DirectProxyResolver);
 };
 
 }  // namespace chromeos_update_engine

@@ -103,6 +103,9 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
                      std::unique_ptr<HttpFetcher> http_fetcher,
                      bool ping_only,
                      const std::string& session_id);
+  OmahaRequestAction(const OmahaRequestAction&) = delete;
+  OmahaRequestAction& operator=(const OmahaRequestAction&) = delete;
+
   ~OmahaRequestAction() override;
   typedef ActionTraits<OmahaRequestAction>::InputObjectType InputObjectType;
   typedef ActionTraits<OmahaRequestAction>::OutputObjectType OutputObjectType;
@@ -316,8 +319,6 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
   int ping_roll_call_days_;
 
   std::string session_id_;
-
-  DISALLOW_COPY_AND_ASSIGN(OmahaRequestAction);
 };
 
 }  // namespace chromeos_update_engine

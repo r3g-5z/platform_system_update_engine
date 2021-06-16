@@ -69,6 +69,8 @@ const int kShowStatusRetryIntervalInSeconds = 2;
 class UpdateEngineClient : public brillo::Daemon {
  public:
   UpdateEngineClient(int argc, char** argv) : argc_(argc), argv_(argv) {}
+  UpdateEngineClient(const UpdateEngineClient&) = delete;
+  UpdateEngineClient& operator=(const UpdateEngineClient&) = delete;
 
   ~UpdateEngineClient() override = default;
 
@@ -119,8 +121,6 @@ class UpdateEngineClient : public brillo::Daemon {
 
   // Pointers to handlers for cleanup
   vector<unique_ptr<update_engine::StatusUpdateHandler>> handlers_;
-
-  DISALLOW_COPY_AND_ASSIGN(UpdateEngineClient);
 };
 
 class ExitingStatusUpdateHandler : public update_engine::StatusUpdateHandler {

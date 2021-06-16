@@ -26,6 +26,8 @@ namespace chromeos_update_manager {
 class FakeShillProvider : public ShillProvider {
  public:
   FakeShillProvider() {}
+  FakeShillProvider(const FakeShillProvider&) = delete;
+  FakeShillProvider& operator=(const FakeShillProvider&) = delete;
 
   FakeVariable<bool>* var_is_connected() override { return &var_is_connected_; }
 
@@ -51,8 +53,6 @@ class FakeShillProvider : public ShillProvider {
       "conn_tethering", kVariableModePoll};
   FakeVariable<base::Time> var_conn_last_changed_{"conn_last_changed",
                                                   kVariableModePoll};
-
-  DISALLOW_COPY_AND_ASSIGN(FakeShillProvider);
 };
 
 }  // namespace chromeos_update_manager

@@ -28,6 +28,9 @@ namespace chromeos_update_engine {
 
 class VerityWriterInterface {
  public:
+  VerityWriterInterface(const VerityWriterInterface&) = delete;
+  VerityWriterInterface& operator=(const VerityWriterInterface&) = delete;
+
   virtual ~VerityWriterInterface() = default;
 
   virtual bool Init(const InstallPlan::Partition& partition) = 0;
@@ -39,9 +42,6 @@ class VerityWriterInterface {
 
  protected:
   VerityWriterInterface() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(VerityWriterInterface);
 };
 
 namespace verity_writer {

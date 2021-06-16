@@ -27,6 +27,11 @@ namespace chromeos_update_manager {
 class EnoughSlotsAbUpdatesPolicyImpl : public PolicyInterface {
  public:
   EnoughSlotsAbUpdatesPolicyImpl() = default;
+  EnoughSlotsAbUpdatesPolicyImpl(const EnoughSlotsAbUpdatesPolicyImpl&) =
+      delete;
+  EnoughSlotsAbUpdatesPolicyImpl& operator=(
+      const EnoughSlotsAbUpdatesPolicyImpl&) = delete;
+
   ~EnoughSlotsAbUpdatesPolicyImpl() override = default;
 
   // PolicyInterface overrides.
@@ -39,9 +44,6 @@ class EnoughSlotsAbUpdatesPolicyImpl : public PolicyInterface {
   std::string PolicyName() const override {
     return "EnoughSlotsAbUpdatesPolicyImpl";
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(EnoughSlotsAbUpdatesPolicyImpl);
 };
 
 }  // namespace chromeos_update_manager

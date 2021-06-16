@@ -59,6 +59,8 @@ class RetryPollVariable : public Variable<T> {
     DCHECK_LT(kRetryPollVariableRetryIntervalSeconds,
               base_interval_.InSeconds());
   }
+  RetryPollVariable(const RetryPollVariable&) = delete;
+  RetryPollVariable& operator=(const RetryPollVariable&) = delete;
 
  protected:
   // Variable override.
@@ -92,8 +94,6 @@ class RetryPollVariable : public Variable<T> {
 
   // The number of consecutive failed attempts made.
   int failed_attempts_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(RetryPollVariable);
 };
 
 }  // namespace

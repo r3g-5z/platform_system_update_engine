@@ -25,13 +25,12 @@ namespace chromeos_update_engine {
 class Clock : public ClockInterface {
  public:
   Clock() = default;
+  Clock(const Clock&) = delete;
+  Clock& operator=(const Clock&) = delete;
 
   base::Time GetWallclockTime() const override;
   base::Time GetMonotonicTime() const override;
   base::Time GetBootTime() const override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Clock);
 };
 
 }  // namespace chromeos_update_engine

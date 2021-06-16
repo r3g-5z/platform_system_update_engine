@@ -49,6 +49,9 @@ using FileDescriptorPtr = std::shared_ptr<FileDescriptor>;
 class FileDescriptor {
  public:
   FileDescriptor() {}
+  FileDescriptor(const FileDescriptor&) = delete;
+  FileDescriptor& operator=(const FileDescriptor&) = delete;
+
   virtual ~FileDescriptor() {}
 
   // Opens a file descriptor. The descriptor must be in the closed state prior
@@ -102,9 +105,6 @@ class FileDescriptor {
 
   // Indicates whether the descriptor is currently open.
   virtual bool IsOpen() = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FileDescriptor);
 };
 
 // A simple EINTR-immune wrapper implementation around standard system calls.

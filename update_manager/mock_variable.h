@@ -29,12 +29,11 @@ namespace chromeos_update_manager {
 template <typename T>
 class MockVariable : public Variable<T> {
  public:
+  MockVariable(const MockVariable&) = delete;
+  MockVariable& operator=(const MockVariable&) = delete;
   using Variable<T>::Variable;
 
   MOCK_METHOD2_T(GetValue, const T*(base::TimeDelta, std::string*));
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MockVariable);
 };
 
 }  // namespace chromeos_update_manager

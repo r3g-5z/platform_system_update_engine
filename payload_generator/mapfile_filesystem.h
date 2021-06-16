@@ -36,6 +36,8 @@ class MapfileFilesystem : public FilesystemInterface {
  public:
   static std::unique_ptr<MapfileFilesystem> CreateFromFile(
       const std::string& filename, const std::string& mapfile_filename);
+  MapfileFilesystem(const MapfileFilesystem&) = delete;
+  MapfileFilesystem& operator=(const MapfileFilesystem&) = delete;
   virtual ~MapfileFilesystem() = default;
 
   // FilesystemInterface overrides.
@@ -56,8 +58,6 @@ class MapfileFilesystem : public FilesystemInterface {
 
   // The number of blocks in the filesystem.
   off_t num_blocks_;
-
-  DISALLOW_COPY_AND_ASSIGN(MapfileFilesystem);
 };
 
 }  // namespace chromeos_update_engine

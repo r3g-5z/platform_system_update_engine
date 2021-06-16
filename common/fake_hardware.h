@@ -56,6 +56,8 @@ class FakeHardware : public HardwareInterface {
   static const int kFirmwareMaxRollforward = 0xfffffffe;
 
   FakeHardware() = default;
+  FakeHardware(const FakeHardware&) = delete;
+  FakeHardware& operator=(const FakeHardware&) = delete;
 
   // HardwareInterface methods.
   bool IsOfficialBuild() const override { return is_official_build_; }
@@ -242,8 +244,6 @@ class FakeHardware : public HardwareInterface {
   bool first_active_omaha_ping_sent_{false};
   bool warm_reset_{false};
   mutable std::map<std::string, std::string> partition_timestamps_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeHardware);
 };
 
 }  // namespace chromeos_update_engine

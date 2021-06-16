@@ -24,13 +24,13 @@ namespace chromeos_update_engine {
 class VerityWriterStub : public VerityWriterInterface {
  public:
   VerityWriterStub() = default;
+  VerityWriterStub(const VerityWriterStub&) = delete;
+  VerityWriterStub& operator=(const VerityWriterStub&) = delete;
+
   ~VerityWriterStub() override = default;
 
   bool Init(const InstallPlan::Partition& partition) override;
   bool Update(uint64_t offset, const uint8_t* buffer, size_t size) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(VerityWriterStub);
 };
 
 }  // namespace chromeos_update_engine

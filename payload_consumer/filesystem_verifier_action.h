@@ -63,6 +63,8 @@ class FilesystemVerifierAction : public InstallPlanAction {
         dynamic_control_(dynamic_control) {
     CHECK(dynamic_control_);
   }
+  FilesystemVerifierAction(const FilesystemVerifierAction&) = delete;
+  FilesystemVerifierAction& operator=(const FilesystemVerifierAction&) = delete;
 
   ~FilesystemVerifierAction() override = default;
 
@@ -143,8 +145,6 @@ class FilesystemVerifierAction : public InstallPlanAction {
 
   // An observer that observes progress updates of this action.
   FilesystemVerifyDelegate* delegate_{};
-
-  DISALLOW_COPY_AND_ASSIGN(FilesystemVerifierAction);
 };
 
 }  // namespace chromeos_update_engine

@@ -35,6 +35,9 @@ namespace chromeos_update_engine {
 class HardwareChromeOS final : public HardwareInterface {
  public:
   HardwareChromeOS() : root_("/") {}
+  HardwareChromeOS(const HardwareChromeOS&) = delete;
+  HardwareChromeOS& operator=(const HardwareChromeOS&) = delete;
+
   ~HardwareChromeOS() override = default;
 
   void Init();
@@ -84,8 +87,6 @@ class HardwareChromeOS final : public HardwareInterface {
   base::FilePath root_;
 
   std::unique_ptr<org::chromium::debugdProxyInterface> debugd_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(HardwareChromeOS);
 };
 
 }  // namespace chromeos_update_engine

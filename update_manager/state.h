@@ -31,6 +31,8 @@ namespace chromeos_update_manager {
 // gives visibility of the state providers to policy implementations.
 class State {
  public:
+  State(const State&) = delete;
+  State& operator=(const State&) = delete;
   virtual ~State() {}
 
   // These methods return the given provider.
@@ -44,9 +46,6 @@ class State {
 
  protected:
   State() {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(State);
 };
 
 }  // namespace chromeos_update_manager

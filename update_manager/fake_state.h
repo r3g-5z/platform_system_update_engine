@@ -42,6 +42,8 @@ class FakeState : public State {
  public:
   // Creates and initializes the FakeState using fake providers.
   FakeState() {}
+  FakeState(const FakeState&) = delete;
+  FakeState& operator=(const FakeState&) = delete;
 
   ~FakeState() override {}
 
@@ -72,8 +74,6 @@ class FakeState : public State {
   FakeSystemProvider system_provider_;
   FakeTimeProvider time_provider_;
   FakeUpdaterProvider updater_provider_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeState);
 };
 
 }  // namespace chromeos_update_manager

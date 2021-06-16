@@ -34,6 +34,8 @@ class RealUpdaterProvider : public UpdaterProvider {
   // during testing. We further assume that, by the time Init() is called, the
   // system state object is fully populated and usable.
   RealUpdaterProvider();
+  RealUpdaterProvider(const RealUpdaterProvider&) = delete;
+  RealUpdaterProvider& operator=(const RealUpdaterProvider&) = delete;
 
   // Initializes the provider and returns whether it succeeded.
   bool Init() { return true; }
@@ -119,8 +121,6 @@ class RealUpdaterProvider : public UpdaterProvider {
   std::unique_ptr<Variable<UpdateRequestStatus>> var_forced_update_requested_;
   std::unique_ptr<Variable<UpdateRestrictions>> var_update_restrictions_;
   std::unique_ptr<Variable<int64_t>> var_test_update_check_interval_timeout_;
-
-  DISALLOW_COPY_AND_ASSIGN(RealUpdaterProvider);
 };
 
 }  // namespace chromeos_update_manager

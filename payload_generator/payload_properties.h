@@ -30,6 +30,9 @@ namespace chromeos_update_engine {
 class PayloadProperties {
  public:
   explicit PayloadProperties(const std::string& payload_path);
+  PayloadProperties(const PayloadProperties&) = delete;
+  PayloadProperties& operator=(const PayloadProperties&) = delete;
+
   ~PayloadProperties() = default;
 
   // Get the properties in a json format. The json file will be used in
@@ -61,8 +64,6 @@ class PayloadProperties {
 
   // Whether the payload is a delta (true) or full (false).
   bool is_delta_;
-
-  DISALLOW_COPY_AND_ASSIGN(PayloadProperties);
 };
 
 }  // namespace chromeos_update_engine

@@ -36,6 +36,9 @@ namespace chromeos_update_engine {
 class FakeFileDescriptor : public FileDescriptor {
  public:
   FakeFileDescriptor() = default;
+  FakeFileDescriptor(const FakeFileDescriptor&) = delete;
+  FakeFileDescriptor& operator=(const FakeFileDescriptor&) = delete;
+
   ~FakeFileDescriptor() override = default;
 
   // FileDescriptor override methods.
@@ -117,8 +120,6 @@ class FakeFileDescriptor : public FileDescriptor {
 
   // List of reads performed as (offset, length) of the read request.
   std::vector<std::pair<uint64_t, uint64_t>> read_ops_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeFileDescriptor);
 };
 
 // Return a blob with the first |size| bytes of a FakeFileDescriptor stream.

@@ -49,6 +49,9 @@ class DownloadActionChromeos
 
   DownloadActionChromeos(std::unique_ptr<HttpFetcher> http_fetcher,
                          bool interactive);
+  DownloadActionChromeos(const DownloadActionChromeos&) = delete;
+  DownloadActionChromeos& operator=(const DownloadActionChromeos&) = delete;
+
   ~DownloadActionChromeos() override = default;
 
   // InstallPlanAction overrides.
@@ -166,8 +169,6 @@ class DownloadActionChromeos
   // Tracker of update restricted time intervals.
   std::unique_ptr<chromeos_update_manager::UpdateTimeRestrictionsMonitor>
       update_time_restrictions_monitor_;
-
-  DISALLOW_COPY_AND_ASSIGN(DownloadActionChromeos);
 };
 
 // We want to be sure that we're compiled with large file support on linux,

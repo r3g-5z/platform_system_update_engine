@@ -58,6 +58,8 @@ class MockHttpFetcher : public HttpFetcher {
   MockHttpFetcher(const char* data, size_t size, ProxyResolver* proxy_resolver)
       : MockHttpFetcher(
             reinterpret_cast<const uint8_t*>(data), size, proxy_resolver) {}
+  MockHttpFetcher(const MockHttpFetcher&) = delete;
+  MockHttpFetcher& operator=(const MockHttpFetcher&) = delete;
 
   // Cleans up all internal state. Does not notify delegate
   ~MockHttpFetcher() override;
@@ -155,8 +157,6 @@ class MockHttpFetcher : public HttpFetcher {
 
   // Whether it should wait for 10ms before sending data to delegates
   bool delay_{true};
-
-  DISALLOW_COPY_AND_ASSIGN(MockHttpFetcher);
 };
 
 }  // namespace chromeos_update_engine

@@ -53,6 +53,9 @@ class MultiRangeHttpFetcher : public HttpFetcher, public HttpFetcherDelegate {
         terminating_(false),
         current_index_(0),
         bytes_received_this_range_(0) {}
+  MultiRangeHttpFetcher(const MultiRangeHttpFetcher&) = delete;
+  MultiRangeHttpFetcher& operator=(const MultiRangeHttpFetcher&) = delete;
+
   ~MultiRangeHttpFetcher() override {}
 
   void ClearRanges() { ranges_.clear(); }
@@ -178,8 +181,6 @@ class MultiRangeHttpFetcher : public HttpFetcher, public HttpFetcherDelegate {
 
   RangesVect::size_type current_index_;  // index into ranges_
   size_t bytes_received_this_range_;
-
-  DISALLOW_COPY_AND_ASSIGN(MultiRangeHttpFetcher);
 };
 
 }  // namespace chromeos_update_engine

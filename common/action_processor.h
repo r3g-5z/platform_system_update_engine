@@ -46,6 +46,8 @@ class ActionProcessorDelegate;
 class ActionProcessor {
  public:
   ActionProcessor() = default;
+  ActionProcessor(const ActionProcessor&) = delete;
+  ActionProcessor& operator=(const ActionProcessor&) = delete;
 
   virtual ~ActionProcessor();
 
@@ -116,8 +118,6 @@ class ActionProcessor {
 
   // A pointer to the delegate, or null if none.
   ActionProcessorDelegate* delegate_{nullptr};
-
-  DISALLOW_COPY_AND_ASSIGN(ActionProcessor);
 };
 
 // A delegate object can be used to be notified of events that happen

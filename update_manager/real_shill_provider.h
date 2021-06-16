@@ -40,6 +40,8 @@ class RealShillProvider : public ShillProvider {
   explicit RealShillProvider(
       chromeos_update_engine::ShillProxyInterface* shill_proxy)
       : shill_proxy_(shill_proxy) {}
+  RealShillProvider(const RealShillProvider&) = delete;
+  RealShillProvider& operator=(const RealShillProvider&) = delete;
 
   ~RealShillProvider() override = default;
 
@@ -88,8 +90,6 @@ class RealShillProvider : public ShillProvider {
   AsyncCopyVariable<chromeos_update_engine::ConnectionTethering>
       var_conn_tethering_{"conn_tethering"};
   AsyncCopyVariable<base::Time> var_conn_last_changed_{"conn_last_changed"};
-
-  DISALLOW_COPY_AND_ASSIGN(RealShillProvider);
 };
 
 }  // namespace chromeos_update_manager

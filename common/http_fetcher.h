@@ -53,6 +53,9 @@ class HttpFetcher {
         proxies_(1, kNoProxy),
         proxy_resolver_(proxy_resolver),
         callback_(nullptr) {}
+  HttpFetcher(const HttpFetcher&) = delete;
+  HttpFetcher& operator=(const HttpFetcher&) = delete;
+
   virtual ~HttpFetcher();
 
   void set_delegate(HttpFetcherDelegate* delegate) { delegate_ = delegate; }
@@ -195,8 +198,6 @@ class HttpFetcher {
   // Stores the ongoing proxy request id if there is one, otherwise
   // kProxyRequestIdNull.
   ProxyRequestId proxy_request_{kProxyRequestIdNull};
-
-  DISALLOW_COPY_AND_ASSIGN(HttpFetcher);
 };
 
 // Interface for delegates

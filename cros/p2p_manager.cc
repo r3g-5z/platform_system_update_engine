@@ -90,6 +90,8 @@ const char kCrosP2PFileSizeXAttrName[] = "user.cros-p2p-filesize";
 class ConfigurationImpl : public P2PManager::Configuration {
  public:
   ConfigurationImpl() {}
+  ConfigurationImpl(const ConfigurationImpl&) = delete;
+  ConfigurationImpl& operator=(const ConfigurationImpl&) = delete;
 
   FilePath GetP2PDir() override { return FilePath(kDefaultP2PDir); }
 
@@ -109,9 +111,6 @@ class ConfigurationImpl : public P2PManager::Configuration {
     args.push_back(StringPrintf("--minimum-size=%" PRIuS, minimum_size));
     return args;
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ConfigurationImpl);
 };
 
 // The default P2PManager implementation.
@@ -122,6 +121,8 @@ class P2PManagerImpl : public P2PManager {
                  const string& file_extension,
                  const int num_files_to_keep,
                  const TimeDelta& max_file_age);
+  P2PManagerImpl(const P2PManagerImpl&) = delete;
+  P2PManagerImpl& operator=(const P2PManagerImpl&) = delete;
 
   // P2PManager methods.
   void SetDevicePolicy(const policy::DevicePolicy* device_policy) override;
@@ -202,8 +203,6 @@ class P2PManagerImpl : public P2PManager {
   std::shared_ptr<P2PEnabledPolicyData> policy_data_;
 
   bool waiting_for_enabled_status_change_ = false;
-
-  DISALLOW_COPY_AND_ASSIGN(P2PManagerImpl);
 };
 
 const char P2PManagerImpl::kP2PExtension[] = ".p2p";

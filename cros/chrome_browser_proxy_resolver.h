@@ -31,6 +31,10 @@ namespace chromeos_update_engine {
 class ChromeBrowserProxyResolver : public ProxyResolver {
  public:
   ChromeBrowserProxyResolver();
+  ChromeBrowserProxyResolver(const ChromeBrowserProxyResolver&) = delete;
+  ChromeBrowserProxyResolver& operator=(const ChromeBrowserProxyResolver&) =
+      delete;
+
   ~ChromeBrowserProxyResolver() override;
 
   // ProxyResolver:
@@ -57,8 +61,6 @@ class ChromeBrowserProxyResolver : public ProxyResolver {
   std::map<ProxyRequestId, ProxiesResolvedFn> pending_callbacks_;
 
   base::WeakPtrFactory<ChromeBrowserProxyResolver> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(ChromeBrowserProxyResolver);
 };
 
 }  // namespace chromeos_update_engine

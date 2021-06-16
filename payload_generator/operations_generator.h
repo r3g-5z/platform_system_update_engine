@@ -29,6 +29,8 @@ namespace chromeos_update_engine {
 
 class OperationsGenerator {
  public:
+  OperationsGenerator(const OperationsGenerator&) = delete;
+  OperationsGenerator& operator=(const OperationsGenerator&) = delete;
   virtual ~OperationsGenerator() = default;
 
   // This method generates a list of operations to update from the partition
@@ -48,9 +50,6 @@ class OperationsGenerator {
 
  protected:
   OperationsGenerator() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(OperationsGenerator);
 };
 
 }  // namespace chromeos_update_engine

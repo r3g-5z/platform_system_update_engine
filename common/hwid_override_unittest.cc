@@ -28,6 +28,9 @@ namespace chromeos_update_engine {
 class HwidOverrideTest : public ::testing::Test {
  public:
   HwidOverrideTest() {}
+  HwidOverrideTest(const HwidOverrideTest&) = delete;
+  HwidOverrideTest& operator=(const HwidOverrideTest&) = delete;
+
   ~HwidOverrideTest() override = default;
 
   void SetUp() override {
@@ -37,9 +40,6 @@ class HwidOverrideTest : public ::testing::Test {
 
  protected:
   base::ScopedTempDir tempdir_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(HwidOverrideTest);
 };
 
 TEST_F(HwidOverrideTest, ReadGood) {

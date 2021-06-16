@@ -33,6 +33,9 @@ namespace chromeos_update_engine {
 class FakeP2PManagerConfiguration : public P2PManager::Configuration {
  public:
   FakeP2PManagerConfiguration() { EXPECT_TRUE(p2p_dir_.CreateUniqueTempDir()); }
+  FakeP2PManagerConfiguration(const FakeP2PManagerConfiguration&) = delete;
+  FakeP2PManagerConfiguration& operator=(const FakeP2PManagerConfiguration&) =
+      delete;
 
   // P2PManager::Configuration override
   base::FilePath GetP2PDir() override { return p2p_dir_.GetPath(); }
@@ -93,8 +96,6 @@ class FakeP2PManagerConfiguration : public P2PManager::Configuration {
   // SetP2PClientCommandLine() for details.
   std::vector<std::string> p2p_client_cmd_format_{
       "p2p-client", "--get-url={file_id}", "--minimum-size={minsize}"};
-
-  DISALLOW_COPY_AND_ASSIGN(FakeP2PManagerConfiguration);
 };
 
 }  // namespace chromeos_update_engine

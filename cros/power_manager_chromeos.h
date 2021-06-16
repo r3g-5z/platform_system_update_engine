@@ -27,6 +27,9 @@ namespace chromeos_update_engine {
 class PowerManagerChromeOS : public PowerManagerInterface {
  public:
   PowerManagerChromeOS();
+  PowerManagerChromeOS(const PowerManagerChromeOS&) = delete;
+  PowerManagerChromeOS& operator=(const PowerManagerChromeOS&) = delete;
+
   ~PowerManagerChromeOS() override = default;
 
   // PowerManagerInterface overrides.
@@ -35,8 +38,6 @@ class PowerManagerChromeOS : public PowerManagerInterface {
  private:
   // Real DBus proxy using the DBus connection.
   org::chromium::PowerManagerProxy power_manager_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(PowerManagerChromeOS);
 };
 
 }  // namespace chromeos_update_engine

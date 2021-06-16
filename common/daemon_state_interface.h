@@ -25,6 +25,9 @@ namespace chromeos_update_engine {
 
 class DaemonStateInterface {
  public:
+  DaemonStateInterface(const DaemonStateInterface&) = delete;
+  DaemonStateInterface& operator=(const DaemonStateInterface&) = delete;
+
   virtual ~DaemonStateInterface() = default;
 
   // Start the daemon loop. Should be called only once to start the daemon's
@@ -41,8 +44,6 @@ class DaemonStateInterface {
 
  protected:
   DaemonStateInterface() = default;
-
-  DISALLOW_COPY_AND_ASSIGN(DaemonStateInterface);
 };
 
 }  // namespace chromeos_update_engine

@@ -26,13 +26,13 @@ namespace chromeos_update_engine {
 class NetworkSelectorStub final : public NetworkSelectorInterface {
  public:
   NetworkSelectorStub() = default;
+  NetworkSelectorStub(const NetworkSelectorStub&) = delete;
+  NetworkSelectorStub& operator=(const NetworkSelectorStub&) = delete;
+
   ~NetworkSelectorStub() override = default;
 
   // NetworkSelectorInterface overrides.
   bool SetProcessNetwork(NetworkId network_id) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(NetworkSelectorStub);
 };
 
 }  // namespace chromeos_update_engine

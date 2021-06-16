@@ -90,6 +90,8 @@ class LastCheckedTimeVariable : public UpdaterVariableBase<Time> {
  public:
   explicit LastCheckedTimeVariable(const string& name)
       : UpdaterVariableBase<Time>(name, kVariableModePoll) {}
+  LastCheckedTimeVariable(const LastCheckedTimeVariable&) = delete;
+  LastCheckedTimeVariable& operator=(const LastCheckedTimeVariable&) = delete;
 
  private:
   const Time* GetValue(TimeDelta /* timeout */, string* errmsg) override {
@@ -99,8 +101,6 @@ class LastCheckedTimeVariable : public UpdaterVariableBase<Time> {
 
     return new Time(Time::FromTimeT(raw.last_checked_time()));
   }
-
-  DISALLOW_COPY_AND_ASSIGN(LastCheckedTimeVariable);
 };
 
 // A variable reporting the update (download) progress as a decimal fraction
@@ -109,6 +109,8 @@ class ProgressVariable : public UpdaterVariableBase<double> {
  public:
   explicit ProgressVariable(const string& name)
       : UpdaterVariableBase<double>(name, kVariableModePoll) {}
+  ProgressVariable(const ProgressVariable&) = delete;
+  ProgressVariable& operator=(const ProgressVariable&) = delete;
 
  private:
   const double* GetValue(TimeDelta /* timeout */, string* errmsg) override {
@@ -126,8 +128,6 @@ class ProgressVariable : public UpdaterVariableBase<double> {
 
     return new double(raw.progress());
   }
-
-  DISALLOW_COPY_AND_ASSIGN(ProgressVariable);
 };
 
 // A variable reporting the stage in which the update process is.
@@ -135,6 +135,8 @@ class StageVariable : public UpdaterVariableBase<Stage> {
  public:
   explicit StageVariable(const string& name)
       : UpdaterVariableBase<Stage>(name, kVariableModePoll) {}
+  StageVariable(const StageVariable&) = delete;
+  StageVariable& operator=(const StageVariable&) = delete;
 
  private:
   struct CurrOpStrToStage {
@@ -145,8 +147,6 @@ class StageVariable : public UpdaterVariableBase<Stage> {
 
   // Note: the method is defined outside the class so arraysize can work.
   const Stage* GetValue(TimeDelta /* timeout */, string* errmsg) override;
-
-  DISALLOW_COPY_AND_ASSIGN(StageVariable);
 };
 
 const StageVariable::CurrOpStrToStage StageVariable::curr_op_str_to_stage[] = {
@@ -184,6 +184,8 @@ class NewVersionVariable : public UpdaterVariableBase<string> {
  public:
   explicit NewVersionVariable(const string& name)
       : UpdaterVariableBase<string>(name, kVariableModePoll) {}
+  NewVersionVariable(const NewVersionVariable&) = delete;
+  NewVersionVariable& operator=(const NewVersionVariable&) = delete;
 
  private:
   const string* GetValue(TimeDelta /* timeout */, string* errmsg) override {
@@ -193,8 +195,6 @@ class NewVersionVariable : public UpdaterVariableBase<string> {
 
     return new string(raw.new_version());
   }
-
-  DISALLOW_COPY_AND_ASSIGN(NewVersionVariable);
 };
 
 // A variable reporting the size of the update being processed in bytes.
@@ -202,6 +202,8 @@ class PayloadSizeVariable : public UpdaterVariableBase<uint64_t> {
  public:
   explicit PayloadSizeVariable(const string& name)
       : UpdaterVariableBase<uint64_t>(name, kVariableModePoll) {}
+  PayloadSizeVariable(const PayloadSizeVariable&) = delete;
+  PayloadSizeVariable& operator=(const PayloadSizeVariable&) = delete;
 
  private:
   const uint64_t* GetValue(TimeDelta /* timeout */, string* errmsg) override {
@@ -211,8 +213,6 @@ class PayloadSizeVariable : public UpdaterVariableBase<uint64_t> {
 
     return new uint64_t(raw.payload_size());
   }
-
-  DISALLOW_COPY_AND_ASSIGN(PayloadSizeVariable);
 };
 
 // A variable reporting the point in time an update last completed in the
@@ -226,6 +226,9 @@ class UpdateCompletedTimeVariable : public UpdaterVariableBase<Time> {
  public:
   explicit UpdateCompletedTimeVariable(const string& name)
       : UpdaterVariableBase<Time>(name, kVariableModePoll) {}
+  UpdateCompletedTimeVariable(const UpdateCompletedTimeVariable&) = delete;
+  UpdateCompletedTimeVariable& operator=(const UpdateCompletedTimeVariable&) =
+      delete;
 
  private:
   const Time* GetValue(TimeDelta /* timeout */, string* errmsg) override {
@@ -247,8 +250,6 @@ class UpdateCompletedTimeVariable : public UpdaterVariableBase<Time> {
     TimeDelta duration_since_update = curr_boottime - update_boottime;
     return new Time(clock->GetWallclockTime() - duration_since_update);
   }
-
-  DISALLOW_COPY_AND_ASSIGN(UpdateCompletedTimeVariable);
 };
 
 // Variables reporting the current image channel.
@@ -256,6 +257,8 @@ class CurrChannelVariable : public UpdaterVariableBase<string> {
  public:
   explicit CurrChannelVariable(const string& name)
       : UpdaterVariableBase<string>(name, kVariableModePoll) {}
+  CurrChannelVariable(const CurrChannelVariable&) = delete;
+  CurrChannelVariable& operator=(const CurrChannelVariable&) = delete;
 
  private:
   const string* GetValue(TimeDelta /* timeout */, string* errmsg) override {
@@ -268,8 +271,6 @@ class CurrChannelVariable : public UpdaterVariableBase<string> {
     }
     return new string(channel);
   }
-
-  DISALLOW_COPY_AND_ASSIGN(CurrChannelVariable);
 };
 
 // Variables reporting the new image channel.
@@ -277,6 +278,8 @@ class NewChannelVariable : public UpdaterVariableBase<string> {
  public:
   explicit NewChannelVariable(const string& name)
       : UpdaterVariableBase<string>(name, kVariableModePoll) {}
+  NewChannelVariable(const NewChannelVariable&) = delete;
+  NewChannelVariable& operator=(const NewChannelVariable&) = delete;
 
  private:
   const string* GetValue(TimeDelta /* timeout */, string* errmsg) override {
@@ -289,8 +292,6 @@ class NewChannelVariable : public UpdaterVariableBase<string> {
     }
     return new string(channel);
   }
-
-  DISALLOW_COPY_AND_ASSIGN(NewChannelVariable);
 };
 
 // A variable class for reading Boolean prefs values.
@@ -307,6 +308,9 @@ class BooleanPrefVariable
     SystemState::Get()->prefs()->AddObserver(key, this);
     OnPrefSet(key);
   }
+  BooleanPrefVariable(const BooleanPrefVariable&) = delete;
+  BooleanPrefVariable& operator=(const BooleanPrefVariable&) = delete;
+
   ~BooleanPrefVariable() {
     SystemState::Get()->prefs()->RemoveObserver(key_, this);
   }
@@ -328,8 +332,6 @@ class BooleanPrefVariable
   // The Boolean preference key and default value.
   const char* const key_;
   const bool default_val_;
-
-  DISALLOW_COPY_AND_ASSIGN(BooleanPrefVariable);
 };
 
 // A variable returning the number of consecutive failed update checks.
@@ -338,6 +340,10 @@ class ConsecutiveFailedUpdateChecksVariable
  public:
   explicit ConsecutiveFailedUpdateChecksVariable(const string& name)
       : UpdaterVariableBase<unsigned int>(name, kVariableModePoll) {}
+  ConsecutiveFailedUpdateChecksVariable(
+      const ConsecutiveFailedUpdateChecksVariable&) = delete;
+  ConsecutiveFailedUpdateChecksVariable& operator=(
+      const ConsecutiveFailedUpdateChecksVariable&) = delete;
 
  private:
   const unsigned int* GetValue(TimeDelta /* timeout */,
@@ -347,8 +353,6 @@ class ConsecutiveFailedUpdateChecksVariable
                                 ->update_attempter()
                                 ->consecutive_failed_update_checks());
   }
-
-  DISALLOW_COPY_AND_ASSIGN(ConsecutiveFailedUpdateChecksVariable);
 };
 
 // A variable returning the server-dictated poll interval.
@@ -357,6 +361,10 @@ class ServerDictatedPollIntervalVariable
  public:
   explicit ServerDictatedPollIntervalVariable(const string& name)
       : UpdaterVariableBase<unsigned int>(name, kVariableModePoll) {}
+  ServerDictatedPollIntervalVariable(
+      const ServerDictatedPollIntervalVariable&) = delete;
+  ServerDictatedPollIntervalVariable& operator=(
+      const ServerDictatedPollIntervalVariable&) = delete;
 
  private:
   const unsigned int* GetValue(TimeDelta /* timeout */,
@@ -366,8 +374,6 @@ class ServerDictatedPollIntervalVariable
                                 ->update_attempter()
                                 ->server_dictated_poll_interval());
   }
-
-  DISALLOW_COPY_AND_ASSIGN(ServerDictatedPollIntervalVariable);
 };
 
 // An async variable that tracks changes to forced update requests.
@@ -382,6 +388,9 @@ class ForcedUpdateRequestedVariable
             base::Bind(&ForcedUpdateRequestedVariable::Reset,
                        base::Unretained(this))));
   }
+  ForcedUpdateRequestedVariable(const ForcedUpdateRequestedVariable&) = delete;
+  ForcedUpdateRequestedVariable& operator=(
+      const ForcedUpdateRequestedVariable&) = delete;
 
  private:
   const UpdateRequestStatus* GetValue(TimeDelta /* timeout */,
@@ -401,8 +410,6 @@ class ForcedUpdateRequestedVariable
   }
 
   UpdateRequestStatus update_request_status_ = UpdateRequestStatus::kNone;
-
-  DISALLOW_COPY_AND_ASSIGN(ForcedUpdateRequestedVariable);
 };
 
 // A variable returning the current update restrictions that are in effect.
@@ -411,6 +418,9 @@ class UpdateRestrictionsVariable
  public:
   explicit UpdateRestrictionsVariable(const string& name)
       : UpdaterVariableBase<UpdateRestrictions>(name, kVariableModePoll) {}
+  UpdateRestrictionsVariable(const UpdateRestrictionsVariable&) = delete;
+  UpdateRestrictionsVariable& operator=(const UpdateRestrictionsVariable&) =
+      delete;
 
  private:
   const UpdateRestrictions* GetValue(TimeDelta /* timeout */,
@@ -427,8 +437,6 @@ class UpdateRestrictionsVariable
 
     return new UpdateRestrictions(restriction_flags);
   }
-
-  DISALLOW_COPY_AND_ASSIGN(UpdateRestrictionsVariable);
 };
 
 // A variable class for reading timeout interval prefs value.
@@ -438,6 +446,11 @@ class TestUpdateCheckIntervalTimeoutVariable : public Variable<int64_t> {
       : Variable<int64_t>(name, kVariableModePoll), read_count_(0) {
     SetMissingOk();
   }
+  TestUpdateCheckIntervalTimeoutVariable(
+      const TestUpdateCheckIntervalTimeoutVariable&) = delete;
+  TestUpdateCheckIntervalTimeoutVariable& operator=(
+      const TestUpdateCheckIntervalTimeoutVariable&) = delete;
+
   ~TestUpdateCheckIntervalTimeoutVariable() = default;
 
  private:
@@ -463,8 +476,6 @@ class TestUpdateCheckIntervalTimeoutVariable : public Variable<int64_t> {
   // underlying file defining the variable after a certain number of reads in
   // order to prevent any abuse of this variable.
   int read_count_;
-
-  DISALLOW_COPY_AND_ASSIGN(TestUpdateCheckIntervalTimeoutVariable);
 };
 
 // RealUpdaterProvider methods.

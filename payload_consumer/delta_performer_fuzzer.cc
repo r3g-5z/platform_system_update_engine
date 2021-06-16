@@ -30,6 +30,10 @@ namespace chromeos_update_engine {
 class FakeDownloadActionDelegate : public DownloadActionDelegate {
  public:
   FakeDownloadActionDelegate() = default;
+  FakeDownloadActionDelegate(const FakeDownloadActionDelegate&) = delete;
+  FakeDownloadActionDelegate& operator=(const FakeDownloadActionDelegate&) =
+      delete;
+
   ~FakeDownloadActionDelegate() = default;
 
   // DownloadActionDelegate overrides;
@@ -40,8 +44,6 @@ class FakeDownloadActionDelegate : public DownloadActionDelegate {
   bool ShouldCancel(ErrorCode* cancel_reason) override { return false; };
 
   void DownloadComplete() override{};
-
-  DISALLOW_COPY_AND_ASSIGN(FakeDownloadActionDelegate);
 };
 
 void FuzzDeltaPerformer(const uint8_t* data, size_t size) {

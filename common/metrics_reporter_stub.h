@@ -28,6 +28,8 @@ namespace chromeos_update_engine {
 class MetricsReporterStub : public MetricsReporterInterface {
  public:
   MetricsReporterStub() = default;
+  MetricsReporterStub(const MetricsReporterStub&) = delete;
+  MetricsReporterStub& operator=(const MetricsReporterStub&) = delete;
 
   ~MetricsReporterStub() override = default;
 
@@ -89,9 +91,6 @@ class MetricsReporterStub : public MetricsReporterInterface {
   void ReportConsecutiveUpdateCount(int count) override {}
 
   void ReportFailedConsecutiveUpdate() override {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(MetricsReporterStub);
 };
 
 }  // namespace chromeos_update_engine

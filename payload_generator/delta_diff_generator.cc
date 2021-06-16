@@ -70,6 +70,9 @@ class PartitionProcessor : public base::DelegateSimpleThread::Delegate {
         cow_merge_sequence_(cow_merge_sequence),
         strategy_(std::move(strategy)) {}
   PartitionProcessor(PartitionProcessor&&) noexcept = default;
+  PartitionProcessor(const PartitionProcessor&) = delete;
+  PartitionProcessor& operator=(const PartitionProcessor&) = delete;
+
   void Run() override {
     LOG(INFO) << "Started an async task to process partition "
               << old_part_.name;
@@ -102,7 +105,6 @@ class PartitionProcessor : public base::DelegateSimpleThread::Delegate {
   std::vector<AnnotatedOperation>* aops_;
   std::vector<CowMergeOperation>* cow_merge_sequence_;
   std::unique_ptr<chromeos_update_engine::OperationsGenerator> strategy_;
-  DISALLOW_COPY_AND_ASSIGN(PartitionProcessor);
 };
 
 bool GenerateUpdatePayloadFile(const PayloadGenerationConfig& config,
@@ -193,5 +195,4 @@ bool GenerateUpdatePayloadFile(const PayloadGenerationConfig& config,
             << "metadata size = " << *metadata_size;
   return true;
 }
-
 };  // namespace chromeos_update_engine

@@ -46,6 +46,9 @@ class RandomSeedVariable : public Variable<uint64_t> {
   // policy request.
   RandomSeedVariable(const string& name, FILE* fp)
       : Variable<uint64_t>(name, kVariableModeConst), fp_(fp) {}
+  RandomSeedVariable(const RandomSeedVariable&) = delete;
+  RandomSeedVariable& operator=(const RandomSeedVariable&) = delete;
+
   ~RandomSeedVariable() override {}
 
  protected:
@@ -74,8 +77,6 @@ class RandomSeedVariable : public Variable<uint64_t> {
 
  private:
   base::ScopedFILE fp_;
-
-  DISALLOW_COPY_AND_ASSIGN(RandomSeedVariable);
 };
 
 bool RealRandomProvider::Init(void) {

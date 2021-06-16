@@ -33,6 +33,9 @@ class PrefsInterface;
 class OpenSSLWrapper {
  public:
   OpenSSLWrapper() = default;
+  OpenSSLWrapper(const OpenSSLWrapper&) = delete;
+  OpenSSLWrapper& operator=(const OpenSSLWrapper&) = delete;
+
   virtual ~OpenSSLWrapper() = default;
 
   // Takes an openssl X509_STORE_CTX, extracts the corresponding certificate
@@ -49,9 +52,6 @@ class OpenSSLWrapper {
                                     int* out_depth,
                                     unsigned int* out_digest_length,
                                     uint8_t* out_digest) const;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(OpenSSLWrapper);
 };
 
 // The values in this enum are replicated in the metrics server. See metrics.h
@@ -100,6 +100,9 @@ class CertificateChecker {
   };
 
   CertificateChecker(PrefsInterface* prefs, OpenSSLWrapper* openssl_wrapper);
+  CertificateChecker(const CertificateChecker&) = delete;
+  CertificateChecker& operator=(const CertificateChecker&) = delete;
+
   ~CertificateChecker();
 
   // This callback is called by libcurl just before the initialization of an
@@ -166,8 +169,6 @@ class CertificateChecker {
 
   // The observer called whenever a certificate is checked, if not null.
   Observer* observer_{nullptr};
-
-  DISALLOW_COPY_AND_ASSIGN(CertificateChecker);
 };
 
 }  // namespace chromeos_update_engine

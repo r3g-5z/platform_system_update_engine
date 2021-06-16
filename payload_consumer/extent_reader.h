@@ -47,6 +47,9 @@ class ExtentReader {
 class DirectExtentReader : public ExtentReader {
  public:
   DirectExtentReader() = default;
+  DirectExtentReader(const DirectExtentReader&) = delete;
+  DirectExtentReader& operator=(const DirectExtentReader&) = delete;
+
   ~DirectExtentReader() override = default;
 
   bool Init(FileDescriptorPtr fd,
@@ -73,8 +76,6 @@ class DirectExtentReader : public ExtentReader {
   // concatenated.
   std::vector<uint64_t> extents_upper_bounds_;
   uint64_t total_size_{0};
-
-  DISALLOW_COPY_AND_ASSIGN(DirectExtentReader);
 };
 
 }  // namespace chromeos_update_engine

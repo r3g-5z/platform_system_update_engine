@@ -43,6 +43,9 @@ class RealDevicePolicyProvider : public DevicePolicyProvider {
         session_manager_proxy_(std::move(session_manager_proxy)) {}
   explicit RealDevicePolicyProvider(policy::PolicyProvider* policy_provider)
       : policy_provider_(policy_provider) {}
+  RealDevicePolicyProvider(const RealDevicePolicyProvider&) = delete;
+  RealDevicePolicyProvider& operator=(const RealDevicePolicyProvider&) = delete;
+
   ~RealDevicePolicyProvider();
 
   // Initializes the provider and returns whether it succeeded.
@@ -237,8 +240,6 @@ class RealDevicePolicyProvider : public DevicePolicyProvider {
   AsyncCopyVariable<std::string> var_quick_fix_build_token_{
       "quick_fix_build_token"};
   AsyncCopyVariable<std::string> var_market_segment_{"market_segment"};
-
-  DISALLOW_COPY_AND_ASSIGN(RealDevicePolicyProvider);
 };
 
 }  // namespace chromeos_update_manager

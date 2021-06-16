@@ -26,6 +26,9 @@ namespace chromeos_update_manager {
 // configuration from a file on /etc.
 class ConfigProvider : public Provider {
  public:
+  ConfigProvider(const ConfigProvider&) = delete;
+  ConfigProvider& operator=(const ConfigProvider&) = delete;
+
   // Returns a variable stating whether the out of the box experience (OOBE) is
   // enabled on this device. A value of false means that the device doesn't have
   // an OOBE workflow.
@@ -37,9 +40,6 @@ class ConfigProvider : public Provider {
 
  protected:
   ConfigProvider() {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ConfigProvider);
 };
 
 }  // namespace chromeos_update_manager

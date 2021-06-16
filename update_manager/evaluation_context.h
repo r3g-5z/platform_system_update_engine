@@ -66,6 +66,9 @@ class EvaluationContext : private BaseVariable::ObserverInterface {
                     base::TimeDelta expiration_timeout);
   explicit EvaluationContext(base::TimeDelta evaluation_timeout)
       : EvaluationContext(evaluation_timeout, base::TimeDelta::Max()) {}
+  EvaluationContext(const EvaluationContext&) = delete;
+  EvaluationContext& operator=(const EvaluationContext&) = delete;
+
   ~EvaluationContext();
 
   // Returns a pointer to the value returned by the passed variable |var|. The
@@ -193,8 +196,6 @@ class EvaluationContext : private BaseVariable::ObserverInterface {
   base::Time expiration_monotonic_deadline_;
 
   base::WeakPtrFactory<EvaluationContext> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(EvaluationContext);
 };
 
 }  // namespace chromeos_update_manager

@@ -31,6 +31,8 @@ namespace chromeos_update_engine {
 class FullUpdateGenerator : public OperationsGenerator {
  public:
   FullUpdateGenerator() = default;
+  FullUpdateGenerator(const FullUpdateGenerator&) = delete;
+  FullUpdateGenerator& operator=(const FullUpdateGenerator&) = delete;
 
   // OperationsGenerator override.
   // Creates a full update for the target image defined in |config|. |config|
@@ -42,9 +44,6 @@ class FullUpdateGenerator : public OperationsGenerator {
                           const PartitionConfig& new_part,
                           BlobFileWriter* blob_file,
                           std::vector<AnnotatedOperation>* aops) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FullUpdateGenerator);
 };
 
 }  // namespace chromeos_update_engine

@@ -30,6 +30,8 @@ namespace chromeos_update_engine {
 class DaemonChromeOS : public DaemonBase {
  public:
   DaemonChromeOS() = default;
+  DaemonChromeOS(const DaemonChromeOS&) = delete;
+  DaemonChromeOS& operator=(const DaemonChromeOS&) = delete;
 
  protected:
   int OnInit() override;
@@ -54,8 +56,6 @@ class DaemonChromeOS : public DaemonBase {
   // current thread, so we need to initialize it from this class instead of
   // the main() function.
   Subprocess subprocess_;
-
-  DISALLOW_COPY_AND_ASSIGN(DaemonChromeOS);
 };
 
 }  // namespace chromeos_update_engine

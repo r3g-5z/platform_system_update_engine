@@ -48,6 +48,8 @@ class PayloadMetadata {
   static const uint64_t kDeltaMetadataSignatureSizeSize;
 
   PayloadMetadata() = default;
+  PayloadMetadata(const PayloadMetadata&) = delete;
+  PayloadMetadata& operator=(const PayloadMetadata&) = delete;
 
   // Attempts to parse the update payload header starting from the beginning of
   // |payload|. On success, returns kMetadataParseSuccess. Returns
@@ -107,8 +109,6 @@ class PayloadMetadata {
   uint64_t manifest_size_{0};
   uint32_t metadata_signature_size_{0};
   uint64_t major_payload_version_{0};
-
-  DISALLOW_COPY_AND_ASSIGN(PayloadMetadata);
 };
 
 }  // namespace chromeos_update_engine

@@ -34,6 +34,9 @@ class CachedFileDescriptor : public FileDescriptor {
   CachedFileDescriptor(FileDescriptorPtr fd, size_t cache_size) : fd_(fd) {
     cache_.resize(cache_size);
   }
+  CachedFileDescriptor(const CachedFileDescriptor&) = delete;
+  CachedFileDescriptor& operator=(const CachedFileDescriptor&) = delete;
+
   ~CachedFileDescriptor() override = default;
 
   bool Open(const char* path, int flags, mode_t mode) override {
@@ -67,8 +70,6 @@ class CachedFileDescriptor : public FileDescriptor {
   brillo::Blob cache_;
   size_t bytes_cached_{0};
   off64_t offset_{0};
-
-  DISALLOW_COPY_AND_ASSIGN(CachedFileDescriptor);
 };
 
 }  // namespace chromeos_update_engine

@@ -29,6 +29,9 @@ namespace chromeos_update_engine {
 class HwidOverride {
  public:
   HwidOverride();
+  HwidOverride(const HwidOverride&) = delete;
+  HwidOverride& operator=(const HwidOverride&) = delete;
+
   ~HwidOverride();
 
   // Read HWID from an /etc/lsb-release file under given root.
@@ -36,9 +39,6 @@ class HwidOverride {
   static std::string Read(const base::FilePath& root);
 
   static const char kHwidOverrideKey[];
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(HwidOverride);
 };
 
 }  // namespace chromeos_update_engine

@@ -41,6 +41,10 @@ class Ext2Filesystem : public FilesystemInterface {
   // file. The file doesn't need to be loop-back mounted.
   static std::unique_ptr<Ext2Filesystem> CreateFromFile(
       const std::string& filename);
+
+  Ext2Filesystem(const Ext2Filesystem&) = delete;
+  Ext2Filesystem& operator=(const Ext2Filesystem&) = delete;
+
   virtual ~Ext2Filesystem();
 
   // FilesystemInterface overrides.
@@ -70,8 +74,6 @@ class Ext2Filesystem : public FilesystemInterface {
 
   // The file where the filesystem is stored.
   std::string filename_;
-
-  DISALLOW_COPY_AND_ASSIGN(Ext2Filesystem);
 };
 
 }  // namespace chromeos_update_engine

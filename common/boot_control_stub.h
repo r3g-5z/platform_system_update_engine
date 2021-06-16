@@ -35,6 +35,9 @@ namespace chromeos_update_engine {
 class BootControlStub : public BootControlInterface {
  public:
   BootControlStub();
+  BootControlStub(const BootControlStub&) = delete;
+  BootControlStub& operator=(const BootControlStub&) = delete;
+
   ~BootControlStub() = default;
 
   // BootControlInterface overrides.
@@ -58,8 +61,6 @@ class BootControlStub : public BootControlInterface {
 
  private:
   std::unique_ptr<DynamicPartitionControlInterface> dynamic_partition_control_;
-
-  DISALLOW_COPY_AND_ASSIGN(BootControlStub);
 };
 
 }  // namespace chromeos_update_engine

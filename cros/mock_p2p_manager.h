@@ -67,6 +67,8 @@ class MockP2PManager : public P2PManager {
         .WillByDefault(
             testing::Invoke(&fake_, &FakeP2PManager::CountSharedFiles));
   }
+  MockP2PManager(const MockP2PManager&) = delete;
+  MockP2PManager& operator=(const MockP2PManager&) = delete;
 
   ~MockP2PManager() override {}
 
@@ -93,8 +95,6 @@ class MockP2PManager : public P2PManager {
  private:
   // The underlying FakeP2PManager.
   FakeP2PManager fake_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockP2PManager);
 };
 
 }  // namespace chromeos_update_engine

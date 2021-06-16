@@ -25,6 +25,8 @@ namespace chromeos_update_engine {
 class FakeClock : public ClockInterface {
  public:
   FakeClock() {}
+  FakeClock(const FakeClock&) = delete;
+  FakeClock& operator=(const FakeClock&) = delete;
 
   base::Time GetWallclockTime() const override { return wallclock_time_; }
 
@@ -42,8 +44,6 @@ class FakeClock : public ClockInterface {
   base::Time wallclock_time_;
   base::Time monotonic_time_;
   base::Time boot_time_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeClock);
 };
 
 }  // namespace chromeos_update_engine

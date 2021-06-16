@@ -36,6 +36,8 @@ class CurrDateVariable : public Variable<Time> {
   // logic for when it value changes.
   explicit CurrDateVariable(const string& name)
       : Variable<Time>(name, TimeDelta::FromHours(1)) {}
+  CurrDateVariable(const CurrDateVariable&) = delete;
+  CurrDateVariable& operator=(const CurrDateVariable&) = delete;
 
  protected:
   virtual const Time* GetValue(TimeDelta /* timeout */, string* /* errmsg */) {
@@ -47,9 +49,6 @@ class CurrDateVariable : public Variable<Time> {
     DCHECK(success);
     return now;
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CurrDateVariable);
 };
 
 // A variable returning the current hour in local time.
@@ -59,6 +58,8 @@ class CurrHourVariable : public Variable<int> {
   // logic for when it value changes.
   explicit CurrHourVariable(const string& name)
       : Variable<int>(name, TimeDelta::FromMinutes(5)) {}
+  CurrHourVariable(const CurrHourVariable&) = delete;
+  CurrHourVariable& operator=(const CurrHourVariable&) = delete;
 
  protected:
   virtual const int* GetValue(TimeDelta /* timeout */, string* /* errmsg */) {
@@ -66,15 +67,14 @@ class CurrHourVariable : public Variable<int> {
     SystemState::Get()->clock()->GetWallclockTime().LocalExplode(&exploded);
     return new int(exploded.hour);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CurrHourVariable);
 };
 
 class CurrMinuteVariable : public Variable<int> {
  public:
   explicit CurrMinuteVariable(const string& name)
       : Variable<int>(name, TimeDelta::FromSeconds(15)) {}
+  CurrMinuteVariable(const CurrMinuteVariable&) = delete;
+  CurrMinuteVariable& operator=(const CurrMinuteVariable&) = delete;
 
  protected:
   virtual const int* GetValue(TimeDelta /* timeout */, string* /* errmsg */) {
@@ -82,9 +82,6 @@ class CurrMinuteVariable : public Variable<int> {
     SystemState::Get()->clock()->GetWallclockTime().LocalExplode(&exploded);
     return new int(exploded.minute);
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(CurrMinuteVariable);
 };
 
 bool RealTimeProvider::Init() {

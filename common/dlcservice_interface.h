@@ -29,6 +29,9 @@ namespace chromeos_update_engine {
 // platform's dlcservice.
 class DlcServiceInterface {
  public:
+  DlcServiceInterface(const DlcServiceInterface&) = delete;
+  DlcServiceInterface& operator=(const DlcServiceInterface&) = delete;
+
   virtual ~DlcServiceInterface() = default;
 
   // Returns true and a list of installed DLC ids in |dlc_ids|.
@@ -45,9 +48,6 @@ class DlcServiceInterface {
 
  protected:
   DlcServiceInterface() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DlcServiceInterface);
 };
 
 // This factory function creates a new DlcServiceInterface instance for the

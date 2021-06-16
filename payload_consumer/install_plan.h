@@ -197,6 +197,8 @@ class InstallPlanAction : public Action<InstallPlanAction> {
   InstallPlanAction() {}
   explicit InstallPlanAction(const InstallPlan& install_plan)
       : install_plan_(install_plan) {}
+  InstallPlanAction(const InstallPlanAction&) = delete;
+  InstallPlanAction& operator=(const InstallPlanAction&) = delete;
 
   void PerformAction() override {
     if (HasOutputPipe()) {
@@ -215,9 +217,6 @@ class InstallPlanAction : public Action<InstallPlanAction> {
 
  protected:
   InstallPlan install_plan_;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(InstallPlanAction);
 };
 
 }  // namespace chromeos_update_engine

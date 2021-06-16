@@ -43,6 +43,8 @@ class UpdateManager {
   UpdateManager(base::TimeDelta evaluation_timeout,
                 base::TimeDelta expiration_timeout,
                 State* state);
+  UpdateManager(const UpdateManager&) = delete;
+  UpdateManager& operator=(const UpdateManager&) = delete;
 
   virtual ~UpdateManager();
 
@@ -105,8 +107,6 @@ class UpdateManager {
   std::vector<std::unique_ptr<PolicyEvaluator>> evaluators_;
 
   base::WeakPtrFactory<UpdateManager> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(UpdateManager);
 };
 
 }  // namespace chromeos_update_manager

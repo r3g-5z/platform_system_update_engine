@@ -33,6 +33,8 @@ namespace chromeos_update_engine {
 class FakeFileWriter : public FileWriter {
  public:
   FakeFileWriter() : was_opened_(false), was_closed_(false) {}
+  FakeFileWriter(const FakeFileWriter&) = delete;
+  FakeFileWriter& operator=(const FakeFileWriter&) = delete;
 
   virtual int Open(const char* path, int flags, mode_t mode) {
     CHECK(!was_opened_);
@@ -65,8 +67,6 @@ class FakeFileWriter : public FileWriter {
   // These are just to ensure FileWriter methods are called properly.
   bool was_opened_;
   bool was_closed_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeFileWriter);
 };
 
 }  // namespace chromeos_update_engine

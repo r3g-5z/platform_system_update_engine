@@ -33,6 +33,8 @@ class RawFilesystem : public FilesystemInterface {
   static std::unique_ptr<RawFilesystem> Create(const std::string& filename,
                                                uint64_t block_size,
                                                uint64_t block_count);
+  RawFilesystem(const RawFilesystem&) = delete;
+  RawFilesystem& operator=(const RawFilesystem&) = delete;
   virtual ~RawFilesystem() = default;
 
   // FilesystemInterface overrides.
@@ -53,8 +55,6 @@ class RawFilesystem : public FilesystemInterface {
   std::string filename_;
   uint64_t block_count_;
   uint64_t block_size_;
-
-  DISALLOW_COPY_AND_ASSIGN(RawFilesystem);
 };
 
 }  // namespace chromeos_update_engine

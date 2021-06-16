@@ -26,13 +26,13 @@ namespace chromeos_update_manager {
 class FakeRandomProvider : public RandomProvider {
  public:
   FakeRandomProvider() {}
+  FakeRandomProvider(const FakeRandomProvider&) = delete;
+  FakeRandomProvider& operator=(const FakeRandomProvider&) = delete;
 
   FakeVariable<uint64_t>* var_seed() override { return &var_seed_; }
 
  private:
   FakeVariable<uint64_t> var_seed_{"seed", kVariableModePoll};
-
-  DISALLOW_COPY_AND_ASSIGN(FakeRandomProvider);
 };
 
 }  // namespace chromeos_update_manager

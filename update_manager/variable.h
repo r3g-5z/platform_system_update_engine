@@ -64,6 +64,9 @@ class BaseVariable {
     virtual void ValueChanged(BaseVariable* variable) = 0;
   };
 
+  BaseVariable(const BaseVariable&) = delete;
+  BaseVariable& operator=(const BaseVariable&) = delete;
+
   virtual ~BaseVariable() {
     if (!observer_list_.empty()) {
       LOG(WARNING) << "Variable " << name_ << " deleted with "
@@ -183,8 +186,6 @@ class BaseVariable {
 
   // Defines whether this variable is expected to have no value.
   bool missing_ok_;
-
-  DISALLOW_COPY_AND_ASSIGN(BaseVariable);
 };
 
 // Interface to an Update Manager variable of a given type. Implementation
@@ -193,6 +194,8 @@ class BaseVariable {
 template <typename T>
 class Variable : public BaseVariable {
  public:
+  Variable(const Variable&) = delete;
+  Variable& operator=(const Variable&) = delete;
   ~Variable() override {}
 
  protected:
@@ -220,9 +223,6 @@ class Variable : public BaseVariable {
   // The caller can pass a null value for |errmsg|, in which case the error
   // message won't be set.
   virtual const T* GetValue(base::TimeDelta timeout, std::string* errmsg) = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(Variable);
 };
 
 }  // namespace chromeos_update_manager

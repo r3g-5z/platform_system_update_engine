@@ -152,6 +152,8 @@ class CallCopyVariable : public Variable<T> {
                    const base::TimeDelta poll_interval,
                    base::Callback<T(void)> func)
       : Variable<T>(name, poll_interval), func_(func) {}
+  CallCopyVariable(const CallCopyVariable&) = delete;
+  CallCopyVariable& operator=(const CallCopyVariable&) = delete;
 
  protected:
   // Variable override.
@@ -167,8 +169,6 @@ class CallCopyVariable : public Variable<T> {
 
   // The function to be called, stored as a base::Callback.
   base::Callback<T(void)> func_;
-
-  DISALLOW_COPY_AND_ASSIGN(CallCopyVariable);
 };
 
 // A Variable class to implement simple Async variables. It provides two methods

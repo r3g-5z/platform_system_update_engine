@@ -33,6 +33,9 @@ namespace chromeos_update_engine {
 // provides a mockable way to access that.
 class ShillProxyInterface {
  public:
+  ShillProxyInterface(const ShillProxyInterface&) = delete;
+  ShillProxyInterface& operator=(const ShillProxyInterface&) = delete;
+
   virtual ~ShillProxyInterface() = default;
 
   // Return the ManagerProxy instance of the shill daemon. The instance is owned
@@ -46,9 +49,6 @@ class ShillProxyInterface {
 
  protected:
   ShillProxyInterface() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ShillProxyInterface);
 };
 
 }  // namespace chromeos_update_engine

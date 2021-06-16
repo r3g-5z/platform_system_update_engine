@@ -26,6 +26,8 @@ namespace chromeos_update_manager {
 class FakeTimeProvider : public TimeProvider {
  public:
   FakeTimeProvider() {}
+  FakeTimeProvider(const FakeTimeProvider&) = delete;
+  FakeTimeProvider& operator=(const FakeTimeProvider&) = delete;
 
   FakeVariable<base::Time>* var_curr_date() override { return &var_curr_date_; }
   FakeVariable<int>* var_curr_hour() override { return &var_curr_hour_; }
@@ -35,8 +37,6 @@ class FakeTimeProvider : public TimeProvider {
   FakeVariable<base::Time> var_curr_date_{"curr_date", kVariableModePoll};
   FakeVariable<int> var_curr_hour_{"curr_hour", kVariableModePoll};
   FakeVariable<int> var_curr_minute_{"curr_minute", kVariableModePoll};
-
-  DISALLOW_COPY_AND_ASSIGN(FakeTimeProvider);
 };
 
 }  // namespace chromeos_update_manager

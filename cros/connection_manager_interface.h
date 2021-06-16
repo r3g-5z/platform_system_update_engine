@@ -30,6 +30,10 @@ namespace chromeos_update_engine {
 // logic in update_engine.
 class ConnectionManagerInterface {
  public:
+  ConnectionManagerInterface(const ConnectionManagerInterface&) = delete;
+  ConnectionManagerInterface& operator=(const ConnectionManagerInterface&) =
+      delete;
+
   virtual ~ConnectionManagerInterface() = default;
 
   // Populates |out_type| with the type of the network connection
@@ -50,9 +54,6 @@ class ConnectionManagerInterface {
 
  protected:
   ConnectionManagerInterface() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(ConnectionManagerInterface);
 };
 
 namespace connection_manager {

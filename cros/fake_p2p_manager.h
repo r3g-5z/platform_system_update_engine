@@ -32,6 +32,8 @@ class FakeP2PManager : public P2PManager {
         ensure_p2p_not_running_result_(false),
         perform_housekeeping_result_(false),
         count_shared_files_result_(0) {}
+  FakeP2PManager(const FakeP2PManager&) = delete;
+  FakeP2PManager& operator=(const FakeP2PManager&) = delete;
 
   // P2PManager overrides.
   void SetDevicePolicy(const policy::DevicePolicy* device_policy) override {}
@@ -103,8 +105,6 @@ class FakeP2PManager : public P2PManager {
   bool perform_housekeeping_result_;
   int count_shared_files_result_;
   std::string lookup_url_for_file_result_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeP2PManager);
 };
 
 }  // namespace chromeos_update_engine

@@ -36,6 +36,9 @@ class ConnectionManager : public ConnectionManagerInterface {
   // Constructs a new ConnectionManager object initialized with the
   // given system state.
   explicit ConnectionManager(ShillProxyInterface* shill_proxy);
+  ConnectionManager(const ConnectionManager&) = delete;
+  ConnectionManager& operator=(const ConnectionManager&) = delete;
+
   ~ConnectionManager() override = default;
 
   // ConnectionManagerInterface overrides.
@@ -56,8 +59,6 @@ class ConnectionManager : public ConnectionManagerInterface {
 
   // The mockable interface to access the shill DBus proxies.
   std::unique_ptr<ShillProxyInterface> shill_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(ConnectionManager);
 };
 
 }  // namespace chromeos_update_engine

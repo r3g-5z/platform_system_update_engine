@@ -30,6 +30,10 @@ class BootImgFilesystem : public FilesystemInterface {
   // Creates an BootImgFilesystem from an Android boot.img file.
   static std::unique_ptr<BootImgFilesystem> CreateFromFile(
       const std::string& filename);
+
+  BootImgFilesystem(const BootImgFilesystem&) = delete;
+  BootImgFilesystem& operator=(const BootImgFilesystem&) = delete;
+
   ~BootImgFilesystem() override = default;
 
   // FilesystemInterface overrides.
@@ -55,8 +59,6 @@ class BootImgFilesystem : public FilesystemInterface {
   uint32_t kernel_size_;  /* size in bytes */
   uint32_t ramdisk_size_; /* size in bytes */
   uint32_t page_size_;    /* flash page size we assume */
-
-  DISALLOW_COPY_AND_ASSIGN(BootImgFilesystem);
 };
 
 }  // namespace chromeos_update_engine

@@ -28,15 +28,15 @@ namespace chromeos_update_engine {
 class DlcServiceStub : public DlcServiceInterface {
  public:
   DlcServiceStub() = default;
+  DlcServiceStub(const DlcServiceStub&) = delete;
+  DlcServiceStub& operator=(const DlcServiceStub&) = delete;
+
   ~DlcServiceStub() = default;
 
   // BootControlInterface overrides.
   bool GetDlcsToUpdate(std::vector<std::string>* dlc_ids) override;
   bool InstallCompleted(const std::vector<std::string>& dlc_ids) override;
   bool UpdateCompleted(const std::vector<std::string>& dlc_ids) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DlcServiceStub);
 };
 
 }  // namespace chromeos_update_engine

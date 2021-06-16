@@ -39,6 +39,8 @@ class FileFetcher : public HttpFetcher {
   static bool SupportedUrl(const std::string& url);
 
   FileFetcher() : HttpFetcher(nullptr) {}
+  FileFetcher(const FileFetcher&) = delete;
+  FileFetcher& operator=(const FileFetcher&) = delete;
 
   // Cleans up all internal state. Does not notify delegate.
   ~FileFetcher() override;
@@ -116,8 +118,6 @@ class FileFetcher : public HttpFetcher {
 
   // The buffer used for reading from the stream.
   brillo::Blob buffer_;
-
-  DISALLOW_COPY_AND_ASSIGN(FileFetcher);
 };
 
 }  // namespace chromeos_update_engine

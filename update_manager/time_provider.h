@@ -27,6 +27,8 @@ namespace chromeos_update_manager {
 // Provider for time related information.
 class TimeProvider : public Provider {
  public:
+  TimeProvider(const TimeProvider&) = delete;
+  TimeProvider& operator=(const TimeProvider&) = delete;
   ~TimeProvider() override {}
 
   // Returns the current date. The time of day component will be zero.
@@ -41,9 +43,6 @@ class TimeProvider : public Provider {
 
  protected:
   TimeProvider() {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(TimeProvider);
 };
 
 }  // namespace chromeos_update_manager

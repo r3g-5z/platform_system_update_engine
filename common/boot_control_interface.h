@@ -40,6 +40,9 @@ class BootControlInterface {
 
   static const Slot kInvalidSlot = UINT_MAX;
 
+  BootControlInterface(const BootControlInterface&) = delete;
+  BootControlInterface& operator=(const BootControlInterface&) = delete;
+
   virtual ~BootControlInterface() = default;
 
   // Return the number of update slots in the system. A system will normally
@@ -116,9 +119,6 @@ class BootControlInterface {
 
  protected:
   BootControlInterface() = default;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(BootControlInterface);
 };
 
 }  // namespace chromeos_update_engine

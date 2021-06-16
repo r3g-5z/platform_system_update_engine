@@ -30,6 +30,9 @@ namespace chromeos_update_engine {
 class DlcServiceChromeOS : public DlcServiceInterface {
  public:
   DlcServiceChromeOS() = default;
+  DlcServiceChromeOS(const DlcServiceChromeOS&) = delete;
+  DlcServiceChromeOS& operator=(const DlcServiceChromeOS&) = delete;
+
   ~DlcServiceChromeOS() = default;
 
   // DlcServiceInterface overrides.
@@ -45,9 +48,6 @@ class DlcServiceChromeOS : public DlcServiceInterface {
 
   // Call into dlcservice for it to mark the DLC IDs as being updated.
   bool UpdateCompleted(const std::vector<std::string>& dlc_ids) override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DlcServiceChromeOS);
 };
 
 }  // namespace chromeos_update_engine

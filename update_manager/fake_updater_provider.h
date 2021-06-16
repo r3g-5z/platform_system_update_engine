@@ -28,6 +28,8 @@ namespace chromeos_update_manager {
 class FakeUpdaterProvider : public UpdaterProvider {
  public:
   FakeUpdaterProvider() {}
+  FakeUpdaterProvider(const FakeUpdaterProvider&) = delete;
+  FakeUpdaterProvider& operator=(const FakeUpdaterProvider&) = delete;
 
   FakeVariable<base::Time>* var_updater_started_time() override {
     return &var_updater_started_time_;
@@ -120,8 +122,6 @@ class FakeUpdaterProvider : public UpdaterProvider {
       "update_restrictions", kVariableModePoll};
   FakeVariable<int64_t> var_test_update_check_interval_timeout_{
       "test_update_check_interval_timeout", kVariableModePoll};
-
-  DISALLOW_COPY_AND_ASSIGN(FakeUpdaterProvider);
 };
 
 }  // namespace chromeos_update_manager

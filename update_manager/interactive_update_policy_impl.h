@@ -27,6 +27,11 @@ namespace chromeos_update_manager {
 class InteractiveUpdateCheckAllowedPolicyImpl : public PolicyInterface {
  public:
   InteractiveUpdateCheckAllowedPolicyImpl() = default;
+  InteractiveUpdateCheckAllowedPolicyImpl(
+      const InteractiveUpdateCheckAllowedPolicyImpl&) = delete;
+  InteractiveUpdateCheckAllowedPolicyImpl& operator=(
+      const InteractiveUpdateCheckAllowedPolicyImpl&) = delete;
+
   ~InteractiveUpdateCheckAllowedPolicyImpl() override = default;
 
   // Policy overrides.
@@ -48,14 +53,17 @@ class InteractiveUpdateCheckAllowedPolicyImpl : public PolicyInterface {
   bool CheckInteractiveUpdateRequested(EvaluationContext* ec,
                                        UpdaterProvider* const updater_provider,
                                        bool* interactive_out) const;
-
-  DISALLOW_COPY_AND_ASSIGN(InteractiveUpdateCheckAllowedPolicyImpl);
 };
 
 // Check to see if an interactive update was requested.
 class InteractiveUpdateCanBeAppliedPolicyImpl : public PolicyInterface {
  public:
   InteractiveUpdateCanBeAppliedPolicyImpl() = default;
+  InteractiveUpdateCanBeAppliedPolicyImpl(
+      const InteractiveUpdateCanBeAppliedPolicyImpl&) = delete;
+  InteractiveUpdateCanBeAppliedPolicyImpl& operator=(
+      const InteractiveUpdateCanBeAppliedPolicyImpl&) = delete;
+
   ~InteractiveUpdateCanBeAppliedPolicyImpl() override = default;
 
   // Policy overrides.
@@ -68,8 +76,6 @@ class InteractiveUpdateCanBeAppliedPolicyImpl : public PolicyInterface {
   std::string PolicyName() const override {
     return "InteractiveUpdateCanBeAppliedPolicyImpl";
   }
-
-  DISALLOW_COPY_AND_ASSIGN(InteractiveUpdateCanBeAppliedPolicyImpl);
 };
 
 }  // namespace chromeos_update_manager

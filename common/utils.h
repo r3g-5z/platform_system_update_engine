@@ -340,6 +340,9 @@ ErrorCode IsTimestampNewer(const std::string& old_version,
 class ScopedFdCloser {
  public:
   explicit ScopedFdCloser(int* fd) : fd_(fd) {}
+  ScopedFdCloser(const ScopedFdCloser&) = delete;
+  ScopedFdCloser& operator=(const ScopedFdCloser&) = delete;
+
   ~ScopedFdCloser() {
     if (should_close_ && fd_ && (*fd_ >= 0) && !IGNORE_EINTR(close(*fd_)))
       *fd_ = -1;
@@ -349,7 +352,6 @@ class ScopedFdCloser {
  private:
   int* fd_;
   bool should_close_ = true;
-  DISALLOW_COPY_AND_ASSIGN(ScopedFdCloser);
 };
 
 // Utility class to delete a file when it goes out of scope.
@@ -357,6 +359,9 @@ class ScopedPathUnlinker {
  public:
   explicit ScopedPathUnlinker(const std::string& path)
       : path_(path), should_remove_(true) {}
+  ScopedPathUnlinker(const ScopedPathUnlinker&) = delete;
+  ScopedPathUnlinker& operator=(const ScopedPathUnlinker&) = delete;
+
   ~ScopedPathUnlinker() {
     if (should_remove_ && unlink(path_.c_str()) < 0) {
       PLOG(ERROR) << "Unable to unlink path " << path_;
@@ -367,7 +372,6 @@ class ScopedPathUnlinker {
  private:
   const std::string path_;
   bool should_remove_;
-  DISALLOW_COPY_AND_ASSIGN(ScopedPathUnlinker);
 };
 
 class ScopedTempFile {
@@ -384,6 +388,8 @@ class ScopedTempFile {
       fd_closer_.reset(new ScopedFdCloser(&fd_));
     }
   }
+  ScopedTempFile(const ScopedTempFile&) = delete;
+  ScopedTempFile& operator=(const ScopedTempFile&) = delete;
   virtual ~ScopedTempFile() = default;
 
   const std::string& path() const { return path_; }
@@ -402,8 +408,6 @@ class ScopedTempFile {
 
   int fd_{-1};
   std::unique_ptr<ScopedFdCloser> fd_closer_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedTempFile);
 };
 
 // A little object to call ActionComplete on the ActionProcessor when
@@ -418,6 +422,9 @@ class ScopedActionCompleter {
         should_complete_(true) {
     CHECK(processor_);
   }
+  ScopedActionCompleter(const ScopedActionCompleter&) = delete;
+  ScopedActionCompleter& operator=(const ScopedActionCompleter&) = delete;
+
   ~ScopedActionCompleter() {
     if (should_complete_)
       processor_->ActionComplete(action_, code_);
@@ -433,7 +440,6 @@ class ScopedActionCompleter {
   AbstractAction* action_;
   ErrorCode code_;
   bool should_complete_;
-  DISALLOW_COPY_AND_ASSIGN(ScopedActionCompleter);
 };
 
 }  // namespace chromeos_update_engine

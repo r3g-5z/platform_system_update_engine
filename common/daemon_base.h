@@ -26,13 +26,13 @@ namespace chromeos_update_engine {
 class DaemonBase : public brillo::Daemon {
  public:
   DaemonBase() = default;
+  DaemonBase(const DaemonBase&) = delete;
+  DaemonBase& operator=(const DaemonBase&) = delete;
+
   virtual ~DaemonBase() = default;
 
   // Creates an instance of the daemon.
   static std::unique_ptr<DaemonBase> CreateInstance();
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(DaemonBase);
 };
 
 }  // namespace chromeos_update_engine

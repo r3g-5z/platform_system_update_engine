@@ -61,6 +61,9 @@ class ChunkProcessor : public base::DelegateSimpleThread::Delegate {
         aop_(aop) {}
   // We use a default move constructor since all the data members are POD types.
   ChunkProcessor(ChunkProcessor&&) = default;
+  ChunkProcessor(const ChunkProcessor&) = delete;
+  ChunkProcessor& operator=(const ChunkProcessor&) = delete;
+
   ~ChunkProcessor() override = default;
 
   // Overrides DelegateSimpleThread::Delegate.
@@ -80,8 +83,6 @@ class ChunkProcessor : public base::DelegateSimpleThread::Delegate {
   size_t size_;
   BlobFileWriter* blob_file_;
   AnnotatedOperation* aop_;
-
-  DISALLOW_COPY_AND_ASSIGN(ChunkProcessor);
 };
 
 void ChunkProcessor::Run() {

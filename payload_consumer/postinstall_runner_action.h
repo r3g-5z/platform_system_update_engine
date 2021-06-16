@@ -42,6 +42,8 @@ class PostinstallRunnerAction : public InstallPlanAction {
   PostinstallRunnerAction(BootControlInterface* boot_control,
                           HardwareInterface* hardware)
       : boot_control_(boot_control), hardware_(hardware) {}
+  PostinstallRunnerAction(const PostinstallRunnerAction&) = delete;
+  PostinstallRunnerAction& operator=(const PostinstallRunnerAction&) = delete;
 
   // InstallPlanAction overrides.
   void PerformAction() override;
@@ -144,8 +146,6 @@ class PostinstallRunnerAction : public InstallPlanAction {
 
   // A buffer of a partial read line from the progress file descriptor.
   std::string progress_buffer_;
-
-  DISALLOW_COPY_AND_ASSIGN(PostinstallRunnerAction);
 };
 
 }  // namespace chromeos_update_engine

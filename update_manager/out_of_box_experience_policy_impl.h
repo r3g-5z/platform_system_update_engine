@@ -27,6 +27,9 @@ namespace chromeos_update_manager {
 class OobePolicyImpl : public PolicyInterface {
  public:
   OobePolicyImpl() = default;
+  OobePolicyImpl(const OobePolicyImpl&) = delete;
+  OobePolicyImpl& operator=(const OobePolicyImpl&) = delete;
+
   ~OobePolicyImpl() override = default;
 
   std::string PolicyName() const override { return "OobePolicyImpl"; }
@@ -36,9 +39,6 @@ class OobePolicyImpl : public PolicyInterface {
                       State* state,
                       std::string* error,
                       PolicyDataInterface* data) const override;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(OobePolicyImpl);
 };
 
 }  // namespace chromeos_update_manager

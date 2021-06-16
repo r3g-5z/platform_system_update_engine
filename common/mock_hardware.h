@@ -79,6 +79,8 @@ class MockHardware : public HardwareInterface {
         .WillByDefault(testing::Invoke(
             &fake_, &FakeHardware::SetFirstActiveOmahaPingSent()));
   }
+  MockHardware(const MockHardware&) = delete;
+  MockHardware& operator=(const MockHardware&) = delete;
 
   ~MockHardware() override = default;
 
@@ -107,8 +109,6 @@ class MockHardware : public HardwareInterface {
  private:
   // The underlying FakeHardware.
   FakeHardware fake_;
-
-  DISALLOW_COPY_AND_ASSIGN(MockHardware);
 };
 
 }  // namespace chromeos_update_engine

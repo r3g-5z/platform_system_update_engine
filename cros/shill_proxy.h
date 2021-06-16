@@ -33,6 +33,9 @@ namespace chromeos_update_engine {
 class ShillProxy : public ShillProxyInterface {
  public:
   ShillProxy();
+  ShillProxy(const ShillProxy&) = delete;
+  ShillProxy& operator=(const ShillProxy&) = delete;
+
   ~ShillProxy() override = default;
 
   // ShillProxyInterface overrides.
@@ -45,8 +48,6 @@ class ShillProxy : public ShillProxyInterface {
   scoped_refptr<dbus::Bus> bus_;
   std::unique_ptr<org::chromium::flimflam::ManagerProxyInterface>
       manager_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(ShillProxy);
 };
 
 }  // namespace chromeos_update_engine

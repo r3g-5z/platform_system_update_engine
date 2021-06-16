@@ -29,13 +29,12 @@ class FakeUpdateManager : public UpdateManager {
       : UpdateManager(base::TimeDelta::FromSeconds(5),
                       base::TimeDelta::FromHours(1),
                       new FakeState()) {}
+  FakeUpdateManager(const FakeUpdateManager&) = delete;
+  FakeUpdateManager& operator=(const FakeUpdateManager&) = delete;
 
   FakeState* state() {
     return reinterpret_cast<FakeState*>(UpdateManager::state());
   }
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FakeUpdateManager);
 };
 
 }  // namespace chromeos_update_manager

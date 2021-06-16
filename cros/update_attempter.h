@@ -66,6 +66,9 @@ class UpdateAttempter : public ActionProcessorDelegate,
   static const int kMaxDeltaUpdateFailures;
 
   explicit UpdateAttempter(CertificateChecker* cert_checker);
+  UpdateAttempter(const UpdateAttempter&) = delete;
+  UpdateAttempter& operator=(const UpdateAttempter&) = delete;
+
   ~UpdateAttempter() override;
 
   // Further initialization to be done post construction.
@@ -606,8 +609,6 @@ class UpdateAttempter : public ActionProcessorDelegate,
       policy_data_;
 
   base::WeakPtrFactory<UpdateAttempter> weak_ptr_factory_;
-
-  DISALLOW_COPY_AND_ASSIGN(UpdateAttempter);
 };
 
 // Turns a generic ErrorCode::kError to a generic error code specific

@@ -30,6 +30,8 @@ class BlobFileWriter {
   // |blob_fd| in a thread safe way.
   BlobFileWriter(int blob_fd, off_t* blob_file_size)
       : blob_fd_(blob_fd), blob_file_size_(blob_file_size) {}
+  BlobFileWriter(const BlobFileWriter&) = delete;
+  BlobFileWriter& operator=(const BlobFileWriter&) = delete;
 
   // Store the passed |blob| in the blob file. Returns the offset at which it
   // was stored, or -1 in case of failure.
@@ -47,8 +49,6 @@ class BlobFileWriter {
   off_t* blob_file_size_;
 
   base::Lock blob_mutex_;
-
-  DISALLOW_COPY_AND_ASSIGN(BlobFileWriter);
 };
 
 }  // namespace chromeos_update_engine

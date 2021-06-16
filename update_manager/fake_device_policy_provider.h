@@ -29,6 +29,8 @@ namespace chromeos_update_manager {
 class FakeDevicePolicyProvider : public DevicePolicyProvider {
  public:
   FakeDevicePolicyProvider() {}
+  FakeDevicePolicyProvider(const FakeDevicePolicyProvider&) = delete;
+  FakeDevicePolicyProvider& operator=(const FakeDevicePolicyProvider&) = delete;
 
   FakeVariable<bool>* var_device_policy_is_loaded() override {
     return &var_device_policy_is_loaded_;
@@ -145,8 +147,6 @@ class FakeDevicePolicyProvider : public DevicePolicyProvider {
                                                        kVariableModePoll};
   FakeVariable<std::string> var_market_segment_{"market_segment",
                                                 kVariableModePoll};
-
-  DISALLOW_COPY_AND_ASSIGN(FakeDevicePolicyProvider);
 };
 
 }  // namespace chromeos_update_manager

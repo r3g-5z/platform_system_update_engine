@@ -88,6 +88,10 @@ class ScopedFilesystemUnmounter {
  public:
   explicit ScopedFilesystemUnmounter(const std::string& mountpoint)
       : mountpoint_(mountpoint), should_unmount_(true) {}
+  ScopedFilesystemUnmounter(const ScopedFilesystemUnmounter&) = delete;
+  ScopedFilesystemUnmounter& operator=(const ScopedFilesystemUnmounter&) =
+      delete;
+
   ~ScopedFilesystemUnmounter() {
     if (should_unmount_) {
       utils::UnmountFilesystem(mountpoint_);
@@ -98,7 +102,6 @@ class ScopedFilesystemUnmounter {
  private:
   const std::string mountpoint_;
   bool should_unmount_;
-  DISALLOW_COPY_AND_ASSIGN(ScopedFilesystemUnmounter);
 };
 
 class ScopedLoopbackDeviceBinder {
@@ -112,6 +115,9 @@ class ScopedLoopbackDeviceBinder {
     if (is_bound_ && dev)
       *dev = dev_;
   }
+  ScopedLoopbackDeviceBinder(const ScopedLoopbackDeviceBinder&) = delete;
+  ScopedLoopbackDeviceBinder& operator=(const ScopedLoopbackDeviceBinder&) =
+      delete;
 
   ~ScopedLoopbackDeviceBinder() {
     if (!is_bound_)
@@ -135,7 +141,6 @@ class ScopedLoopbackDeviceBinder {
  private:
   std::string dev_;
   bool is_bound_;
-  DISALLOW_COPY_AND_ASSIGN(ScopedLoopbackDeviceBinder);
 };
 
 class ScopedLoopMounter {

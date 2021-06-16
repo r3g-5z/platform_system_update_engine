@@ -79,6 +79,8 @@ class BoxedValue {
     other.deleter_ = nullptr;
     other.printer_ = nullptr;
   }
+  BoxedValue(const BoxedValue&) = delete;
+  BoxedValue& operator=(const BoxedValue&) = delete;
 
   // Deletes the |value| passed on construction using the delete for the passed
   // type.
@@ -117,8 +119,6 @@ class BoxedValue {
 
   // A function that converts value_ to a string.
   std::string (*printer_)(const void*);
-
-  DISALLOW_COPY_AND_ASSIGN(BoxedValue);
 };
 
 }  // namespace chromeos_update_manager

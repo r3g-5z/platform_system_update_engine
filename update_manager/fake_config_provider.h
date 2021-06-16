@@ -26,6 +26,8 @@ namespace chromeos_update_manager {
 class FakeConfigProvider : public ConfigProvider {
  public:
   FakeConfigProvider() {}
+  FakeConfigProvider(const FakeConfigProvider&) = delete;
+  FakeConfigProvider& operator=(const FakeConfigProvider&) = delete;
 
   FakeVariable<bool>* var_is_oobe_enabled() override {
     return &var_is_oobe_enabled_;
@@ -40,8 +42,6 @@ class FakeConfigProvider : public ConfigProvider {
                                           kVariableModeConst};
   FakeVariable<bool> var_is_running_from_minios_{"is_running_from_minios",
                                                  kVariableModeConst};
-
-  DISALLOW_COPY_AND_ASSIGN(FakeConfigProvider);
 };
 
 }  // namespace chromeos_update_manager

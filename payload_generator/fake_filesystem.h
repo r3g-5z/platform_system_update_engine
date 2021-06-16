@@ -32,6 +32,8 @@ namespace chromeos_update_engine {
 class FakeFilesystem : public FilesystemInterface {
  public:
   FakeFilesystem(uint64_t block_size, uint64_t block_count);
+  FakeFilesystem(const FakeFilesystem&) = delete;
+  FakeFilesystem& operator=(const FakeFilesystem&) = delete;
   virtual ~FakeFilesystem() = default;
 
   // FilesystemInterface overrides.
@@ -57,8 +59,6 @@ class FakeFilesystem : public FilesystemInterface {
   int minor_version_{-1};
 
   std::vector<File> files_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeFilesystem);
 };
 
 }  // namespace chromeos_update_engine

@@ -43,6 +43,10 @@ namespace chromeos_update_engine {
 class UnresolvedHostStateMachine {
  public:
   UnresolvedHostStateMachine() = default;
+  UnresolvedHostStateMachine(const UnresolvedHostStateMachine&) = delete;
+  UnresolvedHostStateMachine& operator=(const UnresolvedHostStateMachine&) =
+      delete;
+
   enum class State {
     kInit = 0,
     kRetry = 1,
@@ -76,14 +80,14 @@ class UnresolvedHostStateMachine {
 
  private:
   State state_ = {State::kInit};
-
-  DISALLOW_COPY_AND_ASSIGN(UnresolvedHostStateMachine);
 };
 
 class LibcurlHttpFetcher : public HttpFetcher {
  public:
   LibcurlHttpFetcher(ProxyResolver* proxy_resolver,
                      HardwareInterface* hardware);
+  LibcurlHttpFetcher(const LibcurlHttpFetcher&) = delete;
+  LibcurlHttpFetcher& operator=(const LibcurlHttpFetcher&) = delete;
 
   // Cleans up all internal state. Does not notify delegate
   ~LibcurlHttpFetcher() override;
@@ -332,8 +336,6 @@ class LibcurlHttpFetcher : public HttpFetcher {
   int low_speed_limit_bps_{kDownloadLowSpeedLimitBps};
   int low_speed_time_seconds_{kDownloadLowSpeedTimeSeconds};
   int connect_timeout_seconds_{kDownloadConnectTimeoutSeconds};
-
-  DISALLOW_COPY_AND_ASSIGN(LibcurlHttpFetcher);
 };
 
 }  // namespace chromeos_update_engine

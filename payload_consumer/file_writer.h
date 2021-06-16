@@ -37,6 +37,9 @@ namespace chromeos_update_engine {
 class FileWriter {
  public:
   FileWriter() {}
+  FileWriter(const FileWriter&) = delete;
+  FileWriter& operator=(const FileWriter&) = delete;
+
   virtual ~FileWriter() {}
 
   // Wrapper around write. Returns true if all requested bytes
@@ -54,9 +57,6 @@ class FileWriter {
 
   // Wrapper around close. Returns 0 on success or -errno on error.
   virtual int Close() = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(FileWriter);
 };
 
 // Direct file writer is probably the simplest FileWriter implementation.
@@ -65,6 +65,8 @@ class FileWriter {
 class DirectFileWriter : public FileWriter {
  public:
   DirectFileWriter() = default;
+  DirectFileWriter(const DirectFileWriter&) = delete;
+  DirectFileWriter& operator=(const DirectFileWriter&) = delete;
 
   // FileWriter overrides.
   bool Write(const void* bytes, size_t count) override;
@@ -77,13 +79,14 @@ class DirectFileWriter : public FileWriter {
 
  private:
   int fd_{-1};
-
-  DISALLOW_COPY_AND_ASSIGN(DirectFileWriter);
 };
 
 class ScopedFileWriterCloser {
  public:
   explicit ScopedFileWriterCloser(FileWriter* writer) : writer_(writer) {}
+  ScopedFileWriterCloser(const ScopedFileWriterCloser&) = delete;
+  ScopedFileWriterCloser& operator=(const ScopedFileWriterCloser&) = delete;
+
   ~ScopedFileWriterCloser() {
     int err = writer_->Close();
     if (err)
@@ -93,8 +96,6 @@ class ScopedFileWriterCloser {
 
  private:
   FileWriter* writer_;
-
-  DISALLOW_COPY_AND_ASSIGN(ScopedFileWriterCloser);
 };
 
 }  // namespace chromeos_update_engine

@@ -27,6 +27,8 @@ namespace chromeos_update_manager {
 class RealRandomProvider : public RandomProvider {
  public:
   RealRandomProvider() {}
+  RealRandomProvider(const RealRandomProvider&) = delete;
+  RealRandomProvider& operator=(const RealRandomProvider&) = delete;
 
   Variable<uint64_t>* var_seed() override { return var_seed_.get(); }
 
@@ -36,8 +38,6 @@ class RealRandomProvider : public RandomProvider {
  private:
   // The seed() scoped variable.
   std::unique_ptr<Variable<uint64_t>> var_seed_;
-
-  DISALLOW_COPY_AND_ASSIGN(RealRandomProvider);
 };
 
 }  // namespace chromeos_update_manager

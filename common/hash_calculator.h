@@ -38,6 +38,8 @@ namespace chromeos_update_engine {
 class HashCalculator {
  public:
   HashCalculator();
+  HashCalculator(const HashCalculator&) = delete;
+  HashCalculator& operator=(const HashCalculator&) = delete;
 
   // Update is called with all of the data that should be hashed in order.
   // Update will read |length| bytes of |data|.
@@ -86,7 +88,6 @@ class HashCalculator {
 
   // The hash state used by OpenSSL
   SHA256_CTX ctx_;
-  DISALLOW_COPY_AND_ASSIGN(HashCalculator);
 };
 
 }  // namespace chromeos_update_engine

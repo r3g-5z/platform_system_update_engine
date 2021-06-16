@@ -30,6 +30,9 @@ namespace chromeos_update_engine {
 class FakeExtentWriter : public ExtentWriter {
  public:
   FakeExtentWriter() = default;
+  FakeExtentWriter(const FakeExtentWriter&) = delete;
+  FakeExtentWriter& operator=(const FakeExtentWriter&) = delete;
+
   ~FakeExtentWriter() override = default;
 
   // ExtentWriter overrides.
@@ -55,8 +58,6 @@ class FakeExtentWriter : public ExtentWriter {
  private:
   bool init_called_{false};
   brillo::Blob written_data_;
-
-  DISALLOW_COPY_AND_ASSIGN(FakeExtentWriter);
 };
 
 }  // namespace chromeos_update_engine

@@ -27,6 +27,8 @@ class UpdateBootFlagsAction : public AbstractAction {
  public:
   explicit UpdateBootFlagsAction(BootControlInterface* boot_control)
       : boot_control_(boot_control) {}
+  UpdateBootFlagsAction(const UpdateBootFlagsAction&) = delete;
+  UpdateBootFlagsAction& operator=(const UpdateBootFlagsAction&) = delete;
 
   void PerformAction() override;
 
@@ -54,8 +56,6 @@ class UpdateBootFlagsAction : public AbstractAction {
 
   // Used for setting the boot flag.
   BootControlInterface* boot_control_;
-
-  DISALLOW_COPY_AND_ASSIGN(UpdateBootFlagsAction);
 };
 
 }  // namespace chromeos_update_engine

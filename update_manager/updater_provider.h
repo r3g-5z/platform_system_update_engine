@@ -54,6 +54,8 @@ enum UpdateRestrictions : int {
 // Provider for Chrome OS update related information.
 class UpdaterProvider : public Provider {
  public:
+  UpdaterProvider(const UpdaterProvider&) = delete;
+  UpdaterProvider& operator=(const UpdaterProvider&) = delete;
   ~UpdaterProvider() override {}
 
   // A variable returning the timestamp when the update engine was started in
@@ -125,9 +127,6 @@ class UpdaterProvider : public Provider {
 
  protected:
   UpdaterProvider() {}
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(UpdaterProvider);
 };
 
 }  // namespace chromeos_update_manager

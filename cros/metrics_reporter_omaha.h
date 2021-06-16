@@ -109,6 +109,8 @@ extern const char kMetricConsecutiveUpdateFailed[];
 class MetricsReporterOmaha : public MetricsReporterInterface {
  public:
   MetricsReporterOmaha();
+  MetricsReporterOmaha(const MetricsReporterOmaha&) = delete;
+  MetricsReporterOmaha& operator=(const MetricsReporterOmaha&) = delete;
 
   ~MetricsReporterOmaha() override = default;
 
@@ -197,8 +199,6 @@ class MetricsReporterOmaha : public MetricsReporterInterface {
   bool MonotonicDurationHelper(int64_t* storage, base::TimeDelta* out_duration);
 
   std::unique_ptr<MetricsLibraryInterface> metrics_lib_;
-
-  DISALLOW_COPY_AND_ASSIGN(MetricsReporterOmaha);
 };  // class metrics
 
 }  // namespace chromeos_update_engine

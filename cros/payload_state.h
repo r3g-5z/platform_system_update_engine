@@ -42,6 +42,9 @@ class SystemState;
 class PayloadState : public PayloadStateInterface {
  public:
   PayloadState();
+  PayloadState(const PayloadState&) = delete;
+  PayloadState& operator=(const PayloadState&) = delete;
+
   ~PayloadState() override {}
 
   // Initializes a payload state object using the given global system state.
@@ -589,8 +592,6 @@ class PayloadState : public PayloadStateInterface {
 
   // The current staging wallclock-based wait period.
   base::TimeDelta staging_wait_period_;
-
-  DISALLOW_COPY_AND_ASSIGN(PayloadState);
 };
 
 }  // namespace chromeos_update_engine

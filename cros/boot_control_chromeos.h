@@ -33,6 +33,9 @@ namespace chromeos_update_engine {
 class BootControlChromeOS : public BootControlInterface {
  public:
   BootControlChromeOS() = default;
+  BootControlChromeOS(const BootControlChromeOS&) = delete;
+  BootControlChromeOS& operator=(const BootControlChromeOS&) = delete;
+
   ~BootControlChromeOS() = default;
 
   // Initialize the BootControl instance loading the constant values. Returns
@@ -96,8 +99,6 @@ class BootControlChromeOS : public BootControlInterface {
   std::string boot_disk_name_;
 
   std::unique_ptr<DynamicPartitionControlInterface> dynamic_partition_control_;
-
-  DISALLOW_COPY_AND_ASSIGN(BootControlChromeOS);
 };
 
 }  // namespace chromeos_update_engine

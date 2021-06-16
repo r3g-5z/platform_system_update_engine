@@ -39,6 +39,8 @@ namespace chromeos_update_engine {
 class ABGenerator : public OperationsGenerator {
  public:
   ABGenerator() = default;
+  ABGenerator(const ABGenerator&) = delete;
+  ABGenerator& operator=(const ABGenerator&) = delete;
 
   // Generate the update payload operations for the given partition using
   // SOURCE_* operations, used for generating deltas for the minor version
@@ -126,8 +128,6 @@ class ABGenerator : public OperationsGenerator {
                                 const PayloadVersion& version,
                                 const std::string& target_part_path,
                                 BlobFileWriter* blob_file);
-
-  DISALLOW_COPY_AND_ASSIGN(ABGenerator);
 };
 
 }  // namespace chromeos_update_engine

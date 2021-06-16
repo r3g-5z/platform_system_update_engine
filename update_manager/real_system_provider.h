@@ -38,6 +38,8 @@ class RealSystemProvider : public SystemProvider {
   RealSystemProvider(
       org::chromium::KioskAppServiceInterfaceProxyInterface* kiosk_app_proxy)
       : kiosk_app_proxy_(kiosk_app_proxy) {}
+  RealSystemProvider(const RealSystemProvider&) = delete;
+  RealSystemProvider& operator=(const RealSystemProvider&) = delete;
 
   // Initializes the provider and returns whether it succeeded.
   bool Init();
@@ -78,8 +80,6 @@ class RealSystemProvider : public SystemProvider {
   std::unique_ptr<Variable<base::Version>> var_chromeos_version_;
 
   org::chromium::KioskAppServiceInterfaceProxyInterface* const kiosk_app_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(RealSystemProvider);
 };
 
 }  // namespace chromeos_update_manager

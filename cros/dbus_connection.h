@@ -26,6 +26,8 @@ namespace chromeos_update_engine {
 class DBusConnection {
  public:
   DBusConnection();
+  DBusConnection(const DBusConnection&) = delete;
+  DBusConnection& operator=(const DBusConnection&) = delete;
 
   const scoped_refptr<dbus::Bus>& GetDBus();
 
@@ -35,8 +37,6 @@ class DBusConnection {
   scoped_refptr<dbus::Bus> bus_;
 
   brillo::DBusConnection dbus_connection_;
-
-  DISALLOW_COPY_AND_ASSIGN(DBusConnection);
 };
 
 }  // namespace chromeos_update_engine

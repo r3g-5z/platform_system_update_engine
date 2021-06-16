@@ -80,6 +80,8 @@ class DeltaPerformer : public FileWriter {
         interactive_(interactive) {
     CHECK(install_plan_);
   }
+  DeltaPerformer(const DeltaPerformer&) = delete;
+  DeltaPerformer& operator=(const DeltaPerformer&) = delete;
 
   // FileWriter's Write implementation where caller doesn't care about
   // error codes.
@@ -447,8 +449,6 @@ class DeltaPerformer : public FileWriter {
   const base::TimeDelta update_checkpoint_wait_{
       base::TimeDelta::FromSeconds(kCheckpointFrequencySeconds)};
   base::TimeTicks update_checkpoint_time_;
-
-  DISALLOW_COPY_AND_ASSIGN(DeltaPerformer);
 };
 
 }  // namespace chromeos_update_engine
