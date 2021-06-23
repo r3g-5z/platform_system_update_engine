@@ -294,15 +294,8 @@ void UpdateAttempter::Update(const UpdateCheckParams& params) {
   CheckAndReportDailyMetrics();
 
   fake_update_success_ = false;
-  // Get repeated updates feature status if it exists.
-  if (!SystemState::Get()->prefs()->GetBoolean(kPrefsAllowRepeatedUpdates,
-                                               &allow_repeated_updates_)) {
-    allow_repeated_updates_ = false;
-    LOG(WARNING)
-        << "Unable to get RepeatedUpdates feature value, defaulting to false.";
-  }
   if (status_ == UpdateStatus::UPDATED_NEED_REBOOT) {
-    if (!allow_repeated_updates_) {
+    if (!IsRepeatedUpdatesEnabled()) {
       // Although we have applied an update, we still want to ping Omaha
       // to ensure the number of active statistics is accurate.
       //
@@ -1363,9 +1356,6 @@ void UpdateAttempter::ActionCompleted(ActionProcessor* processor,
         case UpdateStatus::UPDATE_AVAILABLE:
         case UpdateStatus::NEED_PERMISSION_TO_UPDATE:
           // Errored out before partition marked unbootable.
-          // If there was a previous valid update. Reset status to NEED_REBOOT.
-          if (allow_repeated_updates_)
-            ResetUpdateStatus();
           break;
         case UpdateStatus::DOWNLOADING:
         case UpdateStatus::VERIFYING:
@@ -1973,17 +1963,29 @@ bool UpdateAttempter::IsAnyUpdateSourceAllowed() const {
 }
 
 bool UpdateAttempter::ChangeRepeatedUpdates(bool enable) {
-  allow_repeated_updates_ = enable;
   if (!enable &&
       SystemState::Get()->prefs()->Delete(kPrefsAllowRepeatedUpdates)) {
+    LOG(INFO) << "Repeated updates has been disabled.";
     return true;
-  } else if (enable && SystemState::Get()->prefs()->SetBoolean(
-                           kPrefsAllowRepeatedUpdates, enable)) {
+  }
+  if (enable && SystemState::Get()->prefs()->SetBoolean(
+                    kPrefsAllowRepeatedUpdates, enable)) {
+    LOG(INFO) << "Repeated updates has been enabled.";
     return true;
   }
   LOG(ERROR) << "Could not change " << kPrefsAllowRepeatedUpdates
              << " feature to " << (enable ? "enabled." : "disabled.");
   return false;
+}
+
+bool UpdateAttempter::IsRepeatedUpdatesEnabled() {
+  bool allow_repeated_updates;
+  if (!SystemState::Get()->prefs()->GetBoolean(kPrefsAllowRepeatedUpdates,
+                                               &allow_repeated_updates)) {
+    // Defaulting to true.
+    allow_repeated_updates = true;
+  }
+  return allow_repeated_updates;
 }
 
 void UpdateAttempter::ReportTimeToUpdateAppliedMetric() {

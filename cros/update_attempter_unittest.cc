@@ -509,27 +509,6 @@ TEST_F(UpdateAttempterTest, ActionCompletedErrorTest) {
   ASSERT_NE(nullptr, attempter_.error_event_.get());
 }
 
-TEST_F(UpdateAttempterTest, ActionCompletedGeneralErrorResetTest) {
-  MockAction action;
-  EXPECT_CALL(action, Type()).WillRepeatedly(Return("MockAction"));
-  // Set boot time.
-  FakeClock fake_clock;
-  fake_clock.SetBootTime(Time::FromTimeT(101));
-  FakeSystemState::Get()->set_clock(&fake_clock);
-  FakePrefs fake_prefs;
-  FakeSystemState::Get()->set_prefs(&fake_prefs);
-  attempter_.allow_repeated_updates_ = true;
-  attempter_.Init();
-  attempter_.WriteUpdateCompletedMarker();
-  // Still awaiting reboot.
-  EXPECT_TRUE(attempter_.GetBootTimeAtUpdate(nullptr));
-
-  attempter_.status_ = UpdateStatus::UPDATE_AVAILABLE;
-  attempter_.ActionCompleted(nullptr, &action, ErrorCode::kError);
-  // If still awaiting reboot and update fails, reset state.
-  EXPECT_EQ(UpdateStatus::UPDATED_NEED_REBOOT, attempter_.status());
-}
-
 TEST_F(UpdateAttempterTest, DownloadProgressAccumulationTest) {
   // Simple test case, where all the values match (nothing was skipped)
   uint64_t bytes_progressed_1 = 1024 * 1024;  // 1MB

@@ -242,6 +242,10 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // if feature is false. Returns false if unable to store the change.
   bool ChangeRepeatedUpdates(bool enable);
 
+  // Returns whether repeated updates are enabled. Defaults to true if the pref
+  // is unset or unable to be read.
+  bool IsRepeatedUpdatesEnabled();
+
   // |DaemonStateInterface| overrides.
   bool StartUpdater() override;
   void AddObserver(ServiceObserverInterface* observer) override {
@@ -256,9 +260,6 @@ class UpdateAttempter : public ActionProcessorDelegate,
 
   // Remove all the observers.
   void ClearObservers() { service_observers_.clear(); }
-
-  // Returns whether repeated update checks are enabled.
-  bool IsRepeatedUpdatesEnabled() const { return allow_repeated_updates_; }
 
  private:
   // Friend declarations for testing purposes.
@@ -602,9 +603,6 @@ class UpdateAttempter : public ActionProcessorDelegate,
 
   // This is the session ID used to track update flow to Omaha.
   std::string session_id_;
-
-  // Allow repeated updates before reboot.
-  bool allow_repeated_updates_ = false;
 
   // Interface for excluder.
   std::unique_ptr<ExcluderInterface> excluder_;
