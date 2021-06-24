@@ -27,10 +27,12 @@
 #include "update_engine/common/dynamic_partition_control_interface.h"
 #include "update_engine/payload_consumer/extent_writer.h"
 #include "update_engine/payload_consumer/file_descriptor.h"
+#include "update_engine/payload_consumer/install_operation_executor.h"
 #include "update_engine/payload_consumer/install_plan.h"
 #include "update_engine/update_metadata.pb.h"
 
 namespace chromeos_update_engine {
+
 class PartitionWriter {
  public:
   PartitionWriter(const PartitionUpdate& partition_update,
@@ -129,6 +131,11 @@ class PartitionWriter {
   // Used to avoid re-opening the same source partition if it is not actually
   // error corrected.
   bool source_ecc_open_failure_{false};
+
+  // This instance handles decompression/bsdfif/puffdiff. It's responsible for
+  // constructing data which should be written to target partition, actual
+  // "writing" is handled by |PartitionWriter|
+  InstallOperationExecutor install_op_executor_;
 };
 
 namespace partition_writer {

@@ -66,7 +66,7 @@ cc_defaults {
     ],
     include_dirs: ["system"],
     local_include_dirs: ["client_library/include"],
-    static_libs: ["libgtest_prod"],
+    header_libs: ["libgtest_prod_headers"],
     shared_libs: [
         "libbrillo-stream",
         "libbrillo",
@@ -147,6 +147,7 @@ cc_defaults {
 cc_library_static {
     name: "update_metadata-protos",
     host_supported: true,
+    ramdisk_available: true,
     recovery_available: true,
 
     srcs: ["update_engine/update_metadata.proto"],
@@ -232,6 +233,7 @@ cc_library_static {
         "payload_consumer/file_descriptor_utils.cc",
         "payload_consumer/file_writer.cc",
         "payload_consumer/filesystem_verifier_action.cc",
+        "payload_consumer/install_operation_executor.cc",
         "payload_consumer/install_plan.cc",
         "payload_consumer/mount_history.cc",
         "payload_consumer/payload_constants.cc",
@@ -348,6 +350,9 @@ cc_defaults {
         "libstatslog",
         "libutils",
     ],
+    whole_static_libs: [
+        "com.android.sysprop.apex",
+    ],
 }
 
 cc_library_static {
@@ -426,6 +431,7 @@ cc_binary {
     // TODO(deymo): Remove external/cros/system_api/dbus once the strings are moved
     // out of the DBus interface.
     include_dirs: ["external/cros/system_api/dbus"],
+    header_libs: ["libgtest_prod_headers"],
 
     srcs: [
         "aosp/hardware_android.cc",
@@ -460,7 +466,6 @@ cc_binary {
         "gkiprops",
         "libevent",
         "libmodpb64",
-        "libgtest_prod",
         "libprotobuf-cpp-lite",
         "libbrillo-stream",
         "libbrillo",
@@ -763,6 +768,7 @@ cc_test {
 
     srcs: [
         "aosp/apex_handler_android_unittest.cc",
+        "aosp/cleanup_previous_update_action_unittest.cc",
         "aosp/dynamic_partition_control_android_unittest.cc",
         "aosp/update_attempter_android_unittest.cc",
         "certificate_checker_unittest.cc",
@@ -788,6 +794,7 @@ cc_test {
         "libcurl_http_fetcher_unittest.cc",
         "payload_consumer/bzip_extent_writer_unittest.cc",
         "payload_consumer/cached_file_descriptor_unittest.cc",
+        "payload_consumer/cow_writer_file_descriptor_unittest.cc",
         "payload_consumer/certificate_parser_android_unittest.cc",
         "payload_consumer/delta_performer_integration_test.cc",
         "payload_consumer/delta_performer_unittest.cc",
@@ -800,6 +807,7 @@ cc_test {
         "payload_consumer/file_writer_unittest.cc",
         "payload_consumer/filesystem_verifier_action_unittest.cc",
         "payload_consumer/install_plan_unittest.cc",
+        "payload_consumer/install_operation_executor_unittest.cc",
         "payload_consumer/partition_update_generator_android_unittest.cc",
         "payload_consumer/postinstall_runner_action_unittest.cc",
         "payload_consumer/verity_writer_android_unittest.cc",
