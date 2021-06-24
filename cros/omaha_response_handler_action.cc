@@ -153,6 +153,11 @@ void OmahaResponseHandlerAction::PerformAction() {
     install_plan_.target_slot =
         SystemState::Get()->boot_control()->GetCurrentSlot();
     install_plan_.source_slot = BootControlInterface::kInvalidSlot;
+    // For (DLC) installs, we don't need to switch slot on reboot, change
+    // `run_postinstall` to false so there is no error set when it is not
+    // completed.
+    install_plan_.switch_slot_on_reboot = false;
+    install_plan_.run_post_install = false;
   } else {
     install_plan_.source_slot =
         SystemState::Get()->boot_control()->GetCurrentSlot();

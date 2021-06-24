@@ -310,6 +310,8 @@ TEST_F(OmahaResponseHandlerActionTest, InstallTest) {
   InstallPlan install_plan;
   EXPECT_TRUE(DoTest(in, &install_plan));
   EXPECT_EQ(install_plan.source_slot, UINT_MAX);
+  EXPECT_FALSE(install_plan.switch_slot_on_reboot);
+  EXPECT_FALSE(install_plan.run_post_install);
 }
 
 TEST_F(OmahaResponseHandlerActionTest, MultiPackageTest) {

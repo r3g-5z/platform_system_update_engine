@@ -347,7 +347,7 @@ void PostinstallRunnerAction::CompletePostinstall(ErrorCode error_code) {
         // Schedules warm reset on next reboot, ignores the error.
         hardware_->SetWarmReset(true);
       }
-    } else {
+    } else if (install_plan_.run_post_install) {
       error_code = ErrorCode::kUpdatedButNotActive;
     }
   }
