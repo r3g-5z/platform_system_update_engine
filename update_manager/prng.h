@@ -19,6 +19,7 @@
 
 #include <random>
 
+#include <base/check_op.h>
 #include <base/logging.h>
 
 namespace chromeos_update_manager {
