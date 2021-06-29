@@ -127,6 +127,13 @@ class FakeBootControl : public BootControlInterface {
     return dynamic_partition_control_.get();
   }
 
+  bool GetMiniOSKernelConfig(std::string* configs) override { return true; }
+
+  bool GetMiniOSVersion(const std::string& kernel_output,
+                        std::string* value) override {
+    return false;
+  }
+
  private:
   BootControlInterface::Slot num_slots_{2};
   BootControlInterface::Slot current_slot_{0};

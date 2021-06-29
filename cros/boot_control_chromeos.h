@@ -28,6 +28,8 @@
 
 namespace chromeos_update_engine {
 
+extern const char kMiniOSVersionKey[];
+
 // The Chrome OS implementation of the BootControlInterface. This interface
 // assumes the partition names and numbers used in Chrome OS devices.
 class BootControlChromeOS : public BootControlInterface {
@@ -63,6 +65,9 @@ class BootControlChromeOS : public BootControlInterface {
   bool MarkBootSuccessfulAsync(base::Callback<void(bool)> callback) override;
   bool IsSlotMarkedSuccessful(BootControlInterface::Slot slot) const override;
   DynamicPartitionControlInterface* GetDynamicPartitionControl() override;
+  bool GetMiniOSKernelConfig(std::string* configs) override;
+  bool GetMiniOSVersion(const std::string& kernel_output,
+                        std::string* value) override;
 
  private:
   friend class BootControlChromeOSTest;

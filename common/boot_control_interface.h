@@ -108,6 +108,15 @@ class BootControlInterface {
   // Return the dynamic partition control interface.
   virtual DynamicPartitionControlInterface* GetDynamicPartitionControl() = 0;
 
+  // Get the MiniOS kernel configs. This function reads from the active MiniOS
+  // partition. Returns false on failure.
+  virtual bool GetMiniOSKernelConfig(std::string* configs) = 0;
+
+  // Returns the MiniOS version from the kernel config output. Returns false on
+  // failure or if there is no value.
+  virtual bool GetMiniOSVersion(const std::string& kernel_output,
+                                std::string* value) = 0;
+
   // Return a human-readable slot name used for logging.
   static std::string SlotName(Slot slot) {
     if (slot == kInvalidSlot)

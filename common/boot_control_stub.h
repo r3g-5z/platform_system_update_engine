@@ -58,6 +58,9 @@ class BootControlStub : public BootControlInterface {
   bool MarkBootSuccessfulAsync(base::Callback<void(bool)> callback) override;
   bool IsSlotMarkedSuccessful(BootControlInterface::Slot slot) const override;
   DynamicPartitionControlInterface* GetDynamicPartitionControl() override;
+  bool GetMiniOSKernelConfig(std::string* configs) override;
+  bool GetMiniOSVersion(const std::string& kernel_output,
+                        std::string* value) override;
 
  private:
   std::unique_ptr<DynamicPartitionControlInterface> dynamic_partition_control_;

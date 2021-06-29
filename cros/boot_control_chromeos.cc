@@ -35,6 +35,7 @@ extern "C" {
 
 #include "update_engine/common/boot_control.h"
 #include "update_engine/common/dynamic_partition_control_stub.h"
+#include "update_engine/common/hardware_interface.h"
 #include "update_engine/common/subprocess.h"
 #include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
@@ -114,6 +115,8 @@ string GetBootDeviceForMiniOs() {
 }  // namespace
 
 namespace chromeos_update_engine {
+
+const char kMiniOSVersionKey[] = "cros_minios_version";
 
 namespace boot_control {
 
@@ -427,6 +430,50 @@ bool BootControlChromeOS::IsSlotMarkedSuccessful(Slot slot) const {
 DynamicPartitionControlInterface*
 BootControlChromeOS::GetDynamicPartitionControl() {
   return dynamic_partition_control_.get();
+}
+
+bool BootControlChromeOS::GetMiniOSKernelConfig(std::string* configs) {
+  int active_minios_partition_number =
+      SystemState::Get()->hardware()->GetActiveMiniOsPartition();
+
+  // Get the full partition path.
+  auto kernel_partition = utils::MakePartitionName(
+      boot_disk_name_, active_minios_partition_number + kMiniOsPartitionANum);
+  vector<string> dump_cmd = {"dump_kernel_config", string(kernel_partition)};
+
+  int exit_code = 0;
+  string error;
+  if (!Subprocess::SynchronousExec(dump_cmd, &exit_code, configs, &error) ||
+      exit_code) {
+    LOG(ERROR) << "Failed getting kernel configs with exit code: " << exit_code
+               << " with output: " << configs << " and error: " << error;
+    configs->clear();
+    return false;
+  } else if (!error.empty()) {
+    LOG(INFO) << "succeeded getting the configs but with error logs: " << error;
+  }
+  return true;
+}
+
+bool BootControlChromeOS::GetMiniOSVersion(const std::string& kernel_output,
+                                           std::string* value) {
+  value->clear();
+  auto key_start = kernel_output.find(std::string(kMiniOSVersionKey) + "=");
+  if (key_start == std::string::npos) {
+    return false;
+  }
+
+  auto value_start = key_start + sizeof(kMiniOSVersionKey);
+
+  // Find the first break point and split the string.
+  std::size_t value_end = kernel_output.find_first_of(" \"", value_start);
+  *value = kernel_output.substr(value_start, value_end - value_start);
+  if (value->empty()) {
+    LOG(INFO) << "Value not found for key " << kMiniOSVersionKey << "  in "
+              << kernel_output;
+    return false;
+  }
+  return true;
 }
 
 }  // namespace chromeos_update_engine

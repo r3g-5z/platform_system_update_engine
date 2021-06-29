@@ -16,6 +16,7 @@
 
 #include "update_engine/cros/boot_control_chromeos.h"
 
+#include <base/strings/stringprintf.h>
 #include <gtest/gtest.h>
 
 using std::string;
@@ -91,6 +92,56 @@ TEST_F(BootControlChromeOSTest, ParseDlcPartitionNameTest) {
   EXPECT_FALSE(bootctl_.ParseDlcPartitionName("dlc//package", &id, &package));
   EXPECT_FALSE(bootctl_.ParseDlcPartitionName("dlc", &id, &package));
   EXPECT_FALSE(bootctl_.ParseDlcPartitionName("foo", &id, &package));
+}
+
+TEST_F(BootControlChromeOSTest, GetMiniOSVersionTest) {
+  const std::string kKey = std::string(kMiniOSVersionKey) + "=";
+  const std::string kVersion = "4018.0.0.1";
+  auto key_value = kKey + kVersion;
+
+  // Normal input.
+  std::string output = kKey + kVersion;
+  std::string value;
+  EXPECT_TRUE(bootctl_.GetMiniOSVersion(output, &value));
+  EXPECT_EQ(value, kVersion);
+
+  // Extra white space on both sides.
+  output = base::StringPrintf("   %s    key=value", key_value.c_str());
+  EXPECT_TRUE(bootctl_.GetMiniOSVersion(output, &value));
+  EXPECT_EQ(value, kVersion);
+
+  // Quotes on both sides.
+  output = base::StringPrintf("  \"%s\"", key_value.c_str());
+  EXPECT_TRUE(bootctl_.GetMiniOSVersion(output, &value));
+  EXPECT_EQ(value, kVersion);
+
+  // Quotes and spaces.
+  output = base::StringPrintf("%s\"  ", key_value.c_str());
+  EXPECT_TRUE(bootctl_.GetMiniOSVersion(output, &value));
+  EXPECT_EQ(value, kVersion);
+
+  // Badly formatted in the value of another key.
+  output = base::StringPrintf("cros_list=\"%s \"", key_value.c_str());
+  EXPECT_TRUE(bootctl_.GetMiniOSVersion(output, &value));
+  EXPECT_EQ(value, kVersion);
+
+  // With other key value pairs.
+  output = base::StringPrintf("noinitrd version=60   %s\" \'kern_guid=78",
+                              key_value.c_str());
+  EXPECT_TRUE(bootctl_.GetMiniOSVersion(output, &value));
+  EXPECT_EQ(value, kVersion);
+
+  // Key but no value.
+  output = base::StringPrintf("\"%s", kKey.c_str());
+  EXPECT_FALSE(bootctl_.GetMiniOSVersion(output, &value));
+
+  // Caps should not match.
+  output = "CROS_minios_version=" + kVersion;
+  EXPECT_FALSE(bootctl_.GetMiniOSVersion(output, &value));
+
+  // No kKey-value separator.
+  output = "cros_minios_version" + value;
+  EXPECT_FALSE(bootctl_.GetMiniOSVersion(output, &value));
 }
 
 }  // namespace chromeos_update_engine

@@ -86,4 +86,15 @@ BootControlStub::GetDynamicPartitionControl() {
   return dynamic_partition_control_.get();
 }
 
+bool BootControlStub::GetMiniOSKernelConfig(std::string* configs) {
+  LOG(ERROR) << __FUNCTION__ << " should never be called.";
+  return false;
+}
+
+bool BootControlStub::GetMiniOSVersion(const std::string& kernel_output,
+                                       std::string* value) {
+  LOG(ERROR) << __FUNCTION__ << " should never be called.";
+  return false;
+}
+
 }  // namespace chromeos_update_engine

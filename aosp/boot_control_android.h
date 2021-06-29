@@ -58,6 +58,9 @@ class BootControlAndroid : public BootControlInterface {
   bool MarkBootSuccessfulAsync(base::Callback<void(bool)> callback) override;
   bool IsSlotMarkedSuccessful(BootControlInterface::Slot slot) const override;
   DynamicPartitionControlInterface* GetDynamicPartitionControl() override;
+  bool GetMiniOSKernelConfig(std::string* configs) override;
+  bool GetMiniOSVersion(const std::string& kernel_output,
+                        std::string* value) override;
 
  private:
   ::android::sp<::android::hardware::boot::V1_0::IBootControl> module_;
