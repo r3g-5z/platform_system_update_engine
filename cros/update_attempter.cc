@@ -658,14 +658,12 @@ void UpdateAttempter::SetPref(const string& pref_key,
                               const string& pref_value,
                               const string& payload_id) {
   string dlc_id;
-  if (!omaha_request_params_->GetDlcId(payload_id, &dlc_id)) {
-    // Not a DLC ID, set fingerprint in perf for platform ID.
-    prefs_->SetString(pref_key, pref_value);
-  } else {
-    // Set fingerprint in pref for DLC ID.
-    auto key = prefs_->CreateSubKey({kDlcPrefsSubDir, dlc_id, pref_key});
-    prefs_->SetString(key, pref_value);
-  }
+  string key = pref_key;
+  if (omaha_request_params_->IsMiniOSAppId(payload_id))
+    key = prefs_->CreateSubKey({kMiniOSPrefsSubDir, pref_key});
+  else if (omaha_request_params_->GetDlcId(payload_id, &dlc_id))
+    key = prefs_->CreateSubKey({kDlcPrefsSubDir, dlc_id, pref_key});
+  prefs_->SetString(key, pref_value);
 }
 
 bool UpdateAttempter::SetDlcActiveValue(bool is_active, const string& dlc_id) {

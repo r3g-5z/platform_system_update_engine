@@ -128,6 +128,7 @@ bool OmahaRequestParams::Init(const string& app_version,
   dlc_apps_params_.clear();
 
   auto boot_control = SystemState::Get()->boot_control();
+  auto prefs = SystemState::Get()->prefs();
   if (boot_control->SupportsMiniOSPartitions()) {
     // Get the MiniOS version from kernel command line.
     std::string kernel_configs;
@@ -138,12 +139,16 @@ bool OmahaRequestParams::Init(const string& app_version,
       LOG(WARNING) << "Unable to get MiniOS version from kernel. Defaulting to "
                    << kNoVersion;
     }
+    // Get the MiniOS fingerprint value to send with the update check.
+    auto minios_fp_key =
+        prefs->CreateSubKey({kMiniOSPrefsSubDir, kPrefsLastFp});
+    prefs->GetString(minios_fp_key, &minios_app_params_.last_fp);
   }
 
   // Set false so it will do update by default.
   is_install_ = false;
 
-  SystemState::Get()->prefs()->GetString(kPrefsLastFp, &last_fp_);
+  prefs->GetString(kPrefsLastFp, &last_fp_);
 
   target_version_prefix_ = params.target_version_prefix;
 

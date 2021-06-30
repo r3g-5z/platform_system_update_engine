@@ -22,6 +22,8 @@ const char kExclusionPrefsSubDir[] = "exclusion";
 
 const char kDlcPrefsSubDir[] = "dlc";
 
+const char kMiniOSPrefsSubDir[] = "minios";
+
 const char kPowerwashSafePrefsSubDirectory[] = "update_engine/prefs";
 
 const char kPrefsSubDirectory[] = "prefs";

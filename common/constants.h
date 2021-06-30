@@ -25,6 +25,9 @@ extern const char kExclusionPrefsSubDir[];
 // The root path of all DLC metadata.
 extern const char kDlcPrefsSubDir[];
 
+// The root path of all MiniOS metadata.
+extern const char kMiniOSPrefsSubDir[];
+
 // Directory for AU prefs that are preserved across powerwash.
 extern const char kPowerwashSafePrefsSubDirectory[];
 

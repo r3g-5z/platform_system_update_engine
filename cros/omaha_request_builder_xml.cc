@@ -166,8 +166,9 @@ string OmahaRequestBuilderXml::GetAppBody(const OmahaAppData& app_data) const {
         if (SystemState::Get()
                 ->update_attempter()
                 ->IsRepeatedUpdatesEnabled()) {
-          string last_fp =
-              app_data.is_dlc ? app_data.app_params.last_fp : params->last_fp();
+          string last_fp = (app_data.is_dlc || app_data.is_minios)
+                               ? app_data.app_params.last_fp
+                               : params->last_fp();
           if (!last_fp.empty()) {
             app_body += base::StringPrintf(
                 " last_fp=\"%s\"", XmlEncodeWithDefault(last_fp).c_str());
@@ -475,16 +476,18 @@ string OmahaRequestBuilderXml::GetApps() const {
   std::string value;
   if (!SystemState::Get()->hardware()->IsRunningFromMiniOs() &&
       SystemState::Get()->boot_control()->SupportsMiniOSPartitions()) {
+    auto minios_params = params->minios_app_params();
     OmahaAppData minios_app = {
         .id = params->GetAppId() + kMiniOsAppIdSuffix,
-        .version = params->minios_app_params().version,
+        .version = minios_params.version,
         .product_components = params->product_components(),
         .skip_update = false,
         .is_dlc = false,
         .is_minios = true,
         .app_params = {.active_counting_type = OmahaRequestParams::kDateBased,
                        .send_ping = include_ping_,
-                       .updated = params->minios_app_params().updated}};
+                       .updated = minios_params.updated,
+                       .last_fp = minios_params.last_fp}};
     app_xml += GetApp(minios_app);
   }
 

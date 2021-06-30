@@ -335,6 +335,18 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlDlcFp) {
       << request_xml;
 }
 
+TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlMiniOSFp) {
+  FakeSystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
+  FakeSystemState::Get()->fake_boot_control()->SetSupportsMiniOSPartitions(
+      true);
+  params_.set_minios_app_params({.last_fp = "1.2"});
+
+  OmahaRequestBuilderXml omaha_request{nullptr, false, false, 0, 0, 0, ""};
+  const string request_xml = omaha_request.GetRequest();
+  EXPECT_EQ(1, CountSubstringInString(request_xml, "last_fp=\"1.2\""))
+      << request_xml;
+}
+
 TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlUpdateCompleteEvent) {
   OmahaEvent event(OmahaEvent::kTypeUpdateComplete);
   OmahaRequestBuilderXml omaha_request{&event,

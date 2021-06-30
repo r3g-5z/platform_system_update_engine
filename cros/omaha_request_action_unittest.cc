@@ -3231,6 +3231,24 @@ TEST_F(OmahaRequestActionTest, OmahaResponseSameDlcFp) {
   EXPECT_FALSE(TestUpdateCheck());
 }
 
+TEST_F(OmahaRequestActionTest, OmahaResponseSameMiniOSFp) {
+  SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
+  // Set request fingerprints. Same fp in both request and response for MiniOS.
+  // Request fps: 1.0 (platform), `fp2` (minios). Response fps:`fp` (platform),
+  // `fp2` (minios).
+  request_params_.set_last_fp("1.0");
+  request_params_.set_minios_app_params({.last_fp = fake_update_response_.fp2});
+  fake_update_response_.minios_app_update = true;
+
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+  tuc_params_.expected_code = ErrorCode::kRepeatedFpFromOmahaError;
+  tuc_params_.expected_check_result = metrics::CheckResult::kParsingError;
+  tuc_params_.expected_check_reaction = metrics::CheckReaction::kUnset;
+
+  EXPECT_CALL(mock_excluder_, IsExcluded(_)).WillRepeatedly(Return(false));
+  EXPECT_FALSE(TestUpdateCheck());
+}
+
 TEST_F(OmahaRequestActionTest, OmahaResponseSamePlatformFp) {
   SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
   // Set request fingerprints. Same fp in both request and response for
