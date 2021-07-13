@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <string>
 
+#include <base/check.h>
 #include <base/files/file_path.h>
 #include <base/logging.h>
 #include <base/metrics/statistics_recorder.h>

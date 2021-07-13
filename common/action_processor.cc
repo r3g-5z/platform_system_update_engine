@@ -19,6 +19,8 @@
 #include <string>
 #include <utility>
 
+#include <base/check.h>
+#include <base/check_op.h>
 #include <base/logging.h>
 
 #include "update_engine/common/action.h"
