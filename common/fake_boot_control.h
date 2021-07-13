@@ -134,6 +134,10 @@ class FakeBootControl : public BootControlInterface {
     return false;
   }
 
+  std::string GetMiniOSPartitionName() override { return ""; }
+
+  bool SupportsMiniOSPartitions() override { return false; }
+
  private:
   BootControlInterface::Slot num_slots_{2};
   BootControlInterface::Slot current_slot_{0};

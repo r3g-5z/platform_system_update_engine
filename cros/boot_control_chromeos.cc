@@ -58,6 +58,8 @@ const char kPartitionNameDlcA[] = "dlc_a";
 const char kPartitionNameDlcB[] = "dlc_b";
 const char kPartitionNameDlcImage[] = "dlc.img";
 
+const char kMiniOSLabelA[] = "MINIOS-A";
+
 constexpr char kSetGoodKernel[] = "/usr/sbin/chromeos-setgoodkernel";
 
 // Returns the currently booted rootfs partition. "/dev/sda3", for example.
@@ -432,14 +434,18 @@ BootControlChromeOS::GetDynamicPartitionControl() {
   return dynamic_partition_control_.get();
 }
 
-bool BootControlChromeOS::GetMiniOSKernelConfig(std::string* configs) {
+std::string BootControlChromeOS::GetMiniOSPartitionName() {
   int active_minios_partition_number =
       SystemState::Get()->hardware()->GetActiveMiniOsPartition();
 
   // Get the full partition path.
-  auto kernel_partition = utils::MakePartitionName(
+  auto partition = utils::MakePartitionName(
       boot_disk_name_, active_minios_partition_number + kMiniOsPartitionANum);
-  vector<string> dump_cmd = {"dump_kernel_config", string(kernel_partition)};
+  return string(partition);
+}
+
+bool BootControlChromeOS::GetMiniOSKernelConfig(std::string* configs) {
+  vector<string> dump_cmd = {"dump_kernel_config", GetMiniOSPartitionName()};
 
   int exit_code = 0;
   string error;
@@ -474,6 +480,14 @@ bool BootControlChromeOS::GetMiniOSVersion(const std::string& kernel_output,
     return false;
   }
   return true;
+}
+
+bool BootControlChromeOS::SupportsMiniOSPartitions() {
+  // Checking for the MINIOS-A partition label should be enough since MINIOS-B
+  // will always be on the device if A is, hardcoded as partitions 9 and 10.
+  CgptFindParams cgpt_params = {.set_label = 1, .label = kMiniOSLabelA};
+  CgptFind(&cgpt_params);
+  return cgpt_params.hits == 1;
 }
 
 }  // namespace chromeos_update_engine

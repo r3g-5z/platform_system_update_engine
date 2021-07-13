@@ -117,6 +117,13 @@ class BootControlInterface {
   virtual bool GetMiniOSVersion(const std::string& kernel_output,
                                 std::string* value) = 0;
 
+  // Get the partition number of the active MINIOS partition. Returns the full
+  // path.
+  virtual std::string GetMiniOSPartitionName() = 0;
+
+  // Returns whether MINIOS-A and B partitions exist on the device.
+  virtual bool SupportsMiniOSPartitions() = 0;
+
   // Return a human-readable slot name used for logging.
   static std::string SlotName(Slot slot) {
     if (slot == kInvalidSlot)

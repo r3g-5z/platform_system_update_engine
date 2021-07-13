@@ -61,6 +61,8 @@ class BootControlStub : public BootControlInterface {
   bool GetMiniOSKernelConfig(std::string* configs) override;
   bool GetMiniOSVersion(const std::string& kernel_output,
                         std::string* value) override;
+  std::string GetMiniOSPartitionName() override;
+  bool SupportsMiniOSPartitions() override;
 
  private:
   std::unique_ptr<DynamicPartitionControlInterface> dynamic_partition_control_;

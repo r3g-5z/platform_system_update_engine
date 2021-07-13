@@ -97,4 +97,13 @@ bool BootControlStub::GetMiniOSVersion(const std::string& kernel_output,
   return false;
 }
 
+std::string BootControlStub::GetMiniOSPartitionName() {
+  LOG(ERROR) << __FUNCTION__ << " should never be called.";
+  return "";
+}
+
+bool BootControlStub::SupportsMiniOSPartitions() {
+  LOG(ERROR) << __FUNCTION__ << " should never be called.";
+  return false;
+}
 }  // namespace chromeos_update_engine

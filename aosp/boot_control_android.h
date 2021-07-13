@@ -61,6 +61,8 @@ class BootControlAndroid : public BootControlInterface {
   bool GetMiniOSKernelConfig(std::string* configs) override;
   bool GetMiniOSVersion(const std::string& kernel_output,
                         std::string* value) override;
+  std::string GetMiniOSPartitionName() override;
+  bool HasMiniOSPartition() override;
 
  private:
   ::android::sp<::android::hardware::boot::V1_0::IBootControl> module_;

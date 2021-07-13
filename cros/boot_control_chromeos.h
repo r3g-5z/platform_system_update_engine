@@ -68,6 +68,8 @@ class BootControlChromeOS : public BootControlInterface {
   bool GetMiniOSKernelConfig(std::string* configs) override;
   bool GetMiniOSVersion(const std::string& kernel_output,
                         std::string* value) override;
+  std::string GetMiniOSPartitionName() override;
+  bool SupportsMiniOSPartitions() override;
 
  private:
   friend class BootControlChromeOSTest;
