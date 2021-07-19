@@ -40,17 +40,17 @@
 namespace chromeos_update_engine {
 
 bool RealSystemState::Initialize() {
+  hardware_ = hardware::CreateHardware();
+  if (!hardware_) {
+    LOG(ERROR) << "Error initializing the HardwareInterface.";
+    return false;
+  }
+
   boot_control_ = boot_control::CreateBootControl();
   if (!boot_control_) {
     LOG(WARNING) << "Unable to create BootControl instance, using stub "
                  << "instead. All update attempts will fail.";
     boot_control_ = std::make_unique<BootControlStub>();
-  }
-
-  hardware_ = hardware::CreateHardware();
-  if (!hardware_) {
-    LOG(ERROR) << "Error initializing the HardwareInterface.";
-    return false;
   }
 
   kiosk_app_proxy_.reset(new org::chromium::KioskAppServiceInterfaceProxy(

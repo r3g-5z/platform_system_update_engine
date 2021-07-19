@@ -87,6 +87,10 @@ const char* kActivePingKey = "first_active_omaha_ping_sent";
 // Vboot MiniOS booting priority flag.
 const char kMiniOsPriorityFlag[] = "minios_priority";
 
+const char kKernelCmdline[] = "proc/cmdline";
+
+const char kRunningFromMiniOSLabel[] = "cros_minios";
+
 }  // namespace
 
 namespace chromeos_update_engine {
@@ -117,7 +121,29 @@ bool HardwareChromeOS::IsNormalBootMode() const {
 }
 
 bool HardwareChromeOS::IsRunningFromMiniOs() const {
-  return base::PathExists(root_.Append("etc").Append("minios"));
+  // Look up the current kernel command line.
+  string kernel_cmd_line;
+  if (!base::ReadFileToString(base::FilePath(root_.Append(kKernelCmdline)),
+                              &kernel_cmd_line)) {
+    LOG(ERROR) << "Can't read kernel commandline options.";
+    return false;
+  }
+
+  size_t match_start = 0;
+  while ((match_start = kernel_cmd_line.find(
+              kRunningFromMiniOSLabel, match_start)) != std::string::npos) {
+    // Make sure the MiniOS flag is not a part of any other key by checking for
+    // a space or a quote after it, except if it is at the end of the string.
+    match_start += sizeof(kRunningFromMiniOSLabel) - 1;
+    if (match_start < kernel_cmd_line.size() &&
+        kernel_cmd_line[match_start] != ' ' &&
+        kernel_cmd_line[match_start] != '"') {
+      // Ignore partial matches.
+      continue;
+    }
+    return true;
+  }
+  return false;
 }
 
 bool HardwareChromeOS::AreDevFeaturesEnabled() const {

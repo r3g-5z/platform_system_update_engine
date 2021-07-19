@@ -88,12 +88,6 @@ void OnMarkBootSuccessfulDone(base::Callback<void(bool)> callback,
   callback.Run(return_code == 0);
 }
 
-// TODO(b/182165759): Use hardware system state to determine whether we are
-// running from MiniOs.
-bool IsRunningFromMiniOs() {
-  return base::PathExists(base::FilePath("/etc").Append("minios"));
-}
-
 // Will return the partition corresponding to slot B to update into Slot A.
 // Empty on error.
 string GetBootDeviceForMiniOs() {
@@ -136,7 +130,7 @@ std::unique_ptr<BootControlInterface> CreateBootControl() {
 
 bool BootControlChromeOS::Init() {
   string boot_device;
-  if (IsRunningFromMiniOs()) {
+  if (SystemState::Get()->hardware()->IsRunningFromMiniOs()) {
     // Unable to get a boot device from rootdev when in recovery mode.
     boot_device = GetBootDeviceForMiniOs();
   } else {

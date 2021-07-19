@@ -91,8 +91,44 @@ TEST_F(HardwareChromeOSTest, ReadRootfsIfStatefulNotFound) {
 TEST_F(HardwareChromeOSTest, RunningInMiniOs) {
   base::FilePath test_path = root_dir_.GetPath();
   hardware_.SetRootForTest(test_path);
-  brillo::TouchFile(test_path.Append("etc").Append("minios"));
+  std::string cmdline =
+      " loglevel=7    root=/dev cros_minios \"noinitrd "
+      "panic=60   version=14018.0\" \'kern_guid=78 ";
+  brillo::TouchFile(test_path.Append("proc").Append("cmdline"));
+  EXPECT_TRUE(
+      base::WriteFile(test_path.Append("proc").Append("cmdline"), cmdline));
   EXPECT_TRUE(hardware_.IsRunningFromMiniOs());
+
+  cmdline = " loglevel=7    root=/dev cros_minios";
+  EXPECT_TRUE(
+      base::WriteFile(test_path.Append("proc").Append("cmdline"), cmdline));
+  EXPECT_TRUE(hardware_.IsRunningFromMiniOs());
+
+  // Search all matches for key.
+  cmdline = "cros_minios_version=1.1.1 cros_minios";
+  EXPECT_TRUE(
+      base::WriteFile(test_path.Append("proc").Append("cmdline"), cmdline));
+  EXPECT_TRUE(hardware_.IsRunningFromMiniOs());
+
+  // Ends with quotes.
+  cmdline =
+      "dm_verity.dev_wait=1  \"noinitrd panic=60 "
+      "cros_minios_version=14116.0.2021_07_28_1259 cros_minios\"";
+  EXPECT_TRUE(
+      base::WriteFile(test_path.Append("proc").Append("cmdline"), cmdline));
+  EXPECT_TRUE(hardware_.IsRunningFromMiniOs());
+
+  // Search all matches for key, reject multiple partial matches.
+  cmdline = "cros_minios_version=1.1.1 cros_minios_mode";
+  EXPECT_TRUE(
+      base::WriteFile(test_path.Append("proc").Append("cmdline"), cmdline));
+  EXPECT_FALSE(hardware_.IsRunningFromMiniOs());
+
+  // Reject a partial match.
+  cmdline = " loglevel=7    root=/dev cros_minios_version=1.1.1";
+  EXPECT_TRUE(
+      base::WriteFile(test_path.Append("proc").Append("cmdline"), cmdline));
+  EXPECT_FALSE(hardware_.IsRunningFromMiniOs());
 }
 
 TEST_F(HardwareChromeOSTest, NotRunningInMiniOs) {
