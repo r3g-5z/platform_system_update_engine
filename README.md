@@ -97,11 +97,10 @@ can also perform any board specific or firmware update tasks necessary. If
 postinstall fails, the entire update is considered failed.
 
 Then the updater client goes into a state that identifies the update has
-completed and the user needs to reboot the system. At this point, until the user
-reboots (or signs out), the updater client will not do any more system updates
-even if newer updates are available. However, it does continue to perform
-periodic update checks so we can have statistics on the number of active devices
-in the field.
+completed and the user needs to reboot the system. However, the system
+continues to perform periodic update checks and will update the inactive
+partition with a newer update if it is available. Periodic update checks also
+provide statistics on the number of active devices in the field.
 
 After the update proved successful, the inactive partition is marked to have a
 higher priority (on a boot, a partition with higher priority is booted
