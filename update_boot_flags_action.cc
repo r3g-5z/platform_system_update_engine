@@ -27,6 +27,11 @@ bool UpdateBootFlagsAction::updated_boot_flags_ = false;
 bool UpdateBootFlagsAction::is_running_ = false;
 
 void UpdateBootFlagsAction::PerformAction() {
+  if (hardware_->IsRunningFromMiniOs()) {
+    LOG(INFO) << "No need to update boot flags when in MiniOS. Skipping.";
+    processor_->ActionComplete(this, ErrorCode::kSuccess);
+    return;
+  }
   if (is_running_) {
     LOG(INFO) << "Update boot flags running, nothing to do.";
     processor_->ActionComplete(this, ErrorCode::kSuccess);

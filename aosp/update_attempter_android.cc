@@ -724,7 +724,7 @@ void UpdateAttempterAndroid::BuildUpdateActions(HttpFetcher* fetcher) {
 
   // Actions:
   auto update_boot_flags_action =
-      std::make_unique<UpdateBootFlagsAction>(boot_control_);
+      std::make_unique<UpdateBootFlagsAction>(boot_control_, hardware_);
   auto cleanup_previous_update_action =
       boot_control_->GetDynamicPartitionControl()
           ->GetCleanupPreviousUpdateAction(boot_control_, prefs_, this);

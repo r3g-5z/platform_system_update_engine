@@ -192,7 +192,7 @@ bool UpdateAttempter::StartUpdater() {
   ScheduleUpdates();
 
   auto update_boot_flags_action = std::make_unique<UpdateBootFlagsAction>(
-      SystemState::Get()->boot_control());
+      SystemState::Get()->boot_control(), SystemState::Get()->hardware());
   aux_processor_.EnqueueAction(std::move(update_boot_flags_action));
   // Update boot flags after 45 seconds.
   MessageLoop::current()->PostDelayedTask(
@@ -778,7 +778,7 @@ void UpdateAttempter::BuildUpdateActions(bool interactive) {
       nullptr, std::move(update_check_fetcher), false, session_id_);
   auto response_handler_action = std::make_unique<OmahaResponseHandlerAction>();
   auto update_boot_flags_action = std::make_unique<UpdateBootFlagsAction>(
-      SystemState::Get()->boot_control());
+      SystemState::Get()->boot_control(), SystemState::Get()->hardware());
   auto download_started_action = std::make_unique<OmahaRequestAction>(
       new OmahaEvent(OmahaEvent::kTypeUpdateDownloadStarted),
       std::make_unique<LibcurlHttpFetcher>(GetProxyResolver(),

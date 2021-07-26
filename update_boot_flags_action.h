@@ -18,6 +18,7 @@
 
 #include "update_engine/common/action.h"
 #include "update_engine/common/boot_control_interface.h"
+#include "update_engine/common/hardware_interface.h"
 
 #include <gtest/gtest_prod.h>
 
@@ -25,8 +26,9 @@ namespace chromeos_update_engine {
 
 class UpdateBootFlagsAction : public AbstractAction {
  public:
-  explicit UpdateBootFlagsAction(BootControlInterface* boot_control)
-      : boot_control_(boot_control) {}
+  explicit UpdateBootFlagsAction(BootControlInterface* boot_control,
+                                 HardwareInterface* hardware)
+      : boot_control_(boot_control), hardware_(hardware) {}
   UpdateBootFlagsAction(const UpdateBootFlagsAction&) = delete;
   UpdateBootFlagsAction& operator=(const UpdateBootFlagsAction&) = delete;
 
@@ -41,6 +43,7 @@ class UpdateBootFlagsAction : public AbstractAction {
 
  private:
   FRIEND_TEST(UpdateBootFlagsActionTest, SimpleTest);
+  FRIEND_TEST(UpdateBootFlagsActionTest, RunningMiniOSTest);
   FRIEND_TEST(UpdateBootFlagsActionTest, DoubleActionTest);
 
   // Originally, both of these flags are false. Once UpdateBootFlags is called,
@@ -56,6 +59,8 @@ class UpdateBootFlagsAction : public AbstractAction {
 
   // Used for setting the boot flag.
   BootControlInterface* boot_control_;
+  // Used for determining whether the device is booted from MiniOS.
+  HardwareInterface* hardware_;
 };
 
 }  // namespace chromeos_update_engine
