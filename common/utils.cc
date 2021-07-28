@@ -96,11 +96,7 @@ bool GetTempName(const string& path, base::FilePath* template_path) {
   }
 
   base::FilePath temp_dir;
-#ifdef __ANDROID__
-  temp_dir = base::FilePath(constants::kNonVolatileDirectory).Append("tmp");
-#else
   TEST_AND_RETURN_FALSE(base::GetTempDir(&temp_dir));
-#endif  // __ANDROID__
   if (!base::PathExists(temp_dir))
     TEST_AND_RETURN_FALSE(base::CreateDirectory(temp_dir));
   *template_path = temp_dir.Append(path);

@@ -37,10 +37,6 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 
-#ifdef __ANDROID__
-#include <libdm/loop_control.h>
-#endif
-
 #include "update_engine/common/error_code_utils.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/payload_consumer/file_writer.h"
@@ -48,7 +44,7 @@
 using std::set;
 using std::string;
 using std::vector;
-using namespace std::chrono_literals;
+using namespace std::chrono_literals;  // NOLINT
 
 namespace chromeos_update_engine {
 
@@ -181,21 +177,8 @@ bool BindToUnusedLoopDevice(const string& filename,
   TEST_AND_RETURN_FALSE_ERRNO(data_fd >= 0);
   ScopedFdCloser data_fd_closer(&data_fd);
 
-#ifdef __ANDROID__
-  // Use libdm to bind a free loop device. The library internally handles the
-  // race condition.
-  android::dm::LoopControl loop_control;
-  TEST_AND_RETURN_FALSE(loop_control.Attach(data_fd, 5s, out_lo_dev_name));
-  int loop_device_fd = open(out_lo_dev_name->c_str(), O_RDWR | O_CLOEXEC);
-  ScopedFdCloser loop_fd_closer(&loop_device_fd);
-  int loop_number;
-  TEST_AND_RETURN_FALSE(
-      sscanf(out_lo_dev_name->c_str(), "/dev/block/loop%d", &loop_number) == 1);
-  return SetLoopDeviceStatus(loop_device_fd, filename, loop_number, writable);
-#else
   return BindToUnusedLoopDeviceLegacy(
       data_fd, filename, writable, out_lo_dev_name);
-#endif
 }
 
 bool UnbindLoopDevice(const string& lo_dev_name) {

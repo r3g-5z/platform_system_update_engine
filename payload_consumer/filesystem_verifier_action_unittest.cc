@@ -276,69 +276,6 @@ TEST_F(FilesystemVerifierActionTest, RunAsRootTerminateEarlyTest) {
   }
 }
 
-#ifdef __ANDROID__
-TEST_F(FilesystemVerifierActionTest, RunAsRootWriteVerityTest) {
-  ScopedTempFile part_file("part_file.XXXXXX");
-  constexpr size_t filesystem_size = 200 * 4096;
-  constexpr size_t part_size = 256 * 4096;
-  brillo::Blob part_data(filesystem_size, 0x1);
-  part_data.resize(part_size);
-  ASSERT_TRUE(test_utils::WriteFileVector(part_file.path(), part_data));
-  string target_path;
-  test_utils::ScopedLoopbackDeviceBinder target_device(
-      part_file.path(), true, &target_path);
-
-  InstallPlan install_plan;
-  InstallPlan::Partition part;
-  part.name = "part";
-  part.target_path = target_path;
-  part.target_size = part_size;
-  part.block_size = 4096;
-  part.hash_tree_algorithm = "sha1";
-  part.hash_tree_data_offset = 0;
-  part.hash_tree_data_size = filesystem_size;
-  part.hash_tree_offset = filesystem_size;
-  part.hash_tree_size = 3 * 4096;
-  part.fec_data_offset = 0;
-  part.fec_data_size = filesystem_size + part.hash_tree_size;
-  part.fec_offset = part.fec_data_size;
-  part.fec_size = 2 * 4096;
-  part.fec_roots = 2;
-  // for i in {1..$((200 * 4096))}; do echo -n -e '\x1' >> part; done
-  // avbtool add_hashtree_footer --image part --partition_size $((256 * 4096))
-  //     --partition_name part --do_not_append_vbmeta_image
-  //     --output_vbmeta_image vbmeta
-  // truncate -s $((256 * 4096)) part
-  // sha256sum part | xxd -r -p | hexdump -v -e '/1 "0x%02x, "'
-  part.target_hash = {0x28, 0xd4, 0x96, 0x75, 0x4c, 0xf5, 0x8a, 0x3e,
-                      0x31, 0x85, 0x08, 0x92, 0x85, 0x62, 0xf0, 0x37,
-                      0xbc, 0x8d, 0x7e, 0xa4, 0xcb, 0x24, 0x18, 0x7b,
-                      0xf3, 0xeb, 0xb5, 0x8d, 0x6f, 0xc8, 0xd8, 0x1a};
-  // avbtool info_image --image vbmeta | grep Salt | cut -d':' -f 2 |
-  //     xxd -r -p | hexdump -v -e '/1 "0x%02x, "'
-  part.hash_tree_salt = {0x9e, 0xcb, 0xf8, 0xd5, 0x0b, 0xb4, 0x43,
-                         0x0a, 0x7a, 0x10, 0xad, 0x96, 0xd7, 0x15,
-                         0x70, 0xba, 0xed, 0x27, 0xe2, 0xae};
-  install_plan.partitions = {part};
-
-  BuildActions(install_plan);
-
-  FilesystemVerifierActionTestDelegate delegate;
-  processor_.set_delegate(&delegate);
-
-  loop_.PostTask(
-      FROM_HERE,
-      base::Bind(
-          [](ActionProcessor* processor) { processor->StartProcessing(); },
-          base::Unretained(&processor_)));
-  loop_.Run();
-
-  EXPECT_FALSE(processor_.IsRunning());
-  EXPECT_TRUE(delegate.ran());
-  EXPECT_EQ(ErrorCode::kSuccess, delegate.code());
-}
-#endif  // __ANDROID__
-
 TEST_F(FilesystemVerifierActionTest, RunAsRootSkipWriteVerityTest) {
   ScopedTempFile part_file("part_file.XXXXXX");
   constexpr size_t filesystem_size = 200 * 4096;

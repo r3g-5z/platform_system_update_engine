@@ -122,13 +122,9 @@ void PostinstallRunnerAction::PerformPartitionPostinstall() {
   // Perform post-install for the current_partition_ partition. At this point we
   // need to call CompletePartitionPostinstall to complete the operation and
   // cleanup.
-#ifdef __ANDROID__
-  fs_mount_dir_ = "/postinstall";
-#else   // __ANDROID__
   base::FilePath temp_dir;
   TEST_AND_RETURN(base::CreateNewTempDirectory("au_postint_mount", &temp_dir));
   fs_mount_dir_ = temp_dir.value();
-#endif  // __ANDROID__
 
   // Double check that the fs_mount_dir is not busy with a previous mounted
   // filesystem from a previous crashed postinstall step.
@@ -154,18 +150,6 @@ void PostinstallRunnerAction::PerformPartitionPostinstall() {
     return CompletePostinstall(ErrorCode::kPostinstallRunnerError);
   }
 
-#ifdef __ANDROID__
-  // In Chromium OS, the postinstall step is allowed to write to the block
-  // device on the target image, so we don't mark it as read-only and should
-  // be read-write since we just wrote to it during the update.
-
-  // Mark the block device as read-only before mounting for post-install.
-  if (!utils::SetBlockDeviceReadOnly(mountable_device, true)) {
-    return CompletePartitionPostinstall(
-        1, "Error marking the device " + mountable_device + " read only.");
-  }
-#endif  // __ANDROID__
-
   if (!utils::MountFilesystem(mountable_device,
                               fs_mount_dir_,
                               MS_RDONLY,
@@ -188,14 +172,8 @@ void PostinstallRunnerAction::PerformPartitionPostinstall() {
   // Runs the postinstall script asynchronously to free up the main loop while
   // it's running.
   vector<string> command = {abs_path};
-#ifdef __ANDROID__
-  // In Brillo and Android, we pass the slot number and status fd.
-  command.push_back(std::to_string(install_plan_.target_slot));
-  command.push_back(std::to_string(kPostinstallStatusFd));
-#else
   // Chrome OS postinstall expects the target rootfs as the first parameter.
   command.push_back(partition.target_path);
-#endif  // __ANDROID__
 
   current_command_ = Subprocess::Get().ExecFlags(
       command,
@@ -283,11 +261,9 @@ void PostinstallRunnerAction::ReportProgress(double frac) {
 
 void PostinstallRunnerAction::Cleanup() {
   utils::UnmountFilesystem(fs_mount_dir_);
-#ifndef __ANDROID__
   if (!base::DeleteFile(base::FilePath(fs_mount_dir_))) {
     PLOG(WARNING) << "Not removing temporary mountpoint " << fs_mount_dir_;
   }
-#endif  // !__ANDROID__
   fs_mount_dir_.clear();
 
   progress_fd_ = -1;

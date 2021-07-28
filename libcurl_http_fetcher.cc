@@ -36,11 +36,6 @@
 #include <base/strings/stringprintf.h>
 #include <base/threading/thread_task_runner_handle.h>
 
-#ifdef __ANDROID__
-#include <cutils/qtaguid.h>
-#include <private/android_filesystem_config.h>
-#endif  // __ANDROID__
-
 #include "update_engine/certificate_checker.h"
 #include "update_engine/common/hardware_interface.h"
 #include "update_engine/common/platform_constants.h"
@@ -65,12 +60,6 @@ const int kNoNetworkRetrySeconds = 10;
 int LibcurlSockoptCallback(void* /* clientp */,
                            curl_socket_t curlfd,
                            curlsocktype /* purpose */) {
-#ifdef __ANDROID__
-  // Socket tag used by all network sockets. See qtaguid kernel module for
-  // stats.
-  const int kUpdateEngineSocketTag = 0x55417243;  // "CrAU" in little-endian.
-  qtaguid_tagSocket(curlfd, kUpdateEngineSocketTag, AID_OTA_UPDATE);
-#endif  // __ANDROID__
   return CURL_SOCKOPT_OK;
 }
 
@@ -79,10 +68,6 @@ int LibcurlSockoptCallback(void* /* clientp */,
 // static
 int LibcurlHttpFetcher::LibcurlCloseSocketCallback(void* clientp,
                                                    curl_socket_t item) {
-#ifdef __ANDROID__
-  qtaguid_untagSocket(item);
-#endif  // __ANDROID__
-
   LibcurlHttpFetcher* fetcher = static_cast<LibcurlHttpFetcher*>(clientp);
   // Stop watching the socket before closing it.
   for (size_t t = 0; t < base::size(fetcher->fd_controller_maps_); ++t) {
@@ -269,11 +254,6 @@ void LibcurlHttpFetcher::ResumeTransfer(const string& url) {
     } else if (base::StartsWith(
                    url_, "https://", base::CompareCase::INSENSITIVE_ASCII)) {
       SetCurlOptionsForHttps();
-#ifdef __ANDROID__
-    } else if (base::StartsWith(
-                   url_, "file://", base::CompareCase::INSENSITIVE_ASCII)) {
-      SetCurlOptionsForFile();
-#endif  // __ANDROID__
     } else {
       LOG(ERROR) << "Received invalid URI: " << url_;
       // Lock down to no protocol supported for the transfer.

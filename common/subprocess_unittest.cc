@@ -55,13 +55,8 @@ using std::vector;
 
 namespace {
 
-#ifdef __ANDROID__
-#define kBinPath "/system/bin"
-#define kUsrBinPath "/system/bin"
-#else
 #define kBinPath "/bin"
 #define kUsrBinPath "/usr/bin"
-#endif  // __ANDROID__
 
 }  // namespace
 
