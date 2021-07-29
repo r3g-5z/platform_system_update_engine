@@ -34,9 +34,6 @@ class ServiceObserverInterface {
   virtual void SendStatusUpdate(
       const update_engine::UpdateEngineStatus& update_engine_status) = 0;
 
-  // Called whenever an update attempt is completed.
-  virtual void SendPayloadApplicationComplete(ErrorCode error_code) = 0;
-
  protected:
   ServiceObserverInterface() = default;
 };

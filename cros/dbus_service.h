@@ -188,8 +188,6 @@ class UpdateEngineAdaptor : public org::chromium::UpdateEngineInterfaceAdaptor,
   void SendStatusUpdate(
       const update_engine::UpdateEngineStatus& update_engine_status) override;
 
-  void SendPayloadApplicationComplete(ErrorCode error_code) override {}
-
  private:
   scoped_refptr<dbus::Bus> bus_;
   DBusUpdateEngineService dbus_service_;

@@ -27,7 +27,6 @@ class MockServiceObserver : public ServiceObserverInterface {
   MOCK_METHOD1(
       SendStatusUpdate,
       void(const update_engine::UpdateEngineStatus& update_engine_status));
-  MOCK_METHOD1(SendPayloadApplicationComplete, void(ErrorCode error_code));
 };
 
 }  // namespace chromeos_update_engine
