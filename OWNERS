@@ -1,11 +1,5 @@
 set noparent
 
-# Android et. al. maintainers:
-deymo@google.com
-elsk@google.com
-senj@google.com
-xunchang@google.com
-
 # Chromium OS maintainers:
 kimjae@google.com
 vyshu@google.com
