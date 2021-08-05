@@ -16,6 +16,7 @@
 
 #include "update_engine/update_manager/minimum_version_policy_impl.h"
 
+#include <base/logging.h>
 #include <base/version.h>
 
 #include "update_engine/update_manager/update_can_be_applied_policy_data.h"

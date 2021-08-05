@@ -16,6 +16,8 @@
 
 #include "update_engine/update_manager/official_build_check_policy_impl.h"
 
+#include <base/logging.h>
+
 namespace chromeos_update_manager {
 
 // Unofficial builds should not perform periodic update checks.

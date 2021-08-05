@@ -26,9 +26,10 @@
 #include <string>
 
 #include <base/bind.h>
+#include <base/logging.h>
+#include <base/strings/string_util.h>
 #include <brillo/data_encoding.h>
 #include <brillo/streams/file_stream.h>
-#include <base/strings/string_util.h>
 
 #include "update_engine/common/utils.h"
 

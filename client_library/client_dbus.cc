@@ -16,6 +16,7 @@
 
 #include "update_engine/client_library/client_dbus.h"
 
+#include <base/logging.h>
 #include <base/task/current_thread.h>
 
 #include <memory>

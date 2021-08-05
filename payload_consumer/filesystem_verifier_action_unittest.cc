@@ -21,6 +21,7 @@
 #include <utility>
 
 #include <base/bind.h>
+#include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <brillo/message_loops/fake_message_loop.h>
 #include <brillo/message_loops/message_loop_utils.h>

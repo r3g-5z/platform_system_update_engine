@@ -22,6 +22,7 @@
 #include <map>
 #include <utility>
 
+#include <base/logging.h>
 #include <base/strings/stringprintf.h>
 
 #include "update_engine/common/hash_calculator.h"

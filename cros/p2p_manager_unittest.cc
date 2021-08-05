@@ -27,10 +27,11 @@
 #include <string>
 #include <vector>
 
-#include <base/test/simple_test_clock.h>
 #include <base/bind.h>
 #include <base/callback.h>
 #include <base/files/file_util.h>
+#include <base/logging.h>
+#include <base/test/simple_test_clock.h>
 #include <brillo/message_loops/fake_message_loop.h>
 #if BASE_VER < 780000  // Android
 #include <base/message_loop/message_loop.h>

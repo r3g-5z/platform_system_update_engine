@@ -20,6 +20,7 @@
 
 #include <base/at_exit.h>
 #include <base/command_line.h>
+#include <base/logging.h>
 #include <brillo/test_helpers.h>
 #include <gtest/gtest.h>
 

@@ -16,6 +16,8 @@
 
 #include "update_engine/update_manager/recovery_policy.h"
 
+#include <base/logging.h>
+
 #include "update_engine/update_manager/interactive_update_policy_impl.h"
 
 namespace chromeos_update_manager {

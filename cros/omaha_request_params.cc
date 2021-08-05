@@ -25,6 +25,7 @@
 #include <vector>
 
 #include <base/files/file_util.h>
+#include <base/logging.h>
 #include <base/stl_util.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>

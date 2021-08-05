@@ -16,6 +16,7 @@
 
 #include "update_engine/cros/dbus_connection.h"
 
+#include <base/logging.h>
 #include <base/time/time.h>
 
 namespace chromeos_update_engine {

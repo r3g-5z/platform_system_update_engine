@@ -18,6 +18,8 @@
 
 #include "update_engine/common/utils.h"
 
+#include <base/logging.h>
+
 namespace chromeos_update_engine {
 
 off_t BlobFileWriter::StoreBlob(const brillo::Blob& blob) {

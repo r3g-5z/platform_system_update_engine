@@ -18,6 +18,7 @@
 
 #include <string>
 
+#include <base/logging.h>
 #include <base/time/time.h>
 
 #include "update_engine/common/clock_interface.h"

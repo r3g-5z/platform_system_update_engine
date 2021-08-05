@@ -23,6 +23,7 @@
 #include <base/bind.h>
 #include <base/files/file_util.h>
 #include <base/location.h>
+#include <base/logging.h>
 #include <base/time/time.h>
 #include <brillo/message_loops/message_loop.h>
 #include <chromeos/dbus/service_constants.h>

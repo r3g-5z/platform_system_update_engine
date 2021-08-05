@@ -16,6 +16,8 @@
 
 #include "update_engine/update_manager/interactive_update_policy_impl.h"
 
+#include <base/logging.h>
+
 #include "update_engine/update_manager/update_can_be_applied_policy_data.h"
 #include "update_engine/update_manager/update_check_allowed_policy_data.h"
 

@@ -18,6 +18,7 @@
 
 #include <endian.h>
 
+#include <base/logging.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/data_encoding.h>
 

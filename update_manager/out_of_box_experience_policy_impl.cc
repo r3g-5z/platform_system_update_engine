@@ -16,6 +16,8 @@
 
 #include "update_engine/update_manager/out_of_box_experience_policy_impl.h"
 
+#include <base/logging.h>
+
 #include "update_engine/common/utils.h"
 
 namespace chromeos_update_manager {

@@ -22,6 +22,7 @@
 #include <string>
 
 #include <base/files/file_path.h>
+#include <base/logging.h>
 #include <base/metrics/statistics_recorder.h>
 #include <base/strings/stringprintf.h>
 

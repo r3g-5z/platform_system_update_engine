@@ -20,6 +20,7 @@
 
 #include <base/bind.h>
 #include <base/location.h>
+#include <base/logging.h>
 
 #include "update_engine/cros/real_system_state.h"
 

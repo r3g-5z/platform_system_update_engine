@@ -22,6 +22,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/logging.h>
 #include <brillo/data_encoding.h>
 #include <gtest/gtest.h>
 

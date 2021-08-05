@@ -18,6 +18,8 @@
 
 #include <algorithm>
 
+#include <base/logging.h>
+
 #include "update_engine/common/utils.h"
 #include "update_engine/update_manager/policy_utils.h"
 

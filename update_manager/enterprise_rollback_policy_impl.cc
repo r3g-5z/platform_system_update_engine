@@ -18,6 +18,8 @@
 
 #include "update_engine/update_manager/update_can_be_applied_policy_data.h"
 
+#include <base/logging.h>
+
 using chromeos_update_engine::ErrorCode;
 using chromeos_update_engine::InstallPlan;
 using std::string;

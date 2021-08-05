@@ -16,6 +16,8 @@
 
 #include "update_engine/payload_consumer/xz_extent_writer.h"
 
+#include <base/logging.h>
+
 using google::protobuf::RepeatedPtrField;
 
 namespace chromeos_update_engine {

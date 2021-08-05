@@ -16,6 +16,7 @@
 
 #include "update_engine/common/multi_range_http_fetcher.h"
 
+#include <base/logging.h>
 #include <base/strings/stringprintf.h>
 
 #include <algorithm>

@@ -16,6 +16,7 @@
 
 #include "update_engine/cros/dlcservice_chromeos.h"
 
+#include <base/logging.h>
 #include <brillo/errors/error.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
 // NOLINTNEXTLINE(build/include_alpha) "dbus-proxies.h" needs "dlcservice.pb.h"

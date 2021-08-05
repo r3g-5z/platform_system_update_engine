@@ -41,6 +41,8 @@
 #include "update_engine/cros/update_attempter.h"
 #include "update_engine/update_manager/update_manager.h"
 
+#include <base/logging.h>
+
 namespace chromeos_update_engine {
 
 // A real implementation of the SystemStateInterface which is

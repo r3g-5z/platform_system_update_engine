@@ -18,6 +18,8 @@
 
 #include <string>
 
+#include <base/logging.h>
+
 #include "update_engine/common/constants.h"
 #include "update_engine/common/system_state.h"
 #include "update_engine/cros/omaha_request_params.h"

@@ -20,6 +20,7 @@
 #include <set>
 #include <string>
 
+#include <base/logging.h>
 #include <base/stl_util.h>
 #include <base/strings/string_util.h>
 #include <policy/device_policy.h>

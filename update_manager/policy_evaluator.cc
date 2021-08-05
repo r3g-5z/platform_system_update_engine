@@ -19,6 +19,8 @@
 #include <string>
 #include <utility>
 
+#include <base/logging.h>
+
 namespace chromeos_update_manager {
 
 PolicyEvaluator::~PolicyEvaluator() {

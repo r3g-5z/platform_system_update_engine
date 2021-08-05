@@ -21,6 +21,7 @@
 #include <vector>
 
 #include <base/guid.h>
+#include <base/logging.h>
 #include <base/strings/stringprintf.h>
 #include <gtest/gtest.h>
 

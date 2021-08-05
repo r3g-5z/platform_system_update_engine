@@ -26,6 +26,7 @@
 
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/logging.h>
 #include <base/task/single_thread_task_executor.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <brillo/message_loops/message_loop.h>

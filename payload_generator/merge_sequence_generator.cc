@@ -20,6 +20,8 @@
 
 #include "update_engine/payload_generator/extent_utils.h"
 
+#include <base/logging.h>
+
 namespace chromeos_update_engine {
 
 CowMergeOperation CreateCowMergeOperation(const Extent& src_extent,

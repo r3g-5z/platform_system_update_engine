@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 
 #include "update_engine/common/utils.h"

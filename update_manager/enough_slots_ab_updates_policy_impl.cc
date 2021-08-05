@@ -18,6 +18,8 @@
 
 #include "update_engine/update_manager/update_check_allowed_policy_data.h"
 
+#include <base/logging.h>
+
 namespace chromeos_update_manager {
 
 // Do not perform any updates if booted from removable device. This decision

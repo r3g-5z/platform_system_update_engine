@@ -17,6 +17,7 @@
 
 #include <memory>
 
+#include <base/logging.h>
 #include <base/time/time.h>
 
 #include "update_engine/update_manager/device_policy_provider.h"

@@ -30,6 +30,7 @@
 #include <vector>
 
 #include <base/files/file_path.h>
+#include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/time/time.h>
 #include <brillo/key_value_store.h>
