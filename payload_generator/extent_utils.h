@@ -22,6 +22,7 @@
 
 #include <base/logging.h>
 
+#include "google/protobuf/repeated_field.h"
 #include "update_engine/payload_consumer/payload_constants.h"
 #include "update_engine/update_metadata.pb.h"
 
@@ -63,6 +64,8 @@ void ExtentsToVector(const google::protobuf::RepeatedPtrField<Extent>& extents,
 
 // Returns a string representing all extents in |extents|.
 std::string ExtentsToString(const std::vector<Extent>& extents);
+std::string ExtentsToString(
+    const google::protobuf::RepeatedPtrField<Extent>& extents);
 
 // Takes a pointer to extents |extents| and extents |extents_to_add|, and
 // merges them by adding |extents_to_add| to |extents| and normalizing.
@@ -83,7 +86,9 @@ std::vector<Extent> ExtentsSublist(const std::vector<Extent>& extents,
                                    uint64_t block_offset,
                                    uint64_t block_count);
 
-bool operator==(const Extent& a, const Extent& b);
+bool operator==(const Extent& a, const Extent& b) noexcept;
+
+bool operator!=(const Extent& a, const Extent& b) noexcept;
 
 // TODO(zhangkelvin) This is ugly. Rewrite using C++20's coroutine once
 // that's available. Unfortunately with C++17 this is the best I could do.
@@ -123,6 +128,22 @@ struct BlockIterator {
 };
 
 std::ostream& operator<<(std::ostream& out, const Extent& extent);
+std::ostream& operator<<(std::ostream& out, const std::vector<Extent>& extent);
+std::ostream& operator<<(
+    std::ostream& out,
+    const google::protobuf::RepeatedPtrField<Extent>& extent);
+
+template <typename Container>
+size_t GetNthBlock(const Container& extents, const size_t n) {
+  size_t cur_block_count = 0;
+  for (const auto& extent : extents) {
+    if (n - cur_block_count < extent.num_blocks()) {
+      return extent.start_block() + (n - cur_block_count);
+    }
+    cur_block_count += extent.num_blocks();
+  }
+  return std::numeric_limits<size_t>::max();
+}
 
 }  // namespace chromeos_update_engine
 

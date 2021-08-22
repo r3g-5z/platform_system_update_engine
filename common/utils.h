@@ -36,6 +36,7 @@
 #include <brillo/key_value_store.h>
 #include <brillo/secure_blob.h>
 
+#include "android-base/mapped_file.h"
 #include "update_engine/common/action.h"
 #include "update_engine/common/action_processor.h"
 #include "update_engine/common/constants.h"
@@ -357,6 +358,8 @@ std::string GetExclusionName(const std::string& str_to_convert);
 ErrorCode IsTimestampNewer(const std::string& old_version,
                            const std::string& new_version);
 
+std::unique_ptr<android::base::MappedFile> GetReadonlyZeroBlock(size_t size);
+
 }  // namespace utils
 
 // Utility class to close a file descriptor
@@ -463,6 +466,17 @@ class ScopedActionCompleter {
   ErrorCode code_;
   bool should_complete_;
   DISALLOW_COPY_AND_ASSIGN(ScopedActionCompleter);
+};
+
+// Simple wrapper for creating a slice of some container,
+// similar to string_view but for other containers.
+template <typename T>
+struct Range {
+  Range(T t1, T t2) : t1_(t1), t2_(t2) {}
+  constexpr auto begin() const noexcept { return t1_; }
+  constexpr auto end() const noexcept { return t2_; }
+  T t1_;
+  T t2_;
 };
 
 }  // namespace chromeos_update_engine
