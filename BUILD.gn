@@ -71,6 +71,7 @@ pkg_config("target_defaults") {
     "_POSIX_C_SOURCE=199309L",
     "USE_CFM=${use.cfm}",
     "USE_FEC=0",
+    "USE_HW_DETAILS=${use.hw_details}",
     "USE_HWID_OVERRIDE=${use.hwid_override}",
   ]
   include_dirs = [
@@ -269,6 +270,12 @@ static_library("libupdate_engine") {
     ":update_engine-dbus-kiosk-app-client",
     ":update_metadata-protos",
   ]
+
+  if (use.hw_details) {
+    deps += [
+      "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter",
+    ]
+  }
 
   if (use.dlc) {
     all_dependent_pkg_deps += [ "libdlcservice-client" ]
