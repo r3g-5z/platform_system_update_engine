@@ -74,6 +74,9 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // Further initialization to be done post construction.
   void Init();
 
+  // Returns true if updating, otherwise (installing) false.
+  virtual bool IsUpdating();
+
   // Initiates scheduling of update checks.
   // Returns true if update check is scheduled.
   virtual bool ScheduleUpdates();

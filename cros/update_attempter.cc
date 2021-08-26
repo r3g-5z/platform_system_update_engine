@@ -170,6 +170,10 @@ void UpdateAttempter::Init() {
   }
 }
 
+bool UpdateAttempter::IsUpdating() {
+  return !is_install_;
+}
+
 bool UpdateAttempter::ScheduleUpdates() {
   if (IsBusyOrUpdateScheduled())
     return false;

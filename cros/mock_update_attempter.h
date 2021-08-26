@@ -30,6 +30,8 @@ class MockUpdateAttempter : public UpdateAttempter {
  public:
   using UpdateAttempter::UpdateAttempter;
 
+  MOCK_METHOD(bool, IsUpdating, (), (override));
+
   MOCK_METHOD(void,
               Update,
               (const chromeos_update_manager::UpdateCheckParams& params),

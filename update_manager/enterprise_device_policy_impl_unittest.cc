@@ -19,9 +19,11 @@
 #include <memory>
 #include <utility>
 
+#include "update_engine/cros/fake_system_state.h"
 #include "update_engine/update_manager/policy_test_utils.h"
 #include "update_engine/update_manager/update_check_allowed_policy_data.h"
 
+using chromeos_update_engine::FakeSystemState;
 using std::string;
 
 namespace chromeos_update_manager {
@@ -39,6 +41,12 @@ class UmEnterpriseDevicePolicyImplTest : public UmPolicyTestBase {
     UmPolicyTestBase::SetUp();
     fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
         new bool(true));
+
+    FakeSystemState::CreateInstance();
+    // Set to mock |UpdateAttempter|.
+    FakeSystemState::Get()->set_update_attempter(nullptr);
+    ON_CALL(*FakeSystemState::Get()->mock_update_attempter(), IsUpdating())
+        .WillByDefault(testing::Return(true));
   }
 
   // Sets the policies required for a kiosk app to control Chrome OS version:
@@ -221,6 +229,17 @@ TEST_F(UmEnterpriseDevicePolicyImplTest,
       nullptr);
 
   EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
+}
+
+TEST_F(UmEnterpriseDevicePolicyImplTest,
+       UpdateCheckAllowedInstallationsNotBlocked) {
+  EXPECT_CALL(*FakeSystemState::Get()->mock_update_attempter(), IsUpdating())
+      .WillOnce(testing::Return(false));
+
+  fake_state_.device_policy_provider()->var_update_disabled()->reset(
+      new bool(true));
+
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
 }
 
 }  // namespace chromeos_update_manager

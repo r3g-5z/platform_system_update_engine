@@ -19,10 +19,13 @@
 #include <base/logging.h>
 #include <base/notreached.h>
 
+#include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
+#include "update_engine/cros/update_attempter.h"
 
 #include "update_engine/update_manager/update_check_allowed_policy_data.h"
 
+using chromeos_update_engine::SystemState;
 using std::string;
 
 namespace chromeos_update_manager {
@@ -45,9 +48,11 @@ EvalStatus EnterpriseDevicePolicyImpl::Evaluate(
     bool kiosk_app_control_chrome_version = false;
 
     // Check whether updates are disabled by policy.
+    // Only care if processing updates, installations should flow through.
     const bool* update_disabled_p =
         ec->GetValue(dp_provider->var_update_disabled());
-    if (update_disabled_p && *update_disabled_p) {
+    if (SystemState::Get()->update_attempter()->IsUpdating() &&
+        update_disabled_p && *update_disabled_p) {
       // Check whether allow kiosk app to control chrome version policy. This
       // policy is only effective when AU is disabled by admin.
       const bool* allow_kiosk_app_control_chrome_version_p = ec->GetValue(
