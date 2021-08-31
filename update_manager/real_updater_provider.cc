@@ -412,33 +412,6 @@ class ForcedUpdateRequestedVariable
   UpdateRequestStatus update_request_status_ = UpdateRequestStatus::kNone;
 };
 
-// A variable returning the current update restrictions that are in effect.
-class UpdateRestrictionsVariable
-    : public UpdaterVariableBase<UpdateRestrictions> {
- public:
-  explicit UpdateRestrictionsVariable(const string& name)
-      : UpdaterVariableBase<UpdateRestrictions>(name, kVariableModePoll) {}
-  UpdateRestrictionsVariable(const UpdateRestrictionsVariable&) = delete;
-  UpdateRestrictionsVariable& operator=(const UpdateRestrictionsVariable&) =
-      delete;
-
- private:
-  const UpdateRestrictions* GetValue(TimeDelta /* timeout */,
-                                     string* /* errmsg */) override {
-    UpdateAttemptFlags attempt_flags =
-        SystemState::Get()->update_attempter()->GetCurrentUpdateAttemptFlags();
-    UpdateRestrictions restriction_flags = UpdateRestrictions::kNone;
-    // Don't blindly copy the whole value, test and set bits that should
-    // transfer from one set of flags to the other.
-    if (attempt_flags & UpdateAttemptFlags::kFlagRestrictDownload) {
-      restriction_flags = static_cast<UpdateRestrictions>(
-          restriction_flags | UpdateRestrictions::kRestrictDownloading);
-    }
-
-    return new UpdateRestrictions(restriction_flags);
-  }
-};
-
 // A variable class for reading timeout interval prefs value.
 class TestUpdateCheckIntervalTimeoutVariable : public Variable<int64_t> {
  public:
@@ -510,8 +483,6 @@ RealUpdaterProvider::RealUpdaterProvider()
           "server_dictated_poll_interval")),
       var_forced_update_requested_(
           new ForcedUpdateRequestedVariable("forced_update_requested")),
-      var_update_restrictions_(
-          new UpdateRestrictionsVariable("update_restrictions")),
       var_test_update_check_interval_timeout_(
           new TestUpdateCheckIntervalTimeoutVariable(
               "test_update_check_interval_timeout")) {}

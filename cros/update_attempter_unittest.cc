@@ -1703,32 +1703,11 @@ TEST_F(UpdateAttempterTest, UpdateIsNotRunningWhenUpdateAvailable) {
 // TODO(ahassani): Refactor these to not use the |policy_data_| of |attempter_|
 // directly.
 TEST_F(UpdateAttempterTest, UpdateAttemptFlagsCachedAtUpdateStart) {
-  attempter_.SetUpdateAttemptFlags(UpdateAttemptFlags::kFlagRestrictDownload);
+  attempter_.SetUpdateAttemptFlags(UpdateAttemptFlags::kFlagNonInteractive);
   attempter_.policy_data_.reset(
       new UpdateCheckAllowedPolicyData({.updates_enabled = true}));
   attempter_.OnUpdateScheduled(EvalStatus::kSucceeded);
-  EXPECT_EQ(UpdateAttemptFlags::kFlagRestrictDownload,
-            attempter_.GetCurrentUpdateAttemptFlags());
-}
-
-TEST_F(UpdateAttempterTest, InteractiveUpdateUsesPassedRestrictions) {
-  attempter_.SetUpdateAttemptFlags(UpdateAttemptFlags::kFlagRestrictDownload);
-
-  attempter_.CheckForUpdate("", "", UpdateAttemptFlags::kNone);
-  EXPECT_EQ(UpdateAttemptFlags::kNone,
-            attempter_.GetCurrentUpdateAttemptFlags());
-}
-
-TEST_F(UpdateAttempterTest, NonInteractiveUpdateUsesSetRestrictions) {
-  attempter_.SetUpdateAttemptFlags(UpdateAttemptFlags::kNone);
-
-  // This tests that when CheckForUpdate() is called with the non-interactive
-  // flag set, that it doesn't change the current UpdateAttemptFlags.
-  attempter_.CheckForUpdate("",
-                            "",
-                            UpdateAttemptFlags::kFlagNonInteractive |
-                                UpdateAttemptFlags::kFlagRestrictDownload);
-  EXPECT_EQ(UpdateAttemptFlags::kNone,
+  EXPECT_EQ(UpdateAttemptFlags::kFlagNonInteractive,
             attempter_.GetCurrentUpdateAttemptFlags());
 }
 

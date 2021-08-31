@@ -85,10 +85,6 @@ class FakeUpdaterProvider : public UpdaterProvider {
     return &var_forced_update_requested_;
   }
 
-  FakeVariable<UpdateRestrictions>* var_update_restrictions() override {
-    return &var_update_restrictions_;
-  }
-
   FakeVariable<int64_t>* var_test_update_check_interval_timeout() override {
     return &var_test_update_check_interval_timeout_;
   }
@@ -118,8 +114,6 @@ class FakeUpdaterProvider : public UpdaterProvider {
       "server_dictated_poll_interval", kVariableModePoll};
   FakeVariable<UpdateRequestStatus> var_forced_update_requested_{
       "forced_update_requested", kVariableModeAsync};
-  FakeVariable<UpdateRestrictions> var_update_restrictions_{
-      "update_restrictions", kVariableModePoll};
   FakeVariable<int64_t> var_test_update_check_interval_timeout_{
       "test_update_check_interval_timeout", kVariableModePoll};
 };

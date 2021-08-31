@@ -444,23 +444,6 @@ TEST_F(UmRealUpdaterProviderTest, GetServerDictatedPollInterval) {
       kPollInterval, provider_->var_server_dictated_poll_interval());
 }
 
-TEST_F(UmRealUpdaterProviderTest, GetUpdateRestrictions) {
-  EXPECT_CALL(*FakeSystemState::Get()->mock_update_attempter(),
-              GetCurrentUpdateAttemptFlags())
-      .WillRepeatedly(Return(UpdateAttemptFlags::kFlagRestrictDownload |
-                             UpdateAttemptFlags::kFlagNonInteractive));
-  UmTestUtils::ExpectVariableHasValue(UpdateRestrictions::kRestrictDownloading,
-                                      provider_->var_update_restrictions());
-}
-
-TEST_F(UmRealUpdaterProviderTest, GetUpdateRestrictionsNone) {
-  EXPECT_CALL(*FakeSystemState::Get()->mock_update_attempter(),
-              GetCurrentUpdateAttemptFlags())
-      .WillRepeatedly(Return(UpdateAttemptFlags::kNone));
-  UmTestUtils::ExpectVariableHasValue(UpdateRestrictions::kNone,
-                                      provider_->var_update_restrictions());
-}
-
 TEST_F(UmRealUpdaterProviderTest, TestUpdateCheckIntervalTimeout) {
   UmTestUtils::ExpectVariableNotSet(
       provider_->var_test_update_check_interval_timeout());

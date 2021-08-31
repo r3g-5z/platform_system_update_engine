@@ -75,10 +75,7 @@ bool UpdateEngineService::SetUpdateAttemptFlags(ErrorPtr* /* error */,
                                                 int32_t in_flags_as_int) {
   auto flags = static_cast<UpdateAttemptFlags>(in_flags_as_int);
   LOG(INFO) << "Setting Update Attempt Flags: "
-            << "flags=0x" << std::hex << flags << " "
-            << "RestrictDownload="
-            << ((flags & UpdateAttemptFlags::kFlagRestrictDownload) ? "yes"
-                                                                    : "no");
+            << "flags=0x" << std::hex << flags;
   SystemState::Get()->update_attempter()->SetUpdateAttemptFlags(flags);
   return true;
 }
@@ -90,13 +87,11 @@ bool UpdateEngineService::AttemptUpdate(ErrorPtr* /* error */,
                                         bool* out_result) {
   auto flags = static_cast<UpdateAttemptFlags>(in_flags_as_int);
   bool interactive = !(flags & UpdateAttemptFlags::kFlagNonInteractive);
-  bool restrict_downloads = (flags & UpdateAttemptFlags::kFlagRestrictDownload);
 
   LOG(INFO) << "Attempt update: app_version=\"" << in_app_version << "\" "
             << "omaha_url=\"" << in_omaha_url << "\" "
             << "flags=0x" << std::hex << flags << " "
-            << "interactive=" << (interactive ? "yes " : "no ")
-            << "RestrictDownload=" << (restrict_downloads ? "yes " : "no ");
+            << "interactive=" << (interactive ? "yes " : "no ");
 
   *out_result = SystemState::Get()->update_attempter()->CheckForUpdate(
       in_app_version, in_omaha_url, flags);

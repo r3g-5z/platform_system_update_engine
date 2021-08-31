@@ -117,10 +117,6 @@ class UpdaterProvider : public Provider {
   // scheduled update.
   virtual Variable<UpdateRequestStatus>* var_forced_update_requested() = 0;
 
-  // A variable that returns the update restriction flags that are set
-  // for all updates.
-  virtual Variable<UpdateRestrictions>* var_update_restrictions() = 0;
-
   // A variable that returns the number of seconds for the first update check to
   // happen.
   virtual Variable<int64_t>* var_test_update_check_interval_timeout() = 0;

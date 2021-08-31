@@ -71,8 +71,6 @@ enum UpdateAttemptFlags : int32_t {
   // Treat the update like a non-interactive update, even when being triggered
   // by the interactive APIs.
   kFlagNonInteractive = (1 << 0),
-  // Restrict (disallow) downloading of updates.
-  kFlagRestrictDownload = (1 << 1),
 };
 
 // Enable bit-wise operators for the above enumeration of flag values.
