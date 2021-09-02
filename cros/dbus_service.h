@@ -46,6 +46,9 @@ class DBusUpdateEngineService
                      const std::string& in_app_version,
                      const std::string& in_omaha_url) override;
 
+  bool Update(brillo::ErrorPtr* error,
+              const update_engine::UpdateParams& in_update_params) override;
+
   bool AttemptUpdateWithFlags(brillo::ErrorPtr* error,
                               const std::string& in_app_version,
                               const std::string& in_omaha_url,

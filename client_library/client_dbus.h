@@ -41,9 +41,7 @@ class DBusUpdateEngineClient : public UpdateEngineClient {
 
   virtual ~DBusUpdateEngineClient() = default;
 
-  bool AttemptUpdate(const std::string& app_version,
-                     const std::string& omaha_url,
-                     bool at_user_request) override;
+  bool Update(const update_engine::UpdateParams& update_params) override;
 
   bool AttemptInstall(const std::string& omaha_url,
                       const std::vector<std::string>& dlc_ids) override;

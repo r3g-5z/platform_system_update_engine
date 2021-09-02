@@ -931,9 +931,8 @@ BootControlInterface::Slot UpdateAttempter::GetRollbackSlot() const {
   return BootControlInterface::kInvalidSlot;
 }
 
-bool UpdateAttempter::CheckForUpdate(const string& app_version,
-                                     const string& omaha_url,
-                                     UpdateAttemptFlags flags) {
+bool UpdateAttempter::CheckForUpdate(
+    const update_engine::UpdateParams& update_params) {
   if (status_ != UpdateStatus::IDLE &&
       status_ != UpdateStatus::UPDATED_NEED_REBOOT) {
     LOG(INFO) << "Refusing to do an update as there is an "
@@ -942,12 +941,16 @@ bool UpdateAttempter::CheckForUpdate(const string& app_version,
     return false;
   }
 
-  bool interactive = !(flags & UpdateAttemptFlags::kFlagNonInteractive);
+  const auto& update_flags = update_params.update_flags();
+  bool interactive = !update_flags.non_interactive();
   is_install_ = false;
 
   LOG(INFO) << "Forced update check requested.";
   forced_app_version_.clear();
   forced_omaha_url_.clear();
+
+  const auto& app_version = update_params.app_version();
+  const auto& omaha_url = update_params.omaha_url();
 
   // Certain conditions must be met to allow setting custom version and update
   // server URLs. However, kScheduledAUTestURLRequest and kAUTestURLRequest are
@@ -969,7 +972,7 @@ bool UpdateAttempter::CheckForUpdate(const string& app_version,
   if (interactive) {
     // Use the passed-in update attempt flags for this update attempt instead
     // of the previously set ones.
-    current_update_attempt_flags_ = flags;
+    current_update_flags_ = update_flags;
     // Note: The caching for non-interactive update checks happens in
     // |OnUpdateScheduled()|.
   }
@@ -1074,11 +1077,8 @@ void UpdateAttempter::OnUpdateScheduled(EvalStatus status) {
     if (!params.interactive) {
       // Cache the update attempt flags that will be used by this update attempt
       // so that they can't be changed mid-way through.
-      current_update_attempt_flags_ = update_attempt_flags_;
+      current_update_flags_ = update_flags_;
     }
-
-    LOG(INFO) << "Update attempt flags in use = 0x" << std::hex
-              << current_update_attempt_flags_;
 
     Update(params);
     // Always clear the forced app_version and omaha_url after an update attempt
@@ -1486,7 +1486,7 @@ void UpdateAttempter::ProgressUpdate(double progress) {
 
 void UpdateAttempter::ResetInteractivityFlags() {
   // Reset the state that's only valid for a single update pass.
-  current_update_attempt_flags_ = UpdateAttemptFlags::kNone;
+  current_update_flags_.Clear();
 
   if (forced_update_pending_callback_.get())
     // Clear prior interactive requests once the processor is done.

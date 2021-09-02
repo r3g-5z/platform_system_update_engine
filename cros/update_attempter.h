@@ -45,6 +45,7 @@
 #include "update_engine/cros/omaha_request_params.h"
 #include "update_engine/cros/omaha_response_handler_action.h"
 #include "update_engine/payload_consumer/postinstall_runner_action.h"
+#include "update_engine/proto_bindings/update_engine.pb.h"
 #include "update_engine/update_manager/staging_utils.h"
 #include "update_engine/update_manager/update_check_allowed_policy.h"
 #include "update_engine/update_manager/update_manager.h"
@@ -62,7 +63,6 @@ class UpdateAttempter : public ActionProcessorDelegate,
                         public DaemonStateInterface {
  public:
   using UpdateStatus = update_engine::UpdateStatus;
-  using UpdateAttemptFlags = update_engine::UpdateAttemptFlags;
   static const int kMaxDeltaUpdateFailures;
 
   explicit UpdateAttempter(CertificateChecker* cert_checker);
@@ -121,15 +121,15 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // Set flags that influence how updates and checks are performed.  These
   // influence all future checks and updates until changed or the device
   // reboots.
-  void SetUpdateAttemptFlags(UpdateAttemptFlags flags) {
-    update_attempt_flags_ = flags;
+  void SetUpdateFlags(const update_engine::UpdateFlags& flags) {
+    update_flags_ = flags;
   }
 
   // Returns the update attempt flags that are in place for the current update
   // attempt.  These are cached at the start of an update attempt so that they
   // remain constant throughout the process.
-  virtual UpdateAttemptFlags GetCurrentUpdateAttemptFlags() const {
-    return current_update_attempt_flags_;
+  virtual update_engine::UpdateFlags GetCurrentUpdateFlags() const {
+    return current_update_flags_;
   }
 
   // This is the internal entry point for going through an
@@ -137,9 +137,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // This is called by the DBus implementation.
   // This returns true if an update check was started, false if a check or an
   // update was already in progress.
-  virtual bool CheckForUpdate(const std::string& app_version,
-                              const std::string& omaha_url,
-                              UpdateAttemptFlags flags);
+  virtual bool CheckForUpdate(const update_engine::UpdateParams& update_params);
 
   // This is the version of CheckForUpdate called by AttemptInstall API.
   virtual bool CheckForInstall(const std::vector<std::string>& dlc_ids,
@@ -319,7 +317,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest, TargetChannelHintSetAndReset);
   FRIEND_TEST(UpdateAttempterTest, TargetVersionPrefixSetAndReset);
   FRIEND_TEST(UpdateAttempterTest, UpdateAfterInstall);
-  FRIEND_TEST(UpdateAttempterTest, UpdateAttemptFlagsCachedAtUpdateStart);
+  FRIEND_TEST(UpdateAttempterTest, UpdateFlagsCachedAtUpdateStart);
   FRIEND_TEST(UpdateAttempterTest, UpdateDeferredByPolicyTest);
   FRIEND_TEST(UpdateAttempterTest, UpdateIsNotRunningWhenUpdateAvailable);
   FRIEND_TEST(UpdateAttempterTest, GetSuccessfulDlcIds);
@@ -549,10 +547,10 @@ class UpdateAttempter : public ActionProcessorDelegate,
   std::string new_version_ = "0.0.0.0";
   uint64_t new_payload_size_ = 0;
   // Flags influencing all periodic update checks
-  UpdateAttemptFlags update_attempt_flags_ = UpdateAttemptFlags::kNone;
+  update_engine::UpdateFlags update_flags_;
   // Flags influencing the currently in-progress check (cached at the start of
   // the update check).
-  UpdateAttemptFlags current_update_attempt_flags_ = UpdateAttemptFlags::kNone;
+  update_engine::UpdateFlags current_update_flags_;
 
   // Common parameters for all Omaha requests.
   OmahaRequestParams* omaha_request_params_ = nullptr;

@@ -26,6 +26,7 @@
 #include <brillo/errors/error.h>
 
 #include "update_engine/client_library/include/update_engine/update_status.h"
+#include "update_engine/proto_bindings/update_engine.pb.h"
 
 namespace chromeos_update_engine {
 
@@ -40,17 +41,15 @@ class UpdateEngineService {
   UpdateEngineService();
   virtual ~UpdateEngineService() = default;
 
-  // Set flags that influence how updates and checks are performed.  These
-  // influence all future checks and updates until changed or the device
-  // reboots.  The |in_flags_as_int| values are a union of values from
-  // |UpdateAttemptFlags|
-  bool SetUpdateAttemptFlags(brillo::ErrorPtr* error, int32_t in_flags_as_int);
-
   bool AttemptUpdate(brillo::ErrorPtr* error,
                      const std::string& in_app_version,
                      const std::string& in_omaha_url,
                      int32_t in_flags_as_int,
                      bool* out_result);
+
+  bool Update(brillo::ErrorPtr* error,
+              const update_engine::UpdateParams& update_params,
+              bool* out_result);
 
   // Attempts a DLC module install operation.
   // |omaha_url|: the URL to query for update.

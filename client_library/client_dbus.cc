@@ -77,16 +77,9 @@ bool DBusUpdateEngineClient::Init() {
   return true;
 }
 
-bool DBusUpdateEngineClient::AttemptUpdate(const string& in_app_version,
-                                           const string& in_omaha_url,
-                                           bool at_user_request) {
-  return proxy_->AttemptUpdateWithFlags(
-      in_app_version,
-      in_omaha_url,
-      (at_user_request)
-          ? 0
-          : update_engine::UpdateAttemptFlags::kFlagNonInteractive,
-      nullptr);
+bool DBusUpdateEngineClient::Update(
+    const update_engine::UpdateParams& update_params) {
+  return proxy_->Update(update_params, nullptr);
 }
 
 bool DBusUpdateEngineClient::AttemptInstall(const string& omaha_url,

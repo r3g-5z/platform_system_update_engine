@@ -32,10 +32,21 @@ using std::vector;
 using testing::_;
 using testing::DoAll;
 using testing::Return;
+using testing::SaveArg;
 using testing::SetArgPointee;
 using update_engine::UpdateAttemptFlags;
+using update_engine::UpdateParams;
 
 namespace chromeos_update_engine {
+
+MATCHER_P(EqualsProto,
+          message,
+          "Match a proto Message equal to the matcher's argument.") {
+  std::string expected_serialized, actual_serialized;
+  message.SerializeToString(&expected_serialized);
+  arg.SerializeToString(&actual_serialized);
+  return expected_serialized == actual_serialized;
+}
 
 class UpdateEngineServiceTest : public ::testing::Test {
  protected:
@@ -54,9 +65,12 @@ class UpdateEngineServiceTest : public ::testing::Test {
 };
 
 TEST_F(UpdateEngineServiceTest, AttemptUpdate) {
-  EXPECT_CALL(
-      *mock_update_attempter_,
-      CheckForUpdate("app_ver", "url", UpdateAttemptFlags::kFlagNonInteractive))
+  UpdateParams update_params;
+  update_params.set_app_version("app_ver");
+  update_params.set_omaha_url("url");
+  update_params.mutable_update_flags()->set_non_interactive(true);
+  EXPECT_CALL(*mock_update_attempter_,
+              CheckForUpdate(EqualsProto(update_params)))
       .WillOnce(Return(true));
 
   // The non-interactive flag needs to be passed through to CheckForUpdate.
@@ -71,13 +85,47 @@ TEST_F(UpdateEngineServiceTest, AttemptUpdate) {
   EXPECT_TRUE(result);
 }
 
-TEST_F(UpdateEngineServiceTest, AttemptUpdateReturnsFalse) {
+TEST_F(UpdateEngineServiceTest, Update) {
+  UpdateParams update_params;
+  update_params.set_app_version("app_ver");
+  update_params.set_omaha_url("url");
+  update_params.mutable_update_flags()->set_non_interactive(true);
   EXPECT_CALL(*mock_update_attempter_,
-              CheckForUpdate("app_ver", "url", UpdateAttemptFlags::kNone))
+              CheckForUpdate(EqualsProto(update_params)))
+      .WillOnce(Return(true));
+
+  // The non-interactive flag needs to be passed through to CheckForUpdate.
+  bool result = false;
+  EXPECT_TRUE(common_service_.Update(&error_, update_params, &result));
+  EXPECT_EQ(nullptr, error_);
+  EXPECT_TRUE(result);
+}
+
+TEST_F(UpdateEngineServiceTest, AttemptUpdateReturnsFalse) {
+  UpdateParams update_params;
+  update_params.set_app_version("app_ver");
+  update_params.set_omaha_url("url");
+  update_params.mutable_update_flags()->set_non_interactive(false);
+  EXPECT_CALL(*mock_update_attempter_,
+              CheckForUpdate(EqualsProto(update_params)))
       .WillOnce(Return(false));
   bool result = true;
   EXPECT_TRUE(common_service_.AttemptUpdate(
       &error_, "app_ver", "url", UpdateAttemptFlags::kNone, &result));
+  EXPECT_EQ(nullptr, error_);
+  EXPECT_FALSE(result);
+}
+
+TEST_F(UpdateEngineServiceTest, UpdateReturnsFalse) {
+  UpdateParams update_params;
+  update_params.set_app_version("app_ver");
+  update_params.set_omaha_url("url");
+  update_params.mutable_update_flags()->set_non_interactive(false);
+  EXPECT_CALL(*mock_update_attempter_,
+              CheckForUpdate(EqualsProto(update_params)))
+      .WillOnce(Return(false));
+  bool result = true;
+  EXPECT_TRUE(common_service_.Update(&error_, update_params, &result));
   EXPECT_EQ(nullptr, error_);
   EXPECT_FALSE(result);
 }

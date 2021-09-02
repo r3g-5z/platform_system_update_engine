@@ -24,6 +24,15 @@
       <arg type="s" name="app_version" direction="in" />
       <arg type="s" name="omaha_url" direction="in" />
     </method>
+    <method name="Update">
+      <arg type="ay" name="update_params" direction="in">
+        <tp:docstring>
+          The update parameters serialized in a protobuf.
+        </tp:docstring>
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="update_engine::UpdateParams"/>
+      </arg>
+    </method>
     <!-- TODO(zeuthen,chromium:286399): Rename to AttemptUpdate and
          update Chrome and other users of the AttemptUpdate() method
          in lockstep.

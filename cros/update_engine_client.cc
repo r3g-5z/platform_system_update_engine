@@ -511,8 +511,12 @@ int UpdateEngineClient::ProcessFlags() {
       LOG(INFO) << "Forcing an update by setting app_version to ForcedUpdate.";
     }
     LOG(INFO) << "Initiating update check.";
-    if (!client_->AttemptUpdate(
-            app_version, FLAGS_omaha_url, FLAGS_interactive)) {
+    update_engine::UpdateParams update_params;
+    update_params.set_app_version(app_version);
+    update_params.set_omaha_url(FLAGS_omaha_url);
+    update_params.mutable_update_flags()->set_non_interactive(
+        !FLAGS_interactive);
+    if (!client_->Update(update_params)) {
       LOG(ERROR) << "Error checking for update.";
       return 1;
     }

@@ -71,30 +71,39 @@ UpdateEngineService::UpdateEngineService() = default;
 
 // org::chromium::UpdateEngineInterfaceInterface methods implementation.
 
-bool UpdateEngineService::SetUpdateAttemptFlags(ErrorPtr* /* error */,
-                                                int32_t in_flags_as_int) {
-  auto flags = static_cast<UpdateAttemptFlags>(in_flags_as_int);
-  LOG(INFO) << "Setting Update Attempt Flags: "
-            << "flags=0x" << std::hex << flags;
-  SystemState::Get()->update_attempter()->SetUpdateAttemptFlags(flags);
-  return true;
-}
-
 bool UpdateEngineService::AttemptUpdate(ErrorPtr* /* error */,
                                         const string& in_app_version,
                                         const string& in_omaha_url,
                                         int32_t in_flags_as_int,
                                         bool* out_result) {
   auto flags = static_cast<UpdateAttemptFlags>(in_flags_as_int);
-  bool interactive = !(flags & UpdateAttemptFlags::kFlagNonInteractive);
+  bool non_interactive = (flags & UpdateAttemptFlags::kFlagNonInteractive);
 
   LOG(INFO) << "Attempt update: app_version=\"" << in_app_version << "\" "
             << "omaha_url=\"" << in_omaha_url << "\" "
             << "flags=0x" << std::hex << flags << " "
-            << "interactive=" << (interactive ? "yes " : "no ");
+            << "interactive=" << (non_interactive ? "no" : "yes");
 
-  *out_result = SystemState::Get()->update_attempter()->CheckForUpdate(
-      in_app_version, in_omaha_url, flags);
+  update_engine::UpdateParams update_params;
+  update_params.set_app_version(in_app_version);
+  update_params.set_omaha_url(in_omaha_url);
+  update_params.mutable_update_flags()->set_non_interactive(non_interactive);
+
+  *out_result =
+      SystemState::Get()->update_attempter()->CheckForUpdate(update_params);
+  return true;
+}
+
+bool UpdateEngineService::Update(
+    ErrorPtr* /* error */,
+    const update_engine::UpdateParams& update_params,
+    bool* out_result) {
+  LOG(INFO) << "Update: app_version=\"" << update_params.app_version() << "\" "
+            << "omaha_url=\"" << update_params.omaha_url() << "\" "
+            << "interactive="
+            << (update_params.update_flags().non_interactive() ? "no" : "yes");
+  *out_result =
+      SystemState::Get()->update_attempter()->CheckForUpdate(update_params);
   return true;
 }
 

@@ -43,12 +43,12 @@ class MockUpdateAttempter : public UpdateAttempter {
 
   MOCK_METHOD0(ResetStatus, bool(void));
 
-  MOCK_CONST_METHOD0(GetCurrentUpdateAttemptFlags, UpdateAttemptFlags(void));
+  MOCK_CONST_METHOD0(GetCurrentUpdateFlags, update_engine::UpdateFlags(void));
 
-  MOCK_METHOD3(CheckForUpdate,
-               bool(const std::string& app_version,
-                    const std::string& omaha_url,
-                    UpdateAttemptFlags flags));
+  MOCK_METHOD(bool,
+              CheckForUpdate,
+              (const update_engine::UpdateParams&),
+              (override));
 
   MOCK_METHOD2(CheckForInstall,
                bool(const std::vector<std::string>& dlc_ids,

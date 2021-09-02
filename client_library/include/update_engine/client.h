@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 
+#include <update_engine/proto_bindings/update_engine.pb.h>
+
 #include "update_engine/status_update_handler.h"
 #include "update_engine/update_status.h"
 
@@ -33,20 +35,10 @@ class UpdateEngineClient {
 
   virtual ~UpdateEngineClient() = default;
 
-  // Force the update_engine to attempt an update.
-  // |app_version|
-  //     Attempt to update to this version.  An empty string indicates that
-  //     update engine should pick the most recent image on the current channel.
-  // |omaha_url|
-  //     Force update_engine to look for updates from the given server.  Passing
-  //     empty indicates update_engine should get this parameter from its
-  //     config.  Note that update_engine will ignore this parameter in
-  //     production mode to avoid pulling untrusted updates.
-  // |at_user_request|
-  //     This update was directly requested by the user.
-  virtual bool AttemptUpdate(const std::string& app_version,
-                             const std::string& omaha_url,
-                             bool at_user_request) = 0;
+  // Force the update_engine to update.
+  // |update_params|
+  //     Refer to proto defined in system_api.
+  virtual bool Update(const update_engine::UpdateParams& update_params) = 0;
 
   // Request the update_engine to install a list of DLC modules.
   // |omaha_url|

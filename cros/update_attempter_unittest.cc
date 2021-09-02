@@ -86,8 +86,9 @@ using testing::ReturnPointee;
 using testing::ReturnRef;
 using testing::SaveArg;
 using testing::SetArgPointee;
-using update_engine::UpdateAttemptFlags;
 using update_engine::UpdateEngineStatus;
+using update_engine::UpdateFlags;
+using update_engine::UpdateParams;
 using update_engine::UpdateStatus;
 
 namespace chromeos_update_engine {
@@ -111,7 +112,7 @@ struct CheckForUpdateTestParams {
   UpdateStatus status = UpdateStatus::IDLE;
   string app_version = "fake_app_version";
   string omaha_url = "fake_omaha_url";
-  UpdateAttemptFlags flags = UpdateAttemptFlags::kNone;
+  bool non_interactive = false;
   bool is_official_build = true;
   bool are_dev_features_enabled = false;
 
@@ -343,10 +344,13 @@ void UpdateAttempterTest::TestCheckForUpdate() {
       cfu_params_.are_dev_features_enabled);
 
   // Invocation
-  EXPECT_EQ(
-      cfu_params_.expected_result,
-      attempter_.CheckForUpdate(
-          cfu_params_.app_version, cfu_params_.omaha_url, cfu_params_.flags));
+  UpdateParams update_params;
+  update_params.set_app_version(cfu_params_.app_version);
+  update_params.set_omaha_url(cfu_params_.omaha_url);
+  update_params.mutable_update_flags()->set_non_interactive(
+      cfu_params_.non_interactive);
+  EXPECT_EQ(cfu_params_.expected_result,
+            attempter_.CheckForUpdate(update_params));
 
   // Verify
   EXPECT_EQ(cfu_params_.expected_forced_app_version,
@@ -1494,7 +1498,7 @@ TEST_F(UpdateAttempterTest,
   // GIVEN a scheduled autest omaha url.
   cfu_params_.omaha_url = "autest-scheduled";
   // GIVEN a noninteractive update.
-  cfu_params_.flags = UpdateAttemptFlags::kFlagNonInteractive;
+  cfu_params_.non_interactive = true;
 
   // THEN forced app version is cleared.
   // THEN forced omaha url changes to default constant.
@@ -1508,7 +1512,7 @@ TEST_F(UpdateAttempterTest,
   // GIVEN a scheduled autest omaha url.
   cfu_params_.omaha_url = "autest-scheduled";
   // GIVEN a noninteractive update.
-  cfu_params_.flags = UpdateAttemptFlags::kFlagNonInteractive;
+  cfu_params_.non_interactive = true;
   // GIVEN a nonofficial build with dev features enabled.
   cfu_params_.is_official_build = false;
   cfu_params_.are_dev_features_enabled = true;
@@ -1525,7 +1529,7 @@ TEST_F(UpdateAttempterTest, CheckForUpdateNonInteractiveOfficialBuildAUTest) {
   // GIVEN a autest omaha url.
   cfu_params_.omaha_url = "autest";
   // GIVEN a noninteractive update.
-  cfu_params_.flags = UpdateAttemptFlags::kFlagNonInteractive;
+  cfu_params_.non_interactive = true;
 
   // THEN forced app version is cleared.
   // THEN forced omaha url changes to default constant.
@@ -1538,7 +1542,7 @@ TEST_F(UpdateAttempterTest, CheckForUpdateNonInteractiveUnofficialBuildAUTest) {
   // GIVEN a autest omaha url.
   cfu_params_.omaha_url = "autest";
   // GIVEN a noninteractive update.
-  cfu_params_.flags = UpdateAttemptFlags::kFlagNonInteractive;
+  cfu_params_.non_interactive = true;
   // GIVEN a nonofficial build with dev features enabled.
   cfu_params_.is_official_build = false;
   cfu_params_.are_dev_features_enabled = true;
@@ -1611,7 +1615,7 @@ TEST_F(UpdateAttempterTest, RollbackAfterInstall) {
 
 TEST_F(UpdateAttempterTest, UpdateAfterInstall) {
   attempter_.is_install_ = true;
-  attempter_.CheckForUpdate("", "", UpdateAttemptFlags::kNone);
+  attempter_.CheckForUpdate({});
   EXPECT_FALSE(attempter_.is_install_);
 }
 
@@ -1702,13 +1706,14 @@ TEST_F(UpdateAttempterTest, UpdateIsNotRunningWhenUpdateAvailable) {
 
 // TODO(ahassani): Refactor these to not use the |policy_data_| of |attempter_|
 // directly.
-TEST_F(UpdateAttempterTest, UpdateAttemptFlagsCachedAtUpdateStart) {
-  attempter_.SetUpdateAttemptFlags(UpdateAttemptFlags::kFlagNonInteractive);
+TEST_F(UpdateAttempterTest, UpdateFlagsCachedAtUpdateStart) {
+  UpdateFlags flags;
+  flags.set_non_interactive(true);
+  attempter_.SetUpdateFlags(flags);
   attempter_.policy_data_.reset(
       new UpdateCheckAllowedPolicyData({.updates_enabled = true}));
   attempter_.OnUpdateScheduled(EvalStatus::kSucceeded);
-  EXPECT_EQ(UpdateAttemptFlags::kFlagNonInteractive,
-            attempter_.GetCurrentUpdateAttemptFlags());
+  EXPECT_TRUE(attempter_.GetCurrentUpdateFlags().non_interactive());
 }
 
 void UpdateAttempterTest::ResetRollbackHappenedStart(bool is_consumer,

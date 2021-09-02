@@ -60,12 +60,17 @@ DBusUpdateEngineService::DBusUpdateEngineService()
     : common_(new UpdateEngineService()) {}
 
 // org::chromium::UpdateEngineInterfaceInterface methods implementation.
-
 bool DBusUpdateEngineService::AttemptUpdate(ErrorPtr* error,
                                             const string& in_app_version,
                                             const string& in_omaha_url) {
   return AttemptUpdateWithFlags(
       error, in_app_version, in_omaha_url, 0 /* no flags */);
+}
+
+bool DBusUpdateEngineService::Update(
+    ErrorPtr* error, const update_engine::UpdateParams& in_update_params) {
+  bool result;
+  return common_->Update(error, in_update_params, &result);
 }
 
 bool DBusUpdateEngineService::AttemptUpdateWithFlags(
