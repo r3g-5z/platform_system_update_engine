@@ -295,6 +295,9 @@ int UpdateEngineClient::ProcessFlags() {
                 "",
                 "Give the name of the feature to disable, "
                 "ex.\"feature-repeated-updates\".");
+  DEFINE_bool(skip_applying,
+              false,
+              "Skip applying updates, only check if there are updates.");
 
   // Boilerplate init commands.
   base::CommandLine::Init(argc_, argv_);
@@ -514,6 +517,7 @@ int UpdateEngineClient::ProcessFlags() {
     update_engine::UpdateParams update_params;
     update_params.set_app_version(app_version);
     update_params.set_omaha_url(FLAGS_omaha_url);
+    update_params.set_skip_applying(FLAGS_skip_applying);
     update_params.mutable_update_flags()->set_non_interactive(
         !FLAGS_interactive);
     if (!client_->Update(update_params)) {

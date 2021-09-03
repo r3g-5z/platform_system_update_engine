@@ -82,6 +82,7 @@ class OmahaResponseHandlerAction : public Action<OmahaResponseHandlerAction> {
   FRIEND_TEST(UpdateAttempterTest, SetRollbackHappenedNotRollback);
   FRIEND_TEST(UpdateAttempterTest, SetRollbackHappenedRollback);
   FRIEND_TEST(UpdateAttempterTest, UpdateDeferredByPolicyTest);
+  FRIEND_TEST(UpdateAttempterTest, ActionCompletedNewVersionSet);
 };
 
 }  // namespace chromeos_update_engine

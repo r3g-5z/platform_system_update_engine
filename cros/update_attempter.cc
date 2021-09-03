@@ -778,6 +778,15 @@ void UpdateAttempter::BuildUpdateActions(bool interactive) {
   update_check_fetcher->set_is_update_check(true);
   auto update_check_action = std::make_unique<OmahaRequestAction>(
       nullptr, std::move(update_check_fetcher), false, session_id_);
+
+  // When `skip_applying_` is requested, the only actions required to process is
+  // querying Omaha and parsing the response to get the new version/etc.
+  if (skip_applying_) {
+    SetOutPipe(update_check_action.get());
+    processor_->EnqueueAction(std::move(update_check_action));
+    return;
+  }
+
   auto response_handler_action = std::make_unique<OmahaResponseHandlerAction>();
   auto update_boot_flags_action = std::make_unique<UpdateBootFlagsAction>(
       SystemState::Get()->boot_control(), SystemState::Get()->hardware());
@@ -944,6 +953,11 @@ bool UpdateAttempter::CheckForUpdate(
   const auto& update_flags = update_params.update_flags();
   bool interactive = !update_flags.non_interactive();
   is_install_ = false;
+  if (update_params.skip_applying()) {
+    skip_applying_ = true;
+    LOG(INFO) << "Update check is only going to query server for update, will "
+              << "not be applying any updates.";
+  }
 
   LOG(INFO) << "Forced update check requested.";
   forced_app_version_.clear();
@@ -1139,6 +1153,13 @@ void UpdateAttempter::ProcessingDoneInternal(const ActionProcessor* processor,
 
   attempt_error_code_ = utils::GetBaseErrorCode(code);
 
+  if (skip_applying_) {
+    LOG(INFO) << "Skip applying complete, check status.";
+    ResetUpdateStatus();
+    ScheduleUpdates();
+    return;
+  }
+
   if (code != ErrorCode::kSuccess) {
     if (ScheduleErrorEventAction()) {
       return;
@@ -1255,6 +1276,7 @@ void UpdateAttempter::ProcessingDone(const ActionProcessor* processor,
   // Note: do cleanups here for any variables that need to be reset after a
   // failure, error, update, or install.
   is_install_ = false;
+  skip_applying_ = false;
 }
 
 void UpdateAttempter::ProcessingStopped(const ActionProcessor* processor) {
@@ -1315,6 +1337,16 @@ void UpdateAttempter::ActionCompleted(ActionProcessor* processor,
           new_payload_size_ += package.size;
         }
         SetStatusAndNotify(UpdateStatus::NEED_PERMISSION_TO_UPDATE);
+      }
+
+      // Although `OmahaResponseHandlerAction` will update the new version,
+      // need to set here explicitly when skipping application of updates as
+      // there are no followup actions.
+      if (skip_applying_) {
+        // Only update version if there were updates to go into from Omaha.
+        if (omaha_response.update_exists) {
+          new_version_ = omaha_response.version;
+        }
       }
     }
   } else if (type == OmahaResponseHandlerAction::StaticType()) {

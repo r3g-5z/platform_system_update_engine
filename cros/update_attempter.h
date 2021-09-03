@@ -268,8 +268,9 @@ class UpdateAttempter : public ActionProcessorDelegate,
   friend class UpdateAttempterTest;
   FRIEND_TEST(UpdateAttempterTest, ActionCompletedDownloadTest);
   FRIEND_TEST(UpdateAttempterTest, ActionCompletedErrorTest);
-  FRIEND_TEST(UpdateAttempterTest, ActionCompletedGeneralErrorResetTest);
   FRIEND_TEST(UpdateAttempterTest, ActionCompletedOmahaRequestTest);
+  FRIEND_TEST(UpdateAttempterTest, ActionCompletedSkipApplying);
+  FRIEND_TEST(UpdateAttempterTest, ActionCompletedNewVersionSet);
   FRIEND_TEST(UpdateAttempterTest, BootTimeInUpdateMarkerFile);
   FRIEND_TEST(UpdateAttempterTest, BroadcastCompleteDownloadTest);
   FRIEND_TEST(UpdateAttempterTest, CalculateDlcParamsInstallTest);
@@ -328,6 +329,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest, ConsecutiveUpdateBeforeRebootSuccess);
   FRIEND_TEST(UpdateAttempterTest, ConsecutiveUpdateFailureMetric);
   FRIEND_TEST(UpdateAttempterTest, ResetUpdatePrefs);
+  FRIEND_TEST(UpdateAttempterTest, ProcessingDoneSkipApplying);
 
   // Returns the special flags to be added to ErrorCode values based on the
   // parameters used in the current update attempt.
@@ -611,6 +613,9 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // Data used by the update check allowed policies.
   std::shared_ptr<chromeos_update_manager::UpdateCheckAllowedPolicyData>
       policy_data_;
+
+  // If the application of update should be skipped.
+  bool skip_applying_ = false;
 
   base::WeakPtrFactory<UpdateAttempter> weak_ptr_factory_;
 };

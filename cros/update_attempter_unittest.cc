@@ -115,6 +115,7 @@ struct CheckForUpdateTestParams {
   bool non_interactive = false;
   bool is_official_build = true;
   bool are_dev_features_enabled = false;
+  bool skip_applying = false;
 
   // Expects:
   string expected_forced_app_version = "";
@@ -140,6 +141,7 @@ struct ProcessingDoneTestParams {
   ActionProcessor* processor = nullptr;
   ErrorCode code = ErrorCode::kSuccess;
   map<string, OmahaRequestParams::AppParams> dlc_apps_params;
+  bool skip_applying = false;
 
   // Expects:
   const bool kExpectedIsInstall = false;
@@ -349,6 +351,7 @@ void UpdateAttempterTest::TestCheckForUpdate() {
   update_params.set_omaha_url(cfu_params_.omaha_url);
   update_params.mutable_update_flags()->set_non_interactive(
       cfu_params_.non_interactive);
+  update_params.set_skip_applying(cfu_params_.skip_applying);
   EXPECT_EQ(cfu_params_.expected_result,
             attempter_.CheckForUpdate(update_params));
 
@@ -368,6 +371,7 @@ void UpdateAttempterTest::TestProcessingDone() {
   attempter_.status_ = pd_params_.status;
   attempter_.omaha_request_params_->set_dlc_apps_params(
       pd_params_.dlc_apps_params);
+  attempter_.skip_applying_ = pd_params_.skip_applying;
 
   // Expects
   if (pd_params_.should_install_completed_be_called)
@@ -608,6 +612,41 @@ TEST_F(UpdateAttempterTest, ActionCompletedOmahaRequestTest) {
   EXPECT_EQ(UpdateStatus::IDLE, attempter_.status());
   EXPECT_EQ(234U, attempter_.server_dictated_poll_interval_);
   ASSERT_TRUE(attempter_.error_event_.get() == nullptr);
+}
+
+TEST_F(UpdateAttempterTest, ActionCompletedSkipApplying) {
+  unique_ptr<MockHttpFetcher> fetcher(new MockHttpFetcher("", 0, nullptr));
+  OmahaRequestAction action(nullptr, std::move(fetcher), false, "");
+  ObjectCollectorAction<OmahaResponse> collector_action;
+  BondActions(&action, &collector_action);
+
+  {
+    OmahaResponse response{.update_exists = true, .version = "123.0.0"};
+    action.SetOutputObject(response);
+
+    attempter_.skip_applying_ = true;
+    attempter_.ActionCompleted(nullptr, &action, ErrorCode::kSuccess);
+    EXPECT_EQ("123.0.0", attempter_.new_version_);
+  }
+  {
+    OmahaResponse response{.update_exists = false, .version = "234.0.0"};
+    action.SetOutputObject(response);
+
+    attempter_.skip_applying_ = true;
+    attempter_.ActionCompleted(nullptr, &action, ErrorCode::kSuccess);
+    // Should still be the old version, since technically there is no update to
+    // apply.
+    EXPECT_EQ("123.0.0", attempter_.new_version_);
+  }
+}
+
+TEST_F(UpdateAttempterTest, ActionCompletedNewVersionSet) {
+  unique_ptr<MockHttpFetcher> fetcher(new MockHttpFetcher("", 0, nullptr));
+  OmahaResponseHandlerAction action;
+  action.install_plan_.version = "123.0.0";
+
+  attempter_.ActionCompleted(nullptr, &action, ErrorCode::kSuccess);
+  EXPECT_EQ("123.0.0", attempter_.new_version_);
 }
 
 TEST_F(UpdateAttempterTest, ConstructWithUpdatedMarkerTest) {
@@ -1424,8 +1463,17 @@ TEST_F(UpdateAttempterTest, CheckForUpdateNotIdleFails) {
 TEST_F(UpdateAttempterTest, CheckForUpdateOfficalBuildClearsSource) {
   // GIVEN a official build.
 
-  // THEN we except forced app version + forced omaha url to be cleared.
+  // THEN we expect forced app version + forced omaha url to be cleared.
 
+  TestCheckForUpdate();
+}
+
+TEST_F(UpdateAttempterTest, CheckForUpdateSkipApplying) {
+  // GIVEN a official build.
+
+  // THEN we expect forced app version + forced omaha url to be cleared.
+
+  cfu_params_.skip_applying = true;
   TestCheckForUpdate();
 }
 
@@ -1934,6 +1982,19 @@ TEST_F(UpdateAttempterTest, ProcessingDoneUpdatedDlcFilter) {
   // THEN install indication should be false.
 
   TestProcessingDone();
+}
+
+TEST_F(UpdateAttempterTest, ProcessingDoneSkipApplying) {
+  // GIVEN an update finished.
+  // GIVEN skip applying.
+  pd_params_.skip_applying = true;
+
+  // THEN update_engine should not call install completion.
+  // THEN go idle.
+  // THEN install indication should be false.
+
+  TestProcessingDone();
+  EXPECT_FALSE(attempter_.skip_applying_);
 }
 
 TEST_F(UpdateAttempterTest, ProcessingDoneInstalled) {
