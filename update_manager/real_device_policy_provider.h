@@ -75,6 +75,10 @@ class RealDevicePolicyProvider : public DevicePolicyProvider {
     return &var_target_version_prefix_;
   }
 
+  Variable<std::string>* var_target_version_selector() override {
+    return &var_target_version_selector_;
+  }
+
   Variable<RollbackToTargetVersion>* var_rollback_to_target_version() override {
     return &var_rollback_to_target_version_;
   }
@@ -218,6 +222,8 @@ class RealDevicePolicyProvider : public DevicePolicyProvider {
   AsyncCopyVariable<bool> var_update_disabled_{"update_disabled"};
   AsyncCopyVariable<std::string> var_target_version_prefix_{
       "target_version_prefix"};
+  AsyncCopyVariable<std::string> var_target_version_selector_{
+      "target_version_selector"};
   AsyncCopyVariable<RollbackToTargetVersion> var_rollback_to_target_version_{
       "rollback_to_target_version"};
   AsyncCopyVariable<int> var_rollback_allowed_milestones_{
