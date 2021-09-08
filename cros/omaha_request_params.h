@@ -50,18 +50,7 @@ extern const char kMiniOsAppIdSuffix[];
 // reflect its lifetime more appropriately.
 class OmahaRequestParams {
  public:
-  OmahaRequestParams()
-      : os_platform_(constants::kOmahaPlatformName),
-        os_version_(kOsVersion),
-        delta_okay_(true),
-        interactive_(false),
-        rollback_allowed_(false),
-        rollback_data_save_requested_(false),
-        wall_clock_based_wait_enabled_(false),
-        update_check_count_wait_enabled_(false),
-        min_update_checks_needed_(kDefaultMinUpdateChecks),
-        max_update_checks_allowed_(kDefaultMaxUpdateChecks),
-        is_install_(false) {}
+  OmahaRequestParams() = default;
   OmahaRequestParams(const OmahaRequestParams&) = delete;
   OmahaRequestParams& operator=(const OmahaRequestParams&) = delete;
 
@@ -374,8 +363,8 @@ class OmahaRequestParams {
   MutableImageProperties mutable_image_props_;
 
   // Basic properties of the OS and Application that go into the Omaha request.
-  std::string os_platform_;
-  std::string os_version_;
+  std::string os_platform_ = constants::kOmahaPlatformName;
+  std::string os_version_ = kOsVersion;
   std::string os_sp_;
 
   // There are three channel values we deal with:
@@ -410,8 +399,8 @@ class OmahaRequestParams {
   // TODO(b:133324571) tracks removal of this field once it is no longer
   // needed in AU requests. Remove by October 1st 2019.
   std::string device_requisition_;  // Chrome OS Requisition type.
-  bool delta_okay_;                 // If this client can accept a delta
-  bool interactive_;  // Whether this is a user-initiated update check
+  bool delta_okay_ = true;          // If this client can accept a delta
+  bool interactive_ = false;  // Whether this is a user-initiated update check
 
   // The URL to send the Omaha request to.
   std::string update_url_;
@@ -422,11 +411,11 @@ class OmahaRequestParams {
 
   // Whether the client is accepting rollback images defined by policy.
   // Normally ss set by |OmahaRequestParamsPolicy|.
-  bool rollback_allowed_;
+  bool rollback_allowed_ = false;
 
   // Whether rollbacks should preserve some system state during powerwash.
   // Normally ss set by |OmahaRequestParamsPolicy|.
-  bool rollback_data_save_requested_;
+  bool rollback_data_save_requested_ = false;
 
   // Specifies the number of Chrome milestones rollback should be allowed,
   // starting from the stable version at any time. Value is -1 if unspecified
@@ -438,16 +427,16 @@ class OmahaRequestParams {
   // True if scattering or staging are enabled, in which case waiting_period_
   // specifies the amount of absolute time that we've to wait for before sending
   // a request to Omaha.
-  bool wall_clock_based_wait_enabled_;
+  bool wall_clock_based_wait_enabled_ = false;
   base::TimeDelta waiting_period_;
 
   // True if scattering or staging are enabled to denote the number of update
   // checks we've to skip before we can send a request to Omaha. The min and max
   // values establish the bounds for a random number to be chosen within that
   // range to enable such a wait.
-  bool update_check_count_wait_enabled_;
-  int64_t min_update_checks_needed_;
-  int64_t max_update_checks_allowed_;
+  bool update_check_count_wait_enabled_ = false;
+  int64_t min_update_checks_needed_ = kDefaultMinUpdateChecks;
+  int64_t max_update_checks_allowed_ = kDefaultMaxUpdateChecks;
 
   // When reading files, prepend root_ to the paths. Useful for testing.
   std::string root_;
@@ -460,7 +449,7 @@ class OmahaRequestParams {
   // This variable defines whether the payload is being installed in the current
   // partition. At the moment, this is used for installing DLC modules on the
   // current active partition instead of the inactive partition.
-  bool is_install_;
+  bool is_install_ = false;
 
   // Token used when making an update request for a specific build.
   // For example: Token for a Quick Fix Build:
