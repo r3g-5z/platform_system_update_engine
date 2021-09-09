@@ -50,11 +50,25 @@ class ActionPipeTest : public ::testing::Test {};
 
 // This test creates two simple Actions and sends a message via an ActionPipe
 // from one to the other.
-TEST(ActionPipeTest, SimpleTest) {
+TEST_F(ActionPipeTest, SimpleTest) {
   ActionPipeTestAction a, b;
   BondActions(&a, &b);
   a.out_pipe()->set_contents("foo");
   EXPECT_EQ("foo", b.in_pipe()->contents());
+}
+
+TEST_F(ActionPipeTest, SetInPipeTest) {
+  ActionPipeTestAction a;
+  EXPECT_FALSE(a.HasInputObject());
+  SetInPipe(&a);
+  EXPECT_TRUE(a.HasInputObject());
+}
+
+TEST_F(ActionPipeTest, SetOutPipeTest) {
+  ActionPipeTestAction a;
+  EXPECT_FALSE(a.HasOutputPipe());
+  SetOutPipe(&a);
+  EXPECT_TRUE(a.HasOutputPipe());
 }
 
 }  // namespace chromeos_update_engine

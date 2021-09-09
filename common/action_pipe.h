@@ -79,6 +79,20 @@ class ActionPipe {
     // different from the To object's InputObjectType.
   }
 
+  // Sets the Action's input pipe with a new ActionPipe.
+  template <typename Action>
+  static void SetInPipe(Action* action) {
+    std::shared_ptr<ActionPipe<ObjectType>> pipe(new ActionPipe<ObjectType>);
+    action->set_in_pipe(pipe);
+  }
+
+  // Sets the Action's output pipe with a new ActionPipe.
+  template <typename Action>
+  static void SetOutPipe(Action* action) {
+    std::shared_ptr<ActionPipe<ObjectType>> pipe(new ActionPipe<ObjectType>);
+    action->set_out_pipe(pipe);
+  }
+
  private:
   ObjectType contents_;
   // Give unit test access
@@ -97,6 +111,16 @@ void BondActions(FromAction* from, ToAction* to) {
                    typename ToAction::InputObjectType>::value,
       "FromAction::OutputObjectType doesn't match ToAction::InputObjectType");
   ActionPipe<typename FromAction::OutputObjectType>::Bond(from, to);
+}
+
+template <typename Action>
+void SetInPipe(Action* action) {
+  ActionPipe<typename Action::OutputObjectType>::SetInPipe(action);
+}
+
+template <typename Action>
+void SetOutPipe(Action* action) {
+  ActionPipe<typename Action::OutputObjectType>::SetOutPipe(action);
 }
 
 }  // namespace chromeos_update_engine
