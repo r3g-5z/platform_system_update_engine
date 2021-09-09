@@ -18,6 +18,7 @@
 
 #include <inttypes.h>
 
+#include <numeric>
 #include <string>
 
 #include <base/guid.h>
@@ -29,6 +30,7 @@
 #include <base/time/time.h>
 
 #include "update_engine/common/constants.h"
+#include "update_engine/common/cros_healthd_interface.h"
 #include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/cros/omaha_request_params.h"
@@ -427,19 +429,21 @@ string OmahaRequestBuilderXml::GetRequest() const {
   const auto* params = SystemState::Get()->request_params();
   string os_xml = GetOs();
   string app_xml = GetApps();
+  string hw_xml = GetHw();
 
   string request_xml = base::StringPrintf(
       "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
       "<request requestid=\"%s\" sessionid=\"%s\""
       " protocol=\"3.0\" updater=\"%s\" updaterversion=\"%s\""
-      " installsource=\"%s\" ismachine=\"1\">\n%s%s</request>\n",
+      " installsource=\"%s\" ismachine=\"1\">\n%s%s%s</request>\n",
       base::GenerateGUID().c_str() /* requestid */,
       session_id_.c_str(),
       constants::kOmahaUpdaterID,
       kOmahaUpdaterVersion,
       params->interactive() ? "ondemandupdate" : "scheduler",
       os_xml.c_str(),
-      app_xml.c_str());
+      app_xml.c_str(),
+      hw_xml.c_str());
 
   return request_xml;
 }
@@ -492,6 +496,53 @@ string OmahaRequestBuilderXml::GetApps() const {
   }
 
   return app_xml;
+}
+
+string OmahaRequestBuilderXml::GetHw() const {
+  if (!SystemState::Get()->request_params()->hw_details())
+    return "";
+
+  auto* telemetry_info = SystemState::Get()->cros_healthd()->GetTelemetryInfo();
+  string hw_xml = base::StringPrintf(
+      "    <hw"
+      " vendor_name=\"%s\""
+      " product_name=\"%s\""
+      " product_version=\"%s\""
+      " bios_version=\"%s\""
+      " uefi=\"%" PRId32
+      "\""
+      " system_memory_bytes=\"%" PRIu32
+      "\""
+      " root_disk_drive\"%" PRIu64
+      "\""
+      " cpu_name\"%s\""
+      " />\n",
+      XmlEncodeWithDefault(telemetry_info->system_v2_info.dmi_info.board_vendor)
+          .c_str(),
+      XmlEncodeWithDefault(telemetry_info->system_v2_info.dmi_info.board_name)
+          .c_str(),
+      XmlEncodeWithDefault(
+          telemetry_info->system_v2_info.dmi_info.board_version)
+          .c_str(),
+      XmlEncodeWithDefault(telemetry_info->system_v2_info.dmi_info.bios_version)
+          .c_str(),
+      static_cast<int32_t>(telemetry_info->system_v2_info.os_info.boot_mode),
+      telemetry_info->memory_info.total_memory_kib,
+      // Note: Summing the entire non-removable disk sizes.
+      std::accumulate(std::begin(telemetry_info->block_device_info),
+                      std::end(telemetry_info->block_device_info),
+                      uint64_t(0),
+                      [](uint64_t sum,
+                         const TelemetryInfo::NonRemovableBlockDeviceInfo& o) {
+                        return sum + o.size;
+                      }),
+      // Note: Using only the first of the CPU model name.
+      XmlEncodeWithDefault(
+          telemetry_info->cpu_info.physical_cpus.size()
+              ? telemetry_info->cpu_info.physical_cpus.front().model_name
+              : "")
+          .c_str());
+  return hw_xml;
 }
 
 }  // namespace chromeos_update_engine

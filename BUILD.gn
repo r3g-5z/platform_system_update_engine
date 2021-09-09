@@ -272,9 +272,10 @@ static_library("libupdate_engine") {
   ]
 
   if (use.hw_details) {
-    deps += [
-      "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter",
-    ]
+    deps += [ "//diagnostics/mojo:cros_healthd_mojo_bindings" ]
+    sources += [ "common/cros_healthd.cc" ]
+  } else {
+    sources += [ "common/cros_healthd_stub.cc" ]
   }
 
   if (use.dlc) {
@@ -555,6 +556,9 @@ if (use.test) {
       "update_manager/weekly_time_unittest.cc",
       "update_status_utils_unittest.cc",
     ]
+    if (use.hw_details) {
+      sources += [ "common/cros_healthd_test.cc" ]
+    }
     if (use.dlc) {
       sources += [ "cros/excluder_chromeos_unittest.cc" ]
     }

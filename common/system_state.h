@@ -43,6 +43,7 @@ namespace chromeos_update_engine {
 // the required classes.
 class BootControlInterface;
 class ConnectionManagerInterface;
+class CrosHealthdInterface;
 class DlcServiceInterface;
 class HardwareInterface;
 class MetricsReporterInterface;
@@ -119,6 +120,9 @@ class SystemState {
 
   // Returns a pointer to the DlcServiceInterface singleton.
   virtual DlcServiceInterface* dlcservice() = 0;
+
+  // Returns a pointer to the CrosHealthdInteraface singleton.
+  virtual CrosHealthdInterface* cros_healthd() = 0;
 
  protected:
   static SystemState* g_pointer_;

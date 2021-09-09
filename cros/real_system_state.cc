@@ -78,6 +78,12 @@ bool RealSystemState::Initialize() {
     return false;
   }
 
+  cros_healthd_ = CreateCrosHealthd();
+  if (!cros_healthd_ && !cros_healthd_->Init()) {
+    LOG(ERROR) << "Error initializing the CrosHealthdInterface,";
+    return false;
+  }
+
   // Initialize standard and powerwash-safe prefs.
   base::FilePath non_volatile_path;
   // TODO(deymo): Fall back to in-memory prefs if there's no physical directory

@@ -243,6 +243,9 @@ class OmahaRequestParams {
   }
   inline const std::string& market_segment() const { return market_segment_; }
 
+  inline void set_hw_details(bool hw_details) { hw_details_ = hw_details; }
+  inline bool hw_details() const { return hw_details_; }
+
   // Returns the App ID corresponding to the current value of the
   // download channel.
   virtual std::string GetAppId() const;
@@ -459,6 +462,13 @@ class OmahaRequestParams {
 
   // Defines the device's market segment.
   std::string market_segment_;
+
+  // Whether to include <hw> element.
+#if USE_HW_DETAILS
+  bool hw_details_ = true;
+#else
+  bool hw_details_ = false;
+#endif  // USE_HW_DETAILS
 };
 
 }  // namespace chromeos_update_engine

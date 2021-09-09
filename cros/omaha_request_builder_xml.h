@@ -143,6 +143,11 @@ class OmahaRequestBuilderXml : OmahaRequestBuilder {
   // Returns an XML that corresponds to the entire Omaha request.
   std::string GetRequest() const override;
 
+  // Same as `GetRequest()` but is async.
+  using GetRequestCallback =
+      base::OnceCallback<void(const std::string& request_xml)>;
+  void GetRequestAsync(GetRequestCallback callback);
+
  private:
   FRIEND_TEST(OmahaRequestBuilderXmlTest, PlatformGetAppTest);
   FRIEND_TEST(OmahaRequestBuilderXmlTest, GetLastFpTest);
@@ -174,6 +179,9 @@ class OmahaRequestBuilderXml : OmahaRequestBuilder {
   // Returns an XML ping element if any of the elapsed days need to be
   // sent, or an empty string otherwise.
   std::string GetPing() const;
+
+  // Returns an XML that corresponds to the <hw> node of the Omaha request.
+  std::string GetHw() const;
 
   // Returns an XML ping element if any of the elapsed days need to be
   // sent, or an empty string otherwise.

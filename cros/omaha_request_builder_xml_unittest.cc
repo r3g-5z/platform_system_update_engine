@@ -25,6 +25,7 @@
 #include <base/strings/stringprintf.h>
 #include <gtest/gtest.h>
 
+#include "update_engine/common/mock_cros_healthd.h"
 #include "update_engine/cros/fake_system_state.h"
 
 using std::pair;
@@ -63,6 +64,7 @@ class OmahaRequestBuilderXmlTest : public ::testing::Test {
  protected:
   void SetUp() override {
     FakeSystemState::CreateInstance();
+    params_.set_hw_details(false);
     FakeSystemState::Get()->set_request_params(&params_);
   }
   void TearDown() override {}
@@ -491,6 +493,92 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlDlcCohortCheck) {
                     kDlcCohortVal.c_str(),
                     kDlcCohortNameVal.c_str(),
                     kDlcCohortHintVal.c_str())))
+      << request_xml;
+}
+
+TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
+  params_.set_hw_details(true);
+  MockCrosHealthd mock_cros_healthd;
+  FakeSystemState::Get()->set_cros_healthd(&mock_cros_healthd);
+
+  const string board_vendor = "fake-board-vendor",
+               board_name = "fake-board-name",
+               board_version = "fake-board-version",
+               bios_version = "fake-bios-version",
+               model_name = "fake-model-name";
+  auto boot_mode = TelemetryInfo::SystemV2Info::OsInfo::BootMode::kCrosEfi;
+  uint32_t total_memory_kib = 123;
+  uint64_t size = 456;
+
+  TelemetryInfo telemetry_info{
+      .system_v2_info =
+          // NOLINTNEXTLINE(whitespace/braces)
+      {
+          .dmi_info =
+              // NOLINTNEXTLINE(whitespace/braces)
+          {
+              .board_vendor = board_vendor,
+              .board_name = board_name,
+              .board_version = board_version,
+              .bios_version = bios_version,
+          },
+          .os_info =
+              // NOLINTNEXTLINE(whitespace/braces)
+          {
+              .boot_mode = boot_mode,
+          },
+      },
+      .memory_info =
+          // NOLINTNEXTLINE(whitespace/braces)
+      {
+          .total_memory_kib = total_memory_kib,
+      },
+      .block_device_info =
+          // NOLINTNEXTLINE(whitespace/braces)
+      {
+          {
+              .size = size,
+          },
+      },
+      .cpu_info =
+          // NOLINTNEXTLINE(whitespace/braces)
+      {
+          .physical_cpus =
+              // NOLINTNEXTLINE(whitespace/braces)
+          {
+              {
+                  .model_name = model_name,
+              },
+          },
+      },
+  };
+
+  EXPECT_CALL(mock_cros_healthd, GetTelemetryInfo())
+      .WillOnce(Return(&telemetry_info));
+
+  OmahaRequestBuilderXml omaha_request{nullptr, false, false, 0, 0, 0, ""};
+  const string request_xml = omaha_request.GetRequest();
+  EXPECT_EQ(1,
+            CountSubstringInString(
+                request_xml,
+                base::StringPrintf("    <hw"
+                                   " vendor_name=\"%s\""
+                                   " product_name=\"%s\""
+                                   " product_version=\"%s\""
+                                   " bios_version=\"%s\""
+                                   " uefi=\"%" PRId32 "\""
+                                   " system_memory_bytes=\"%" PRIu32 "\""
+                                   " root_disk_drive\"%" PRIu64 "\""
+                                   " cpu_name\"%s\""
+                                   " />\n",
+                                   board_vendor.c_str(),
+                                   board_name.c_str(),
+                                   board_version.c_str(),
+                                   bios_version.c_str(),
+                                   static_cast<int32_t>(boot_mode),
+                                   total_memory_kib,
+                                   size,
+                                   model_name.c_str())))
       << request_xml;
 }
 

@@ -28,6 +28,7 @@
 #include "update_engine/certificate_checker.h"
 #include "update_engine/common/boot_control_interface.h"
 #include "update_engine/common/clock.h"
+#include "update_engine/common/cros_healthd_interface.h"
 #include "update_engine/common/daemon_state_interface.h"
 #include "update_engine/common/dlcservice_interface.h"
 #include "update_engine/common/hardware_interface.h"
@@ -112,6 +113,8 @@ class RealSystemState : public SystemState {
 
   DlcServiceInterface* dlcservice() override { return dlcservice_.get(); }
 
+  CrosHealthdInterface* cros_healthd() override { return cros_healthd_.get(); }
+
  private:
   // Initializes and sets systems objects that require an initialization
   // separately from construction. Returns |true| on success.
@@ -126,6 +129,9 @@ class RealSystemState : public SystemState {
 
   // Interface for dlcservice.
   std::unique_ptr<DlcServiceInterface> dlcservice_;
+
+  // Interface for cros_healthd.
+  std::unique_ptr<CrosHealthdInterface> cros_healthd_;
 
   // Interface for the bootloader control.
   std::unique_ptr<BootControlInterface> boot_control_;

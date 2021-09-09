@@ -427,6 +427,7 @@ class OmahaRequestActionTest : public ::testing::Test {
     request_params_.set_is_powerwash_allowed(false);
     request_params_.set_is_install(false);
     request_params_.set_dlc_apps_params({});
+    request_params_.set_hw_details(false);
 
     FakeSystemState::Get()->set_request_params(&request_params_);
     fake_prefs_ = FakeSystemState::Get()->fake_prefs();
