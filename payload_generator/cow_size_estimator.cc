@@ -26,6 +26,7 @@
 #include "update_engine/common/cow_operation_convert.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/update_metadata.pb.h"
+#include "update_engine/payload_consumer/vabc_partition_writer.h"
 
 namespace chromeos_update_engine {
 using android::snapshot::CowWriter;
@@ -150,6 +151,7 @@ bool CowDryRun(
       case InstallOperation::BROTLI_BSDIFF:
       case InstallOperation::PUFFDIFF:
       case InstallOperation::BSDIFF:
+      case InstallOperation::ZUCCHINI:
         // We might do something special by adding CowBsdiff to CowWriter.
         // For now proceed the same way as normal REPLACE operation.
         TEST_AND_RETURN_FALSE(
@@ -161,6 +163,7 @@ bool CowDryRun(
     // emits 1 label for every op.
     cow_writer->AddLabel(2);
   }
+  VABCPartitionWriter::WriteMergeSequence(merge_operations, cow_writer);
   // TODO(zhangkelvin) Take FEC extents into account once VABC stabilizes
   return true;
 }
