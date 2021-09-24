@@ -57,6 +57,36 @@ TEST_F(CrosHealthdTest, ParseSystemResultV2Check) {
     system_info_v2_ptr->dmi_info =
         chromeos::cros_healthd::mojom::DmiInfo::New();
     auto& dmi_info_ptr = system_info_v2_ptr->dmi_info;
+    // Missing values.
+    dmi_info_ptr->board_name = "fake-board-name";
+    dmi_info_ptr->bios_version = "fake-bios-version";
+
+    system_info_v2_ptr->os_info = chromeos::cros_healthd::mojom::OsInfo::New();
+    auto& os_info_ptr = system_info_v2_ptr->os_info;
+    os_info_ptr->boot_mode = chromeos::cros_healthd::mojom::BootMode::kCrosEfi;
+
+    cros_healthd_.ParseSystemResultV2(&telemetry_info_ptr, &telemetry_info);
+    EXPECT_EQ("fake-board-name",
+              telemetry_info.system_v2_info.dmi_info.board_name);
+    EXPECT_EQ("fake-bios-version",
+              telemetry_info.system_v2_info.dmi_info.bios_version);
+    EXPECT_EQ(TelemetryInfo::SystemV2Info::OsInfo::BootMode::kCrosEfi,
+              telemetry_info.system_v2_info.os_info.boot_mode);
+  }
+  {
+    TelemetryInfo telemetry_info{};
+    auto&& telemetry_info_ptr =
+        chromeos::cros_healthd::mojom::TelemetryInfo::New();
+    telemetry_info_ptr->system_result_v2 =
+        chromeos::cros_healthd::mojom::SystemResultV2::New();
+    auto& system_result_v2_ptr = telemetry_info_ptr->system_result_v2;
+    system_result_v2_ptr->set_system_info_v2(
+        chromeos::cros_healthd::mojom::SystemInfoV2::New());
+    auto& system_info_v2_ptr = system_result_v2_ptr->get_system_info_v2();
+
+    system_info_v2_ptr->dmi_info =
+        chromeos::cros_healthd::mojom::DmiInfo::New();
+    auto& dmi_info_ptr = system_info_v2_ptr->dmi_info;
     dmi_info_ptr->board_vendor = "fake-board-vendor";
     dmi_info_ptr->board_name = "fake-board-name";
     dmi_info_ptr->board_version = "fake-board-version";
@@ -144,6 +174,27 @@ TEST_F(CrosHealthdTest, ParseCpuResultCheck) {
     TelemetryInfo telemetry_info{};
     auto&& telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
+    cros_healthd_.ParseCpuResult(&telemetry_info_ptr, &telemetry_info);
+    EXPECT_TRUE(telemetry_info.cpu_info.physical_cpus.empty());
+  }
+  {
+    TelemetryInfo telemetry_info{};
+    auto&& telemetry_info_ptr =
+        chromeos::cros_healthd::mojom::TelemetryInfo::New();
+    telemetry_info_ptr->cpu_result =
+        chromeos::cros_healthd::mojom::CpuResult::New();
+    auto& cpu_result_ptr = telemetry_info_ptr->cpu_result;
+    cpu_result_ptr->set_cpu_info(chromeos::cros_healthd::mojom::CpuInfo::New());
+    auto& cpu_info_ptr = cpu_result_ptr->get_cpu_info();
+
+    std::vector<chromeos::cros_healthd::mojom::PhysicalCpuInfoPtr>
+        physical_cpus;
+    physical_cpus.emplace_back(
+        chromeos::cros_healthd::mojom::PhysicalCpuInfo::New());
+    cpu_info_ptr->physical_cpus = std::move(physical_cpus);
+
+    // Missing values, don't set any values.
+
     cros_healthd_.ParseCpuResult(&telemetry_info_ptr, &telemetry_info);
     EXPECT_TRUE(telemetry_info.cpu_info.physical_cpus.empty());
   }

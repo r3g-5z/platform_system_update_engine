@@ -182,14 +182,18 @@ bool CrosHealthd::ParseSystemResultV2(
 
     const auto& dmi_info = system_info_v2->dmi_info;
     if (dmi_info) {
-      telemetry_info->system_v2_info.dmi_info.board_vendor =
-          dmi_info->board_vendor.value();
-      telemetry_info->system_v2_info.dmi_info.board_name =
-          dmi_info->board_name.value();
-      telemetry_info->system_v2_info.dmi_info.board_version =
-          dmi_info->board_version.value();
-      telemetry_info->system_v2_info.dmi_info.bios_version =
-          dmi_info->bios_version.value();
+      if (dmi_info->board_vendor.has_value())
+        telemetry_info->system_v2_info.dmi_info.board_vendor =
+            dmi_info->board_vendor.value();
+      if (dmi_info->board_name.has_value())
+        telemetry_info->system_v2_info.dmi_info.board_name =
+            dmi_info->board_name.value();
+      if (dmi_info->board_version.has_value())
+        telemetry_info->system_v2_info.dmi_info.board_version =
+            dmi_info->board_version.value();
+      if (dmi_info->bios_version.has_value())
+        telemetry_info->system_v2_info.dmi_info.bios_version =
+            dmi_info->bios_version.value();
     }
 
     const auto& os_info = system_info_v2->os_info;
@@ -254,9 +258,11 @@ bool CrosHealthd::ParseCpuResult(
     }
     const auto& cpu_info = cpu_result->get_cpu_info();
     for (const auto& physical_cpu : cpu_info->physical_cpus) {
-      telemetry_info->cpu_info.physical_cpus.push_back({
-          .model_name = physical_cpu->model_name.value(),
-      });
+      if (physical_cpu->model_name.has_value()) {
+        telemetry_info->cpu_info.physical_cpus.push_back({
+            .model_name = physical_cpu->model_name.value(),
+        });
+      }
     }
   }
   return true;
