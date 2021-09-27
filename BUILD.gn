@@ -71,8 +71,9 @@ pkg_config("target_defaults") {
     "_POSIX_C_SOURCE=199309L",
     "USE_CFM=${use.cfm}",
     "USE_FEC=0",
-    "USE_HW_DETAILS=${use.hw_details}",
     "USE_HWID_OVERRIDE=${use.hwid_override}",
+    "USE_HW_DETAILS=${use.hw_details}",
+    "USE_REPORT_REQUISITION=${use.report_requisition}",
   ]
   include_dirs = [
     # We need this include dir because we include all the local code as

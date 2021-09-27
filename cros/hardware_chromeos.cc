@@ -38,7 +38,7 @@ extern "C" {
 #include "update_engine/common/subprocess.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/cros/dbus_connection.h"
-#if USE_CFM
+#if USE_CFM || USE_REPORT_REQUISITION
 #include "update_engine/cros/requisition_util.h"
 #endif
 
@@ -208,7 +208,7 @@ string HardwareChromeOS::GetHardwareClass() const {
 }
 
 string HardwareChromeOS::GetDeviceRequisition() const {
-#if USE_CFM
+#if USE_CFM || USE_REPORT_REQUISITION
   const char* kLocalStatePath = "/home/chronos/Local State";
   return ReadDeviceRequisition(base::FilePath(kLocalStatePath));
 #else
