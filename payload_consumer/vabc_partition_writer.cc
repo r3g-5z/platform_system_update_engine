@@ -126,15 +126,19 @@ bool VABCPartitionWriter::Init(const InstallPlan* install_plan,
 
   // ==============================================
   if (!partition_update_.merge_operations().empty()) {
-    TEST_AND_RETURN_FALSE(WriteMergeSequence(
-        partition_update_.merge_operations(), cow_writer_.get()));
+    if (IsXorEnabled()) {
+      LOG(INFO) << "VABC XOR enabled for partition "
+                << partition_update_.partition_name();
+      TEST_AND_RETURN_FALSE(WriteMergeSequence(
+          partition_update_.merge_operations(), cow_writer_.get()));
+    }
   }
 
   // TODO(zhangkelvin) Rewrite this in C++20 coroutine once that's available.
   // TODO(177104308) Don't write all COPY ops up-front if merge sequence is
   // written
-  auto converted = ConvertToCowOperations(partition_update_.operations(),
-                                          partition_update_.merge_operations());
+  const auto converted = ConvertToCowOperations(
+      partition_update_.operations(), partition_update_.merge_operations());
 
   if (!converted.empty()) {
     // Use source fd directly. Ideally we want to verify all extents used in
@@ -280,7 +284,9 @@ void VABCPartitionWriter::CheckpointUpdateProgress(size_t next_op_index) {
   // Add a hardcoded magic label to indicate end of all install ops. This label
   // is needed by filesystem verification, don't remove.
   TEST_AND_RETURN_FALSE(cow_writer_ != nullptr);
-  return cow_writer_->AddLabel(kEndOfInstallLabel);
+  TEST_AND_RETURN_FALSE(cow_writer_->AddLabel(kEndOfInstallLabel));
+  TEST_AND_RETURN_FALSE(cow_writer_->Finalize());
+  return cow_writer_->VerifyMergeOps();
 }
 
 VABCPartitionWriter::~VABCPartitionWriter() {
