@@ -513,9 +513,12 @@ string OmahaRequestBuilderXml::GetHw() const {
       "\""
       " system_memory_bytes=\"%" PRIu32
       "\""
-      " root_disk_drive\"%" PRIu64
+      " root_disk_drive=\"%" PRIu64
       "\""
-      " cpu_name\"%s\""
+      " cpu_name=\"%s\""
+      " wireless_drivers=\"%s\""
+      " wireless_ids=\"%s\""
+      " gpu_ids=\"%s\""
       " />\n",
       XmlEncodeWithDefault(telemetry_info->system_v2_info.dmi_info.board_vendor)
           .c_str(),
@@ -541,7 +544,10 @@ string OmahaRequestBuilderXml::GetHw() const {
           telemetry_info->cpu_info.physical_cpus.size()
               ? telemetry_info->cpu_info.physical_cpus.front().model_name
               : "")
-          .c_str());
+          .c_str(),
+      XmlEncodeWithDefault(telemetry_info->GetWirelessDrivers()).c_str(),
+      XmlEncodeWithDefault(telemetry_info->GetWirelessIds()).c_str(),
+      XmlEncodeWithDefault(telemetry_info->GetGpuIds()).c_str());
   return hw_xml;
 }
 

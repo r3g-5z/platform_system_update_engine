@@ -551,6 +551,68 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
               },
           },
       },
+      .bus_devices =
+          // NOLINTNEXTLINE(whitespace/braces)
+      {
+          {
+              .device_class =
+                  TelemetryInfo::BusDevice::BusDeviceClass::kWirelessController,
+              .bus_type_info =
+                  TelemetryInfo::BusDevice::PciBusInfo{
+                      .vendor_id = 1,
+                      .device_id = 2,
+                      .driver = "fake-driver-1",
+                  },
+          },
+          {
+              .device_class =
+                  TelemetryInfo::BusDevice::BusDeviceClass::kWirelessController,
+              .bus_type_info =
+                  TelemetryInfo::BusDevice::UsbBusInfo{
+                      .vendor_id = 3,
+                      .product_id = 4,
+                  },
+          },
+          {
+              .device_class =
+                  TelemetryInfo::BusDevice::BusDeviceClass::kDisplayController,
+              .bus_type_info =
+                  TelemetryInfo::BusDevice::PciBusInfo{
+                      .vendor_id = 5,
+                      .device_id = 6,
+                      .driver = "fake-driver-2",
+                  },
+          },
+          {
+              .device_class =
+                  TelemetryInfo::BusDevice::BusDeviceClass::kDisplayController,
+              .bus_type_info =
+                  TelemetryInfo::BusDevice::UsbBusInfo{
+                      .vendor_id = 7,
+                      .product_id = 8,
+                  },
+          },
+          // Should be ignored.
+          {
+              .device_class =
+                  TelemetryInfo::BusDevice::BusDeviceClass::kEthernetController,
+              .bus_type_info =
+                  TelemetryInfo::BusDevice::PciBusInfo{
+                      .vendor_id = 9,
+                      .device_id = 10,
+                      .driver = "fake-driver-3",
+                  },
+          },
+          {
+              .device_class =
+                  TelemetryInfo::BusDevice::BusDeviceClass::kEthernetController,
+              .bus_type_info =
+                  TelemetryInfo::BusDevice::UsbBusInfo{
+                      .vendor_id = 11,
+                      .product_id = 12,
+                  },
+          },
+      },
   };
 
   EXPECT_CALL(mock_cros_healthd, GetTelemetryInfo())
@@ -568,8 +630,11 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
                                    " bios_version=\"%s\""
                                    " uefi=\"%" PRId32 "\""
                                    " system_memory_bytes=\"%" PRIu32 "\""
-                                   " root_disk_drive\"%" PRIu64 "\""
-                                   " cpu_name\"%s\""
+                                   " root_disk_drive=\"%" PRIu64 "\""
+                                   " cpu_name=\"%s\""
+                                   " wireless_drivers=\"%s\""
+                                   " wireless_ids=\"%s\""
+                                   " gpu_ids=\"%s\""
                                    " />\n",
                                    board_vendor.c_str(),
                                    board_name.c_str(),
@@ -578,7 +643,10 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
                                    static_cast<int32_t>(boot_mode),
                                    total_memory_kib,
                                    size,
-                                   model_name.c_str())))
+                                   model_name.c_str(),
+                                   "fake-driver-1",
+                                   "0100:0200 0300:0400",
+                                   "0500:0600 0700:0800")))
       << request_xml;
 }
 

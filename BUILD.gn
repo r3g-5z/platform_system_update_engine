@@ -273,9 +273,15 @@ static_library("libupdate_engine") {
 
   if (use.hw_details) {
     deps += [ "//diagnostics/mojo:cros_healthd_mojo_bindings" ]
-    sources += [ "common/cros_healthd.cc" ]
+    sources += [
+      "common/cros_healthd.cc",
+      "common/telemetry_info.cc",
+    ]
   } else {
-    sources += [ "common/cros_healthd_stub.cc" ]
+    sources += [
+      "common/cros_healthd_stub.cc",
+      "common/telemetry_info.cc",
+    ]
   }
 
   if (use.dlc) {
@@ -479,6 +485,7 @@ if (use.test) {
       "common/prefs_unittest.cc",
       "common/proxy_resolver_unittest.cc",
       "common/subprocess_unittest.cc",
+      "common/telemetry_info_unittest.cc",
       "common/terminator_unittest.cc",
       "common/utils_unittest.cc",
       "cros/boot_control_chromeos_unittest.cc",

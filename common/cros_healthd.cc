@@ -268,4 +268,53 @@ bool CrosHealthd::ParseCpuResult(
   return true;
 }
 
+bool CrosHealthd::ParseBusResult(
+    chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
+    TelemetryInfo* telemetry_info) {
+  const auto& bus_result = (*result)->bus_result;
+  if (bus_result) {
+    if (bus_result->is_error()) {
+      PrintError(bus_result->get_error(), "bus information");
+      return false;
+    }
+    const auto& bus_devices = bus_result->get_bus_devices();
+    for (const auto& bus_device : bus_devices) {
+      switch (bus_device->bus_info->which()) {
+        case chromeos::cros_healthd::mojom::BusInfo::Tag::PCI_BUS_INFO: {
+          const auto& pci_bus_info = bus_device->bus_info->get_pci_bus_info();
+          telemetry_info->bus_devices.push_back({
+              .device_class =
+                  static_cast<TelemetryInfo::BusDevice::BusDeviceClass>(
+                      bus_device->device_class),
+              .bus_type_info =
+                  TelemetryInfo::BusDevice::PciBusInfo{
+                      .vendor_id = pci_bus_info->vendor_id,
+                      .device_id = pci_bus_info->device_id,
+                      .driver = pci_bus_info->driver.has_value()
+                                    ? pci_bus_info->driver.value()
+                                    : "",
+                  },
+          });
+          break;
+        }
+        case chromeos::cros_healthd::mojom::BusInfo::Tag::USB_BUS_INFO: {
+          const auto& usb_bus_info = bus_device->bus_info->get_usb_bus_info();
+          telemetry_info->bus_devices.push_back({
+              .device_class =
+                  static_cast<TelemetryInfo::BusDevice::BusDeviceClass>(
+                      bus_device->device_class),
+              .bus_type_info =
+                  TelemetryInfo::BusDevice::UsbBusInfo{
+                      .vendor_id = usb_bus_info->vendor_id,
+                      .product_id = usb_bus_info->product_id,
+                  },
+          });
+          break;
+        }
+      }
+    }
+  }
+  return true;
+}
+
 }  // namespace chromeos_update_engine

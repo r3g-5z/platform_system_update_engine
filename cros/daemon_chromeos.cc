@@ -91,6 +91,7 @@ void DaemonChromeOS::OnDBusRegistered(bool succeeded) {
             TelemetryCategoryEnum::kCpu,
             TelemetryCategoryEnum::kMemory,
             TelemetryCategoryEnum::kSystem2,
+            TelemetryCategoryEnum::kBus,
         },
         base::BindOnce([](const TelemetryInfo&) {
           SystemState::Get()->update_attempter()->StartUpdater();

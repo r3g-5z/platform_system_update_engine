@@ -79,6 +79,8 @@ class CrosHealthd : public CrosHealthdInterface {
       TelemetryInfo* telemetry_info);
   bool ParseCpuResult(chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
                       TelemetryInfo* telemetry_info);
+  bool ParseBusResult(chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
+                      TelemetryInfo* telemetry_info);
 
   std::unique_ptr<TelemetryInfo> telemetry_info_;
 
