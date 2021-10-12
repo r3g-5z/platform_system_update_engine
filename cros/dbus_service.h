@@ -42,17 +42,8 @@ class DBusUpdateEngineService
   virtual ~DBusUpdateEngineService() = default;
 
   // Implementation of org::chromium::UpdateEngineInterfaceInterface.
-  bool AttemptUpdate(brillo::ErrorPtr* error,
-                     const std::string& in_app_version,
-                     const std::string& in_omaha_url) override;
-
   bool Update(brillo::ErrorPtr* error,
               const update_engine::UpdateParams& in_update_params) override;
-
-  bool AttemptUpdateWithFlags(brillo::ErrorPtr* error,
-                              const std::string& in_app_version,
-                              const std::string& in_omaha_url,
-                              int32_t in_flags_as_int) override;
 
   bool AttemptInstall(brillo::ErrorPtr* error,
                       const std::string& in_omaha_url,

@@ -71,29 +71,6 @@ UpdateEngineService::UpdateEngineService() = default;
 
 // org::chromium::UpdateEngineInterfaceInterface methods implementation.
 
-bool UpdateEngineService::AttemptUpdate(ErrorPtr* /* error */,
-                                        const string& in_app_version,
-                                        const string& in_omaha_url,
-                                        int32_t in_flags_as_int,
-                                        bool* out_result) {
-  auto flags = static_cast<UpdateAttemptFlags>(in_flags_as_int);
-  bool non_interactive = (flags & UpdateAttemptFlags::kFlagNonInteractive);
-
-  LOG(INFO) << "Attempt update: app_version=\"" << in_app_version << "\" "
-            << "omaha_url=\"" << in_omaha_url << "\" "
-            << "flags=0x" << std::hex << flags << " "
-            << "interactive=" << (non_interactive ? "no" : "yes");
-
-  update_engine::UpdateParams update_params;
-  update_params.set_app_version(in_app_version);
-  update_params.set_omaha_url(in_omaha_url);
-  update_params.mutable_update_flags()->set_non_interactive(non_interactive);
-
-  *out_result =
-      SystemState::Get()->update_attempter()->CheckForUpdate(update_params);
-  return true;
-}
-
 bool UpdateEngineService::Update(
     ErrorPtr* /* error */,
     const update_engine::UpdateParams& update_params,

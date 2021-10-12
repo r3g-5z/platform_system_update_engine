@@ -20,10 +20,6 @@
                 value="update_engine_service" />
     <annotation name="org.freedesktop.DBus.GLib.ClientCSymbol"
                 value="update_engine_client" />
-    <method name="AttemptUpdate">
-      <arg type="s" name="app_version" direction="in" />
-      <arg type="s" name="omaha_url" direction="in" />
-    </method>
     <method name="Update">
       <arg type="ay" name="update_params" direction="in">
         <tp:docstring>
@@ -32,16 +28,6 @@
         <annotation name="org.chromium.DBus.Argument.ProtobufClass"
                     value="update_engine::UpdateParams"/>
       </arg>
-    </method>
-    <!-- TODO(zeuthen,chromium:286399): Rename to AttemptUpdate and
-         update Chrome and other users of the AttemptUpdate() method
-         in lockstep.
-    -->
-    <method name="AttemptUpdateWithFlags">
-      <arg type="s" name="app_version" direction="in" />
-      <arg type="s" name="omaha_url" direction="in" />
-      <!-- See AttemptUpdateFlags enum in update_engine/dbus-constants.h. -->
-      <arg type="i" name="flags" direction="in" />
     </method>
     <method name="AttemptInstall">
       <arg type="s" name="omaha_url" direction="in" />

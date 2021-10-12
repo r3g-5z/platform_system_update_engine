@@ -41,12 +41,6 @@ class UpdateEngineService {
   UpdateEngineService();
   virtual ~UpdateEngineService() = default;
 
-  bool AttemptUpdate(brillo::ErrorPtr* error,
-                     const std::string& in_app_version,
-                     const std::string& in_omaha_url,
-                     int32_t in_flags_as_int,
-                     bool* out_result);
-
   bool Update(brillo::ErrorPtr* error,
               const update_engine::UpdateParams& update_params,
               bool* out_result);

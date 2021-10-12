@@ -60,34 +60,10 @@ DBusUpdateEngineService::DBusUpdateEngineService()
     : common_(new UpdateEngineService()) {}
 
 // org::chromium::UpdateEngineInterfaceInterface methods implementation.
-bool DBusUpdateEngineService::AttemptUpdate(ErrorPtr* error,
-                                            const string& in_app_version,
-                                            const string& in_omaha_url) {
-  return AttemptUpdateWithFlags(
-      error, in_app_version, in_omaha_url, 0 /* no flags */);
-}
-
 bool DBusUpdateEngineService::Update(
     ErrorPtr* error, const update_engine::UpdateParams& in_update_params) {
   bool result;
   return common_->Update(error, in_update_params, &result);
-}
-
-bool DBusUpdateEngineService::AttemptUpdateWithFlags(
-    ErrorPtr* error,
-    const string& in_app_version,
-    const string& in_omaha_url,
-    int32_t in_flags_as_int) {
-  update_engine::AttemptUpdateFlags flags =
-      static_cast<update_engine::AttemptUpdateFlags>(in_flags_as_int);
-  bool interactive = !(flags & update_engine::kAttemptUpdateFlagNonInteractive);
-  bool result;
-  return common_->AttemptUpdate(
-      error,
-      in_app_version,
-      in_omaha_url,
-      interactive ? 0 : update_engine::UpdateAttemptFlags::kFlagNonInteractive,
-      &result);
 }
 
 bool DBusUpdateEngineService::AttemptInstall(ErrorPtr* error,

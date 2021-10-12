@@ -64,27 +64,6 @@ class UpdateEngineServiceTest : public ::testing::Test {
   UpdateEngineService common_service_;
 };
 
-TEST_F(UpdateEngineServiceTest, AttemptUpdate) {
-  UpdateParams update_params;
-  update_params.set_app_version("app_ver");
-  update_params.set_omaha_url("url");
-  update_params.mutable_update_flags()->set_non_interactive(true);
-  EXPECT_CALL(*mock_update_attempter_,
-              CheckForUpdate(EqualsProto(update_params)))
-      .WillOnce(Return(true));
-
-  // The non-interactive flag needs to be passed through to CheckForUpdate.
-  bool result = false;
-  EXPECT_TRUE(
-      common_service_.AttemptUpdate(&error_,
-                                    "app_ver",
-                                    "url",
-                                    UpdateAttemptFlags::kFlagNonInteractive,
-                                    &result));
-  EXPECT_EQ(nullptr, error_);
-  EXPECT_TRUE(result);
-}
-
 TEST_F(UpdateEngineServiceTest, Update) {
   UpdateParams update_params;
   update_params.set_app_version("app_ver");
@@ -99,21 +78,6 @@ TEST_F(UpdateEngineServiceTest, Update) {
   EXPECT_TRUE(common_service_.Update(&error_, update_params, &result));
   EXPECT_EQ(nullptr, error_);
   EXPECT_TRUE(result);
-}
-
-TEST_F(UpdateEngineServiceTest, AttemptUpdateReturnsFalse) {
-  UpdateParams update_params;
-  update_params.set_app_version("app_ver");
-  update_params.set_omaha_url("url");
-  update_params.mutable_update_flags()->set_non_interactive(false);
-  EXPECT_CALL(*mock_update_attempter_,
-              CheckForUpdate(EqualsProto(update_params)))
-      .WillOnce(Return(false));
-  bool result = true;
-  EXPECT_TRUE(common_service_.AttemptUpdate(
-      &error_, "app_ver", "url", UpdateAttemptFlags::kNone, &result));
-  EXPECT_EQ(nullptr, error_);
-  EXPECT_FALSE(result);
 }
 
 TEST_F(UpdateEngineServiceTest, UpdateReturnsFalse) {
