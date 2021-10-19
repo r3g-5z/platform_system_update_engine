@@ -454,7 +454,8 @@ string OmahaRequestBuilderXml::GetRequest() const {
 }
 
 string OmahaRequestBuilderXml::GetApps() const {
-  const auto* params = SystemState::Get()->request_params();
+  auto* system_state = SystemState::Get();
+  const auto* params = system_state->request_params();
   string app_xml = "";
   OmahaAppData product_app = {
       .id = params->GetAppId(),
@@ -482,9 +483,9 @@ string OmahaRequestBuilderXml::GetApps() const {
   // Do not do MiniOS updates when in recovery yet. Do not send MiniOS update
   // checks if there is no MiniOS marker in the kernel partitions. This means
   // the device does not support MiniOS.
-  std::string value;
-  if (!SystemState::Get()->hardware()->IsRunningFromMiniOs() &&
-      SystemState::Get()->boot_control()->SupportsMiniOSPartitions()) {
+  if (!system_state->hardware()->IsRunningFromMiniOs() &&
+      system_state->boot_control()->SupportsMiniOSPartitions() &&
+      !params->is_install()) {
     auto minios_params = params->minios_app_params();
     OmahaAppData minios_app = {
         .id = params->GetAppId() + kMiniOsAppIdSuffix,

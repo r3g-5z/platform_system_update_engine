@@ -255,6 +255,17 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlDlcInstallationTest) {
   }
 }
 
+TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlMiniOsTestForInstallations) {
+  FakeSystemState::Get()->fake_boot_control()->SetSupportsMiniOSPartitions(
+      true);
+  params_.set_is_install(true);
+  params_.set_minios_app_params({});
+  OmahaRequestBuilderXml omaha_request{nullptr, false, false, 0, 0, 0, ""};
+  const string request_xml = omaha_request.GetRequest();
+  EXPECT_EQ(0, CountSubstringInString(request_xml, "<updatecheck"))
+      << request_xml;
+}
+
 TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlMiniOsTest) {
   FakeSystemState::Get()->fake_boot_control()->SetSupportsMiniOSPartitions(
       true);
