@@ -297,8 +297,8 @@ ssize_t HandleGet(int fd,
                   const HttpRequest& request,
                   const size_t total_length,
                   const size_t truncate_length,
-                  const int sleep_every,
-                  const int sleep_secs) {
+                  const int sleep_every_ms,
+                  const int sleep_ms) {
   ssize_t ret;
   size_t written = 0;
 
@@ -351,8 +351,8 @@ ssize_t HandleGet(int fd,
             << (end_offset - 1) << "/" << (end_offset - start_offset);
 
   // Decide about optional midway delay.
-  if (truncate_length > 0 && sleep_every > 0 && sleep_secs >= 0 &&
-      start_offset % (truncate_length * sleep_every) == 0) {
+  if (truncate_length > 0 && sleep_every_ms > 0 && sleep_ms >= 0 &&
+      start_offset % (truncate_length * sleep_every_ms) == 0) {
     const off_t midway_offset = start_offset + payload_length / 2;
 
     if ((ret = WritePayload(fd, start_offset, midway_offset)) < 0)
@@ -360,8 +360,9 @@ ssize_t HandleGet(int fd,
     LOG(INFO) << ret << " payload bytes written (first chunk)";
     written += ret;
 
-    LOG(INFO) << "sleeping for " << sleep_secs << " seconds...";
-    sleep(sleep_secs);
+    LOG(INFO) << "sleeping for " << sleep_ms << " milliseconds...";
+    for (int remain = sleep_ms; remain > 0; remain -= 1000)
+      usleep(std::min(remain, 1000) * 1000);
 
     if ((ret = WritePayload(fd, midway_offset, end_offset)) < 0)
       return -1;

@@ -78,8 +78,8 @@ namespace {
 const int kBigLength = 100000;
 const int kMediumLength = 1000;
 const int kFlakyTruncateLength = 29000;
-const int kFlakySleepEvery = 3;
-const int kFlakySleepSecs = 10;
+const int kFlakySleepEveryMilliseconds = 30;
+const int kFlakySleepMilliseconds = 100;
 
 }  // namespace
 
@@ -797,16 +797,17 @@ TYPED_TEST(HttpFetcherTest, FlakyTest) {
     unique_ptr<HttpServer> server(this->test_.CreateServer());
     ASSERT_TRUE(server->started_);
 
-    this->loop_.PostTask(FROM_HERE,
-                         base::Bind(&StartTransfer,
-                                    fetcher.get(),
-                                    LocalServerUrlForPath(
-                                        server->GetPort(),
-                                        base::StringPrintf("/flaky/%d/%d/%d/%d",
-                                                           kBigLength,
-                                                           kFlakyTruncateLength,
-                                                           kFlakySleepEvery,
-                                                           kFlakySleepSecs))));
+    this->loop_.PostTask(
+        FROM_HERE,
+        base::BindOnce(&StartTransfer,
+                       fetcher.get(),
+                       LocalServerUrlForPath(
+                           server->GetPort(),
+                           base::StringPrintf("/flaky/%d/%d/%d/%d",
+                                              kBigLength,
+                                              kFlakyTruncateLength,
+                                              kFlakySleepEveryMilliseconds,
+                                              kFlakySleepMilliseconds))));
     this->loop_.Run();
 
     // verify the data we get back
@@ -934,17 +935,19 @@ TYPED_TEST(HttpFetcherTest, ServerDiesTest) {
   FailureHttpFetcherTestDelegate delegate(server);
   unique_ptr<HttpFetcher> fetcher(this->test_.NewSmallFetcher());
   fetcher->set_delegate(&delegate);
+  fetcher->set_max_retry_count(3);
 
   this->loop_.PostTask(
       FROM_HERE,
-      base::Bind(StartTransfer,
-                 fetcher.get(),
-                 LocalServerUrlForPath(port,
-                                       base::StringPrintf("/flaky/%d/%d/%d/%d",
-                                                          kBigLength,
-                                                          kFlakyTruncateLength,
-                                                          kFlakySleepEvery,
-                                                          kFlakySleepSecs))));
+      base::BindOnce(
+          StartTransfer,
+          fetcher.get(),
+          LocalServerUrlForPath(port,
+                                base::StringPrintf("/flaky/%d/%d/%d/%d",
+                                                   kBigLength,
+                                                   kFlakyTruncateLength,
+                                                   kFlakySleepEveryMilliseconds,
+                                                   kFlakySleepMilliseconds))));
   this->loop_.Run();
   EXPECT_EQ(1, delegate.times_transfer_complete_called_);
   EXPECT_EQ(0, delegate.times_transfer_terminated_called_);
@@ -969,14 +972,15 @@ TYPED_TEST(HttpFetcherTest, TerminateTransferWhenServerDiedTest) {
 
   this->loop_.PostTask(
       FROM_HERE,
-      base::Bind(StartTransfer,
-                 fetcher.get(),
-                 LocalServerUrlForPath(port,
-                                       base::StringPrintf("/flaky/%d/%d/%d/%d",
-                                                          kBigLength,
-                                                          kFlakyTruncateLength,
-                                                          kFlakySleepEvery,
-                                                          kFlakySleepSecs))));
+      base::BindOnce(
+          StartTransfer,
+          fetcher.get(),
+          LocalServerUrlForPath(port,
+                                base::StringPrintf("/flaky/%d/%d/%d/%d",
+                                                   kBigLength,
+                                                   kFlakyTruncateLength,
+                                                   kFlakySleepEveryMilliseconds,
+                                                   kFlakySleepMilliseconds))));
   // Terminating the transfer after 3 seconds gives it a chance to contact the
   // server and enter the retry loop.
   this->loop_.PostDelayedTask(FROM_HERE,
