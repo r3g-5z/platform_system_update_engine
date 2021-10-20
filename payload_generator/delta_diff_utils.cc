@@ -82,7 +82,7 @@ const uint64_t kMaxBsdiffDestinationSize = 200 * 1024 * 1024;  // bytes
 // memory intensive, so we limit these operations to 150 MiB.
 const uint64_t kMaxPuffdiffDestinationSize = 150 * 1024 * 1024;  // bytes
 
-const int kBrotliCompressionQuality = 11;
+const int kBrotliCompressionQuality = 9;
 
 // Storing a diff operation has more overhead over replace operation in the
 // manifest, we need to store an additional src_sha256_hash which is 32 bytes
