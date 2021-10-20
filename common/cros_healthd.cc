@@ -311,6 +311,10 @@ bool CrosHealthd::ParseBusResult(
           });
           break;
         }
+        case chromeos::cros_healthd::mojom::BusInfo::Tag::
+            THUNDERBOLT_BUS_INFO: {
+          break;
+        }
       }
     }
   }
