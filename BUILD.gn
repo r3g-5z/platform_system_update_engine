@@ -272,7 +272,7 @@ static_library("libupdate_engine") {
   ]
 
   if (use.hw_details) {
-    deps += [ "//diagnostics/mojo:cros_healthd_mojo_bindings" ]
+    deps += [ "//diagnostics/mojom/public:cros_healthd_mojo_bindings" ]
     sources += [
       "common/cros_healthd.cc",
       "common/telemetry_info.cc",

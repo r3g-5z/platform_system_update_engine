@@ -30,7 +30,7 @@
 #include <mojo/core/embedder/scoped_ipc_support.h>
 
 #include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter.h"
-#include "mojo/cros_healthd_probe.mojom.h"
+#include "diagnostics/mojom/public/cros_healthd_probe.mojom.h"
 
 namespace chromeos_update_engine {
 
