@@ -64,14 +64,15 @@ class ConnectionManagerTest : public ::testing::Test {
   // ManagerProxyMock instance.
   void SetManagerReply(const char* default_service, bool reply_succeeds);
 
-  // Sets the |service_type|, |physical_technology| and |service_tethering|
-  // properties in the mocked service |service_path|. If any of the three
-  // const char* is a nullptr, the corresponding property will not be included
-  // in the response.
+  // Sets the |service_type|, |physical_technology|, |service_tethering| and
+  // |service_metered| properties in the mocked service |service_path|. If any
+  // of the three const char* is a nullptr, the corresponding property will not
+  // be included in the response.
   void SetServiceReply(const string& service_path,
                        const char* service_type,
                        const char* physical_technology,
-                       const char* service_tethering);
+                       const char* service_tethering,
+                       bool service_metered);
 
   void TestWithServiceType(const char* service_type,
                            const char* physical_technology,
@@ -81,6 +82,8 @@ class ConnectionManagerTest : public ::testing::Test {
 
   void TestWithServiceTethering(const char* service_tethering,
                                 ConnectionTethering expected_tethering);
+
+  void TestWithServiceMetered(bool service_metered, bool expected_metered);
 
   brillo::FakeMessageLoop loop_{nullptr};
   FakeShillProxy* fake_shill_proxy_;
@@ -114,7 +117,8 @@ void ConnectionManagerTest::SetManagerReply(const char* default_service,
 void ConnectionManagerTest::SetServiceReply(const string& service_path,
                                             const char* service_type,
                                             const char* physical_technology,
-                                            const char* service_tethering) {
+                                            const char* service_tethering,
+                                            bool service_metered) {
   brillo::VariantDictionary reply_dict;
   reply_dict["SomeOtherProperty"] = 0xC0FFEE;
 
@@ -128,6 +132,8 @@ void ConnectionManagerTest::SetServiceReply(const string& service_path,
 
   if (service_tethering)
     reply_dict[shill::kTetheringProperty] = string(service_tethering);
+
+  reply_dict[shill::kMeteredProperty] = service_metered;
 
   std::unique_ptr<ServiceProxyMock> service_proxy_mock(new ServiceProxyMock());
 
@@ -146,11 +152,13 @@ void ConnectionManagerTest::TestWithServiceType(const char* service_type,
   SetServiceReply("/service/guest/network",
                   service_type,
                   physical_technology,
-                  shill::kTetheringNotDetectedState);
+                  shill::kTetheringNotDetectedState,
+                  false);
 
   ConnectionType type;
   ConnectionTethering tethering;
-  EXPECT_TRUE(cmut_.GetConnectionProperties(&type, &tethering));
+  bool metered = false;
+  EXPECT_TRUE(cmut_.GetConnectionProperties(&type, &tethering, &metered));
   EXPECT_EQ(expected_type, type);
   testing::Mock::VerifyAndClearExpectations(
       fake_shill_proxy_->GetManagerProxy());
@@ -159,13 +167,35 @@ void ConnectionManagerTest::TestWithServiceType(const char* service_type,
 void ConnectionManagerTest::TestWithServiceTethering(
     const char* service_tethering, ConnectionTethering expected_tethering) {
   SetManagerReply("/service/guest/network", true);
-  SetServiceReply(
-      "/service/guest/network", shill::kTypeWifi, nullptr, service_tethering);
+  SetServiceReply("/service/guest/network",
+                  shill::kTypeWifi,
+                  nullptr,
+                  service_tethering,
+                  false);
 
   ConnectionType type;
   ConnectionTethering tethering;
-  EXPECT_TRUE(cmut_.GetConnectionProperties(&type, &tethering));
+  bool metered = false;
+  EXPECT_TRUE(cmut_.GetConnectionProperties(&type, &tethering, &metered));
   EXPECT_EQ(expected_tethering, tethering);
+  testing::Mock::VerifyAndClearExpectations(
+      fake_shill_proxy_->GetManagerProxy());
+}
+
+void ConnectionManagerTest::TestWithServiceMetered(bool service_metered,
+                                                   bool expected_metered) {
+  SetManagerReply("/service/guest/network", true);
+  SetServiceReply("/service/guest/network",
+                  shill::kTypeWifi,
+                  nullptr,
+                  shill::kTetheringNotDetectedState,
+                  service_metered);
+
+  ConnectionType type;
+  ConnectionTethering tethering;
+  bool metered = false;
+  EXPECT_TRUE(cmut_.GetConnectionProperties(&type, &tethering, &metered));
+  EXPECT_EQ(expected_metered, metered);
   testing::Mock::VerifyAndClearExpectations(
       fake_shill_proxy_->GetManagerProxy());
 }
@@ -176,7 +206,8 @@ void ConnectionManagerTest::TestWithServiceDisconnected(
 
   ConnectionType type;
   ConnectionTethering tethering;
-  EXPECT_TRUE(cmut_.GetConnectionProperties(&type, &tethering));
+  bool metered = false;
+  EXPECT_TRUE(cmut_.GetConnectionProperties(&type, &tethering, &metered));
   EXPECT_EQ(expected_type, type);
   testing::Mock::VerifyAndClearExpectations(
       fake_shill_proxy_->GetManagerProxy());
@@ -204,6 +235,11 @@ TEST_F(ConnectionManagerTest, TetheringTest) {
                            ConnectionTethering::kSuspected);
   TestWithServiceTethering("I'm not a valid property value =)",
                            ConnectionTethering::kUnknown);
+}
+
+TEST_F(ConnectionManagerTest, MeteredTest) {
+  TestWithServiceMetered(/*service_metered=*/true, /*expected_metered=*/true);
+  TestWithServiceMetered(/*service_metered=*/false, /*expected_metered=*/false);
 }
 
 TEST_F(ConnectionManagerTest, UnknownTest) {
@@ -355,7 +391,8 @@ TEST_F(ConnectionManagerTest, MalformedServiceList) {
 
   ConnectionType type;
   ConnectionTethering tethering;
-  EXPECT_FALSE(cmut_.GetConnectionProperties(&type, &tethering));
+  bool metered = false;
+  EXPECT_FALSE(cmut_.GetConnectionProperties(&type, &tethering, &metered));
 }
 
 }  // namespace chromeos_update_engine

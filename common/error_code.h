@@ -89,6 +89,7 @@ enum class ErrorCode : int {
   kDownloadCancelledPerPolicy = 63,
   kRepeatedFpFromOmahaError = 64,
   kInvalidateLastUpdate = 65,
+  kOmahaUpdateIgnoredOverMetered = 66,
 
   // VERY IMPORTANT! When adding new error codes:
   //

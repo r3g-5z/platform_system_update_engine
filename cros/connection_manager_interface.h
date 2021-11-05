@@ -40,7 +40,8 @@ class ConnectionManagerInterface {
   // that we are currently connected and |out_tethering| with the estimate of
   // whether that network is being tethered.
   virtual bool GetConnectionProperties(ConnectionType* out_type,
-                                       ConnectionTethering* out_tethering) = 0;
+                                       ConnectionTethering* out_tethering,
+                                       bool* out_metered) = 0;
 
   // Returns true if we're allowed to update the system when we're
   // connected to the internet through the given network connection type and the

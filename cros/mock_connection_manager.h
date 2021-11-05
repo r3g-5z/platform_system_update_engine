@@ -30,9 +30,11 @@ class MockConnectionManager : public ConnectionManagerInterface {
  public:
   MockConnectionManager() = default;
 
-  MOCK_METHOD2(GetConnectionProperties,
-               bool(ConnectionType* out_type,
-                    ConnectionTethering* out_tethering));
+  MOCK_METHOD(bool,
+              GetConnectionProperties,
+              (ConnectionType * out_type,
+               ConnectionTethering* out_tethering,
+               bool* out_metered));
 
   MOCK_CONST_METHOD2(IsUpdateAllowedOver,
                      bool(ConnectionType type, ConnectionTethering tethering));

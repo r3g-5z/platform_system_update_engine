@@ -179,6 +179,8 @@ string ErrorCodeToString(ErrorCode code) {
       return "ErrorCode::kRepeatedFpFromOmahaError";
     case ErrorCode::kInvalidateLastUpdate:
       return "ErrorCode::kInvalidateLastUpdate";
+    case ErrorCode::kOmahaUpdateIgnoredOverMetered:
+      return "ErrorCode::kOmahaUpdateIgnoredOverMetered";
       // Don't add a default case to let the compiler warn about newly added
       // error codes which should be added here.
   }

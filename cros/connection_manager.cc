@@ -125,7 +125,9 @@ bool ConnectionManager::IsAllowedConnectionTypesForUpdateSet() const {
 }
 
 bool ConnectionManager::GetConnectionProperties(
-    ConnectionType* out_type, ConnectionTethering* out_tethering) {
+    ConnectionType* out_type,
+    ConnectionTethering* out_tethering,
+    bool* out_metered) {
   dbus::ObjectPath default_service_path;
   TEST_AND_RETURN_FALSE(GetDefaultServicePath(&default_service_path));
   if (!default_service_path.IsValid())
@@ -136,8 +138,8 @@ bool ConnectionManager::GetConnectionProperties(
     *out_tethering = ConnectionTethering::kUnknown;
     return true;
   }
-  TEST_AND_RETURN_FALSE(
-      GetServicePathProperties(default_service_path, out_type, out_tethering));
+  TEST_AND_RETURN_FALSE(GetServicePathProperties(
+      default_service_path, out_type, out_tethering, out_metered));
   return true;
 }
 
@@ -161,7 +163,8 @@ bool ConnectionManager::GetDefaultServicePath(dbus::ObjectPath* out_path) {
 bool ConnectionManager::GetServicePathProperties(
     const dbus::ObjectPath& path,
     ConnectionType* out_type,
-    ConnectionTethering* out_tethering) {
+    ConnectionTethering* out_tethering,
+    bool* out_metered) {
   // We create and dispose the ServiceProxyInterface on every request.
   std::unique_ptr<ServiceProxyInterface> service =
       shill_proxy_->GetServiceForPath(path);
@@ -169,6 +172,15 @@ bool ConnectionManager::GetServicePathProperties(
   brillo::VariantDictionary properties;
   brillo::ErrorPtr error;
   TEST_AND_RETURN_FALSE(service->GetProperties(&properties, &error));
+
+  // Populate the out_metered property.
+  const auto& prop_metered = properties.find(shill::kMeteredProperty);
+  if (prop_metered == properties.end() ||
+      !prop_metered->second.IsTypeCompatible<bool>()) {
+    *out_metered = false;
+  } else {
+    *out_metered = prop_metered->second.Get<bool>();
+  }
 
   // Populate the out_tethering.
   const auto& prop_tethering = properties.find(shill::kTetheringProperty);

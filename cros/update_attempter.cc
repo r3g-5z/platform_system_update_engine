@@ -1328,9 +1328,10 @@ void UpdateAttempter::ActionCompleted(ActionProcessor* processor,
           std::max(0, omaha_response.poll_interval);
 
       // This update is ignored by omaha request action because update over
-      // cellular connection is not allowed. Needs to ask for user's permissions
-      // to update.
-      if (code == ErrorCode::kOmahaUpdateIgnoredOverCellular) {
+      // cellular or metered connection is not allowed. Needs to ask for user's
+      // permissions to update.
+      if (code == ErrorCode::kOmahaUpdateIgnoredOverCellular ||
+          code == ErrorCode::kOmahaUpdateIgnoredOverMetered) {
         new_version_ = omaha_response.version;
         new_payload_size_ = 0;
         for (const auto& package : omaha_response.packages) {

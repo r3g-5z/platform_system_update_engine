@@ -1203,6 +1203,7 @@ void OmahaRequestAction::ActionCompleted(ErrorCode code) {
 
     case ErrorCode::kOmahaUpdateIgnoredPerPolicy:
     case ErrorCode::kOmahaUpdateIgnoredOverCellular:
+    case ErrorCode::kOmahaUpdateIgnoredOverMetered:
       result = metrics::CheckResult::kUpdateAvailable;
       reaction = metrics::CheckReaction::kIgnored;
       break;
@@ -1377,9 +1378,11 @@ bool OmahaRequestAction::IsUpdateAllowedOverCurrentConnection(
     ErrorCode* error) const {
   ConnectionType type;
   ConnectionTethering tethering;
+  bool metered = false;
   ConnectionManagerInterface* connection_manager =
       SystemState::Get()->connection_manager();
-  if (!connection_manager->GetConnectionProperties(&type, &tethering)) {
+  if (!connection_manager->GetConnectionProperties(
+          &type, &tethering, &metered)) {
     LOG(INFO) << "We could not determine our connection type. "
               << "Defaulting to allow updates.";
     return true;
@@ -1395,8 +1398,14 @@ bool OmahaRequestAction::IsUpdateAllowedOverCurrentConnection(
   if (!is_over_cellular) {
     // There's no need to further check user preferences as we are not over
     // cellular connection.
-    if (!is_allowed)
+    if (!is_allowed) {
       *error = ErrorCode::kOmahaUpdateIgnoredPerPolicy;
+    } else if (metered) {
+      // Ignores update on metered network.
+      is_allowed = IsUpdateAllowedOverCellularByPrefs();
+      if (!is_allowed)
+        *error = ErrorCode::kOmahaUpdateIgnoredOverMetered;
+    }
   } else if (is_device_policy_set) {
     // There's no need to further check user preferences as the device policy
     // is set regarding updates over cellular.
