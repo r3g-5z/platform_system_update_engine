@@ -76,6 +76,10 @@ std::unique_ptr<CrosHealthdInterface> CreateCrosHealthd() {
 }
 
 bool CrosHealthd::Init() {
+  if (cros_healthd_service_factory_.is_bound()) {
+    LOG(WARNING) << "cros_healthd is already bound, ignoring initialization.";
+    return true;
+  }
   mojo::core::Init();
   ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
       base::ThreadTaskRunnerHandle::Get() /* io_thread_task_runner */,
