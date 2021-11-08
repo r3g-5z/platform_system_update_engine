@@ -78,25 +78,20 @@ void DaemonChromeOS::OnDBusRegistered(bool succeeded) {
   // Need to wait for DBus ownership as bootstraping requires requesting
   // `cros_healthd` DBus API calls.
   auto* cros_healthd = SystemState::Get()->cros_healthd();
-  if (!cros_healthd->Init()) {
-    LOG(ERROR) << "Failed to initialize cros_healthd connection.";
-    SystemState::Get()->update_attempter()->StartUpdater();
-  } else {
-    LOG(INFO) << "Requesting telemetry info from cros_healthd.";
-    // Update the telemetry information before starting the updater, to request
-    // once and continue caching on boot.
-    cros_healthd->ProbeTelemetryInfo(
-        {
-            TelemetryCategoryEnum::kNonRemovableBlockDevices,
-            TelemetryCategoryEnum::kCpu,
-            TelemetryCategoryEnum::kMemory,
-            TelemetryCategoryEnum::kSystem2,
-            TelemetryCategoryEnum::kBus,
-        },
-        base::BindOnce([](const TelemetryInfo&) {
-          SystemState::Get()->update_attempter()->StartUpdater();
-        }));
-  }
+  LOG(INFO) << "Requesting telemetry info from cros_healthd.";
+  // Update the telemetry information before starting the updater, to request
+  // once and continue caching on boot.
+  cros_healthd->ProbeTelemetryInfo(
+      {
+          TelemetryCategoryEnum::kNonRemovableBlockDevices,
+          TelemetryCategoryEnum::kCpu,
+          TelemetryCategoryEnum::kMemory,
+          TelemetryCategoryEnum::kSystem2,
+          TelemetryCategoryEnum::kBus,
+      },
+      base::BindOnce([](const TelemetryInfo&) {
+        SystemState::Get()->update_attempter()->StartUpdater();
+      }));
 }
 
 }  // namespace chromeos_update_engine
