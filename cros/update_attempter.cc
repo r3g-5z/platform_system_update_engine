@@ -299,7 +299,7 @@ void UpdateAttempter::Update(const UpdateCheckParams& params) {
 
   fake_update_success_ = false;
   if (status_ == UpdateStatus::UPDATED_NEED_REBOOT) {
-    if (!IsRepeatedUpdatesEnabled()) {
+    if (!SystemState::Get()->prefs()->Exists(kPrefsAllowRepeatedUpdates)) {
       // Although we have applied an update, we still want to ping Omaha
       // to ensure the number of active statistics is accurate.
       //
@@ -1995,32 +1995,6 @@ bool UpdateAttempter::IsAnyUpdateSourceAllowed() const {
   LOG(INFO)
       << "Developer features disabled; disallowing custom update sources.";
   return false;
-}
-
-bool UpdateAttempter::ChangeRepeatedUpdates(bool enable) {
-  if (!enable &&
-      SystemState::Get()->prefs()->Delete(kPrefsAllowRepeatedUpdates)) {
-    LOG(INFO) << "Repeated updates has been disabled.";
-    return true;
-  }
-  if (enable && SystemState::Get()->prefs()->SetBoolean(
-                    kPrefsAllowRepeatedUpdates, enable)) {
-    LOG(INFO) << "Repeated updates has been enabled.";
-    return true;
-  }
-  LOG(ERROR) << "Could not change " << kPrefsAllowRepeatedUpdates
-             << " feature to " << (enable ? "enabled." : "disabled.");
-  return false;
-}
-
-bool UpdateAttempter::IsRepeatedUpdatesEnabled() {
-  bool allow_repeated_updates;
-  if (!SystemState::Get()->prefs()->GetBoolean(kPrefsAllowRepeatedUpdates,
-                                               &allow_repeated_updates)) {
-    // Defaulting to true.
-    allow_repeated_updates = true;
-  }
-  return allow_repeated_updates;
 }
 
 void UpdateAttempter::ReportTimeToUpdateAppliedMetric() {

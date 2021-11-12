@@ -136,10 +136,17 @@ class UpdateEngineService {
 
   // Sets feature value in update engine based on the corresponding feature
   // value. For example, whether a feature flag is turned on in chrome. Returns
-  // an error if unable to set feature.
+  // an error if unable to set feature. Other examples would be internal
+  // features that update engine exposes to callers. Refer to
+  // system_api/dbus/update_engine/dbus-constants.h for full feature list.
   bool ToggleFeature(brillo::ErrorPtr* error,
                      const std::string& feature,
                      bool enable);
+
+  // Gets feature value indicating if it's on or off within update engine.
+  bool GetToggleFeature(brillo::ErrorPtr* error,
+                        const std::string& feature,
+                        bool* out_enabled);
 
   // Returns the duration since the last successful update, as the
   // duration on the wallclock. Returns an error if the device has not

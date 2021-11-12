@@ -56,6 +56,7 @@
 #include "update_engine/common/platform_constants.h"
 #include "update_engine/common/prefs_interface.h"
 #include "update_engine/common/subprocess.h"
+#include "update_engine/common/system_state.h"
 #include "update_engine/payload_consumer/file_descriptor.h"
 
 using base::Time;
@@ -106,6 +107,24 @@ bool GetTempName(const string& path, base::FilePath* template_path) {
 }  // namespace
 
 namespace utils {
+
+bool TogglePref(const std::string& pref, bool enable) {
+  auto* prefs = SystemState::Get()->prefs();
+  if (enable) {
+    LOG(INFO) << "Enabling pref=" << pref;
+    if (!prefs->SetString(pref, "")) {
+      LOG(ERROR) << "Failed to enable pref=" << pref;
+      return false;
+    }
+  } else {
+    LOG(INFO) << "Disabling pref=" << pref;
+    if (!prefs->Delete(pref)) {
+      LOG(ERROR) << "Failed to disable pref=" << pref;
+      return false;
+    }
+  }
+  return true;
+}
 
 bool WriteFile(const char* path, const void* data, size_t data_len) {
   int fd = HANDLE_EINTR(open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600));

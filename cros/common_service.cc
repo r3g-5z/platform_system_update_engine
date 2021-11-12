@@ -345,20 +345,33 @@ bool UpdateEngineService::ToggleFeature(ErrorPtr* error,
                                         const std::string& feature,
                                         bool enable) {
   if (feature == update_engine::kFeatureRepeatedUpdates) {
-    if (!SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(
-            enable)) {
-      LogAndSetError(error,
-                     FROM_HERE,
-                     string("Error setting AllowRepeatedUpdates to ") +
-                         (enable ? "true" : "false"));
-      return false;
-    }
-    return true;
-  } else {
-    LogAndSetError(
-        error, FROM_HERE, string("Feature ") + feature + " is not supported");
-    return false;
+    return utils::TogglePref(kPrefsAllowRepeatedUpdates, enable);
   }
+  if (feature == update_engine::kFeatureDisableConsumerAutoUpdate) {
+    return utils::TogglePref(kPrefsDisableConsumerAutoUpdate, enable);
+  }
+  LogAndSetError(
+      error, FROM_HERE, string("Feature ") + feature + " is not supported");
+  return false;
+}
+
+bool UpdateEngineService::GetToggleFeature(brillo::ErrorPtr* error,
+                                           const std::string& feature,
+                                           bool* out_enabled) {
+  auto* prefs = SystemState::Get()->prefs();
+  if (feature == update_engine::kFeatureRepeatedUpdates) {
+    *out_enabled = prefs->Exists(kPrefsAllowRepeatedUpdates);
+    return true;
+  }
+  if (feature == update_engine::kFeatureDisableConsumerAutoUpdate) {
+    *out_enabled = prefs->Exists(kPrefsDisableConsumerAutoUpdate);
+    return true;
+  }
+  LogAndSetError(
+      error,
+      FROM_HERE,
+      string("Could not get unsupported feature (") + feature + ") value.");
+  return false;
 }
 
 bool UpdateEngineService::GetDurationSinceUpdate(ErrorPtr* error,
