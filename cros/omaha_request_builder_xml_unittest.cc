@@ -153,6 +153,23 @@ TEST_F(OmahaRequestBuilderXmlTest, DlcGetAppTest) {
   EXPECT_EQ(string::npos, app.find("requisition="));
 }
 
+TEST_F(OmahaRequestBuilderXmlTest, GetNotRunningMiniOS) {
+  OmahaRequestBuilderXml omaha_request{nullptr, false, false, 0, 0, 0, ""};
+  const string request_xml = omaha_request.GetRequest();
+  const string isminios =
+      FindAttributeKeyValueInXml(request_xml, "isminios", 1);
+  EXPECT_TRUE(isminios.empty());
+}
+
+TEST_F(OmahaRequestBuilderXmlTest, GetRunningMiniOS) {
+  FakeSystemState::Get()->fake_hardware()->SetIsRunningFromMiniOs(true);
+  OmahaRequestBuilderXml omaha_request{nullptr, false, false, 0, 0, 0, ""};
+  const string request_xml = omaha_request.GetRequest();
+  const string isminios =
+      FindAttributeKeyValueInXml(request_xml, "isminios", 1);
+  EXPECT_EQ("1", isminios);
+}
+
 TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlRequestIdTest) {
   OmahaRequestBuilderXml omaha_request{nullptr,
                                        false,

@@ -431,7 +431,8 @@ string OmahaRequestBuilderXml::GetOs() const {
 }
 
 string OmahaRequestBuilderXml::GetRequest() const {
-  const auto* params = SystemState::Get()->request_params();
+  auto* system_state = SystemState::Get();
+  const auto* params = system_state->request_params();
   string os_xml = GetOs();
   string app_xml = GetApps();
   string hw_xml = GetHw();
@@ -440,12 +441,13 @@ string OmahaRequestBuilderXml::GetRequest() const {
       "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
       "<request requestid=\"%s\" sessionid=\"%s\""
       " protocol=\"3.0\" updater=\"%s\" updaterversion=\"%s\""
-      " installsource=\"%s\" ismachine=\"1\">\n%s%s%s</request>\n",
+      " installsource=\"%s\" ismachine=\"1\" %s>\n%s%s%s</request>\n",
       base::GenerateGUID().c_str() /* requestid */,
       session_id_.c_str(),
       constants::kOmahaUpdaterID,
       kOmahaUpdaterVersion,
       params->interactive() ? "ondemandupdate" : "scheduler",
+      (system_state->hardware()->IsRunningFromMiniOs() ? "isminios=\"1\"" : ""),
       os_xml.c_str(),
       app_xml.c_str(),
       hw_xml.c_str());
