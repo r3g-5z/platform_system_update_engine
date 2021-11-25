@@ -16,9 +16,9 @@
 
 #include "update_engine/payload_generator/extent_ranges.h"
 
+#include <iterator>
 #include <vector>
 
-#include <base/stl_util.h>
 #include <gtest/gtest.h>
 
 #include "update_engine/common/test_utils.h"
@@ -52,9 +52,9 @@ void ExpectRangeEq(const ExtentRanges& ranges,
   }
 }
 
-#define EXPECT_RANGE_EQ(ranges, var)                       \
-  do {                                                     \
-    ExpectRangeEq(ranges, var, base::size(var), __LINE__); \
+#define EXPECT_RANGE_EQ(ranges, var)                      \
+  do {                                                    \
+    ExpectRangeEq(ranges, var, std::size(var), __LINE__); \
   } while (0)
 
 void ExpectRangesOverlapOrTouch(uint64_t a_start,

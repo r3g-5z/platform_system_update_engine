@@ -21,7 +21,6 @@
 #include <cstdlib>
 
 #include <base/macros.h>
-#include <base/stl_util.h>
 
 namespace chromeos_update_engine {
 
@@ -55,13 +54,12 @@ const char* GetHttpResponseDescription(HttpResponseCode code) {
       {kHttpResponseVersionNotSupported, "HTTP Version Not Supported"},
   };
 
-  bool is_found = false;
-  size_t i;
-  for (i = 0; i < base::size(http_response_table); i++)
-    if ((is_found = (http_response_table[i].code == code)))
-      break;
+  for (const auto& response : http_response_table) {
+    if (response.code == code)
+      return response.description;
+  }
 
-  return (is_found ? http_response_table[i].description : "(unsupported)");
+  return "(unsupported)";
 }
 
 HttpResponseCode StringToHttpResponseCode(const char* s) {
@@ -76,13 +74,12 @@ const char* GetHttpContentTypeString(HttpContentType type) {
       {kHttpContentTypeTextXml, "text/xml"},
   };
 
-  bool is_found = false;
-  size_t i;
-  for (i = 0; i < base::size(http_content_type_table); i++)
-    if ((is_found = (http_content_type_table[i].type == type)))
-      break;
+  for (const auto& content_type : http_content_type_table) {
+    if (content_type.type == type)
+      return content_type.str;
+  }
 
-  return (is_found ? http_content_type_table[i].str : nullptr);
+  return nullptr;
 }
 
 }  // namespace chromeos_update_engine
