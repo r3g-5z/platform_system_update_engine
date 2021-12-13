@@ -446,6 +446,9 @@ class OmahaRequestActionTest : public ::testing::Test {
         .expected_download_error_code = metrics::DownloadErrorCode::kUnset,
     };
 
+    ON_CALL(*FakeSystemState::Get()->mock_update_attempter(),
+            IsRepeatedUpdatesEnabled())
+        .WillByDefault(Return(true));
     ON_CALL(*FakeSystemState::Get()->mock_update_attempter(), GetExcluder())
         .WillByDefault(Return(&mock_excluder_));
   }

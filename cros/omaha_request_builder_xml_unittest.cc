@@ -66,6 +66,10 @@ class OmahaRequestBuilderXmlTest : public ::testing::Test {
     FakeSystemState::CreateInstance();
     params_.set_hw_details(false);
     FakeSystemState::Get()->set_request_params(&params_);
+
+    ON_CALL(*FakeSystemState::Get()->mock_update_attempter(),
+            IsRepeatedUpdatesEnabled())
+        .WillByDefault(Return(true));
   }
   void TearDown() override {}
 

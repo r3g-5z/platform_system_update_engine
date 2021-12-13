@@ -17,6 +17,8 @@
 #ifndef UPDATE_ENGINE_COMMON_CONSTANTS_H_
 #define UPDATE_ENGINE_COMMON_CONSTANTS_H_
 
+#include <stdint.h>
+
 namespace chromeos_update_engine {
 
 // The root path of all exclusion prefs.
@@ -225,6 +227,9 @@ const int kDownloadP2PConnectTimeoutSeconds = 5;
 
 // Size in bytes of SHA256 hash.
 const int kSHA256Size = 32;
+
+// Limit on the number of consecutive updates.
+const int64_t kConsecutiveUpdateLimit = 3;
 
 }  // namespace chromeos_update_engine
 

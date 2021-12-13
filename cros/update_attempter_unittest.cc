@@ -266,6 +266,11 @@ class UpdateAttempterTest : public ::testing::Test {
         .WillRepeatedly(ReturnPointee(&actual_using_p2p_for_sharing_));
   }
 
+  void TearDown() override {
+    prefs_->Delete(kPrefsAllowRepeatedUpdates);
+    prefs_->Delete(kPrefsConsecutiveUpdateCount);
+  }
+
  public:
   void ScheduleQuitMainLoop();
 
@@ -2464,15 +2469,39 @@ TEST_F(UpdateAttempterTest, ConsecutiveUpdateBeforeRebootSuccess) {
 
   // Consecutive update metric should be updated.
   int64_t num_updates;
-  FakeSystemState::Get()->prefs()->GetInt64(kPrefsConsecutiveUpdateCount,
-                                            &num_updates);
+  prefs_->GetInt64(kPrefsConsecutiveUpdateCount, &num_updates);
   EXPECT_EQ(num_updates, 1);
+
+  // Validate that consecutive count gets incremented on updates.
+  TestProcessingDone();
+  prefs_->GetInt64(kPrefsConsecutiveUpdateCount, &num_updates);
+  EXPECT_EQ(num_updates, 2);
+}
+
+TEST_F(UpdateAttempterTest, ConsecutiveUpdateBeforeRebootLimited) {
+  // Default should be true.
+  EXPECT_TRUE(attempter_.IsRepeatedUpdatesEnabled());
+
+  // Disabled feature.
+  EXPECT_TRUE(prefs_->SetBoolean(kPrefsAllowRepeatedUpdates, false));
+  EXPECT_FALSE(attempter_.IsRepeatedUpdatesEnabled());
+
+  EXPECT_TRUE(prefs_->SetBoolean(kPrefsAllowRepeatedUpdates, true));
+  EXPECT_TRUE(attempter_.IsRepeatedUpdatesEnabled());
+
+  EXPECT_TRUE(prefs_->SetInt64(kPrefsConsecutiveUpdateCount,
+                               kConsecutiveUpdateLimit - 1));
+  EXPECT_TRUE(attempter_.IsRepeatedUpdatesEnabled());
+
+  EXPECT_TRUE(
+      prefs_->SetInt64(kPrefsConsecutiveUpdateCount, kConsecutiveUpdateLimit));
+  EXPECT_FALSE(attempter_.IsRepeatedUpdatesEnabled());
 }
 
 TEST_F(UpdateAttempterTest, ConsecutiveUpdateFailureMetric) {
   MockAction action;
   // Two previous consecutive updates.
-  FakeSystemState::Get()->prefs()->SetInt64(kPrefsConsecutiveUpdateCount, 2);
+  prefs_->SetInt64(kPrefsConsecutiveUpdateCount, 2);
 
   // Fail an update.
   EXPECT_CALL(action, Type()).WillRepeatedly(Return("MockAction"));

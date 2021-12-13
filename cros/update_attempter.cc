@@ -2014,12 +2014,25 @@ bool UpdateAttempter::ChangeRepeatedUpdates(bool enable) {
 }
 
 bool UpdateAttempter::IsRepeatedUpdatesEnabled() {
+  auto* prefs = SystemState::Get()->prefs();
+
+  // Limit the number of repeated updates allowed as a safeguard on client.
+  // Whether consecutive update feature is allowed or not.
+  // Refer to b/201737820.
+  int64_t consecutive_updates = 0;
+  prefs->GetInt64(kPrefsConsecutiveUpdateCount, &consecutive_updates);
+  if (consecutive_updates >= kConsecutiveUpdateLimit) {
+    LOG(WARNING) << "Not allowing repeated updates as limit reached.";
+    return false;
+  }
+
   bool allow_repeated_updates;
   if (!SystemState::Get()->prefs()->GetBoolean(kPrefsAllowRepeatedUpdates,
                                                &allow_repeated_updates)) {
     // Defaulting to true.
-    allow_repeated_updates = true;
+    return true;
   }
+
   return allow_repeated_updates;
 }
 

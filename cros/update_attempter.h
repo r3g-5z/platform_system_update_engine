@@ -245,7 +245,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
 
   // Returns whether repeated updates are enabled. Defaults to true if the pref
   // is unset or unable to be read.
-  bool IsRepeatedUpdatesEnabled();
+  virtual bool IsRepeatedUpdatesEnabled();
 
   // |DaemonStateInterface| overrides.
   bool StartUpdater() override;
@@ -327,6 +327,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest, FirstUpdateBeforeReboot);
   FRIEND_TEST(UpdateAttempterTest, InvalidateLastUpdate);
   FRIEND_TEST(UpdateAttempterTest, ConsecutiveUpdateBeforeRebootSuccess);
+  FRIEND_TEST(UpdateAttempterTest, ConsecutiveUpdateBeforeRebootLimited);
   FRIEND_TEST(UpdateAttempterTest, ConsecutiveUpdateFailureMetric);
   FRIEND_TEST(UpdateAttempterTest, ResetUpdatePrefs);
   FRIEND_TEST(UpdateAttempterTest, ProcessingDoneSkipApplying);
