@@ -170,7 +170,9 @@ string OmahaRequestBuilderXml::GetAppBody(const OmahaAppData& app_data) const {
               XmlEncodeWithDefault(params->release_lts_tag()).c_str());
         }
         // If allowing repeated update checks, send fp value of the last update.
-        if (SystemState::Get()->prefs()->Exists(kPrefsAllowRepeatedUpdates)) {
+        if (SystemState::Get()
+                ->update_attempter()
+                ->IsRepeatedUpdatesEnabled()) {
           string last_fp = (app_data.is_dlc || app_data.is_minios)
                                ? app_data.app_params.last_fp
                                : params->last_fp();

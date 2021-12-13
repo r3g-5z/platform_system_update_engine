@@ -46,9 +46,6 @@ namespace chromeos_update_engine {
 
 namespace utils {
 
-// Toggles (creates/deletes) a pref based on the value of `enable`.
-bool TogglePref(const std::string& pref, bool enable);
-
 // Formats |vec_str| as a string of the form ["<elem1>", "<elem2>"].
 // Does no escaping, only use this for presentation in error messages.
 std::string StringVectorToString(const std::vector<std::string>& vec_str);

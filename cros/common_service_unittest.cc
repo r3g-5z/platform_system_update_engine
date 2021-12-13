@@ -23,7 +23,6 @@
 #include <brillo/errors/error.h>
 #include <policy/libpolicy.h>
 #include <policy/mock_device_policy.h>
-#include <update_engine/dbus-constants.h>
 
 #include "update_engine/cros/fake_system_state.h"
 #include "update_engine/cros/omaha_utils.h"
@@ -191,92 +190,6 @@ TEST_F(UpdateEngineServiceTest, ResetStatusFails) {
   ASSERT_NE(nullptr, error_);
   EXPECT_TRUE(error_->HasError(UpdateEngineService::kErrorDomain,
                                UpdateEngineService::kErrorFailed));
-}
-
-TEST_F(UpdateEngineServiceTest, EnableToggleFeature) {
-  FakeSystemState::Get()->set_prefs(nullptr);
-  EXPECT_CALL(*FakeSystemState::Get()->mock_prefs(), SetString(_, _))
-      .Times(2)
-      .WillOnce(Return(true))
-      .WillOnce(Return(true));
-  ASSERT_TRUE(common_service_.ToggleFeature(
-      nullptr, update_engine::kFeatureRepeatedUpdates, true));
-  ASSERT_TRUE(common_service_.ToggleFeature(
-      nullptr, update_engine::kFeatureDisableConsumerAutoUpdate, true));
-  // Unsupported.
-  brillo::ErrorPtr error_ptr;
-  ASSERT_FALSE(
-      common_service_.ToggleFeature(&error_ptr, "foo-bar-feature", true));
-}
-
-TEST_F(UpdateEngineServiceTest, DisableToggleFeature) {
-  FakeSystemState::Get()->set_prefs(nullptr);
-  EXPECT_CALL(*FakeSystemState::Get()->mock_prefs(), Delete(_))
-      .Times(2)
-      .WillOnce(Return(true))
-      .WillOnce(Return(true));
-  ASSERT_TRUE(common_service_.ToggleFeature(
-      nullptr, update_engine::kFeatureRepeatedUpdates, false));
-  ASSERT_TRUE(common_service_.ToggleFeature(
-      nullptr, update_engine::kFeatureDisableConsumerAutoUpdate, false));
-  // Unsupported.
-  brillo::ErrorPtr error_ptr;
-  ASSERT_FALSE(
-      common_service_.ToggleFeature(&error_ptr, "foo-bar-feature", false));
-}
-
-TEST_F(UpdateEngineServiceTest, GetMissingToggleFeature) {
-  FakeSystemState::Get()->set_prefs(nullptr);
-  EXPECT_CALL(*FakeSystemState::Get()->mock_prefs(), Exists(_))
-      .Times(2)
-      .WillOnce(Return(false))
-      .WillOnce(Return(false));
-  {
-    bool enabled = true;
-    ASSERT_TRUE(common_service_.GetToggleFeature(
-        nullptr, update_engine::kFeatureRepeatedUpdates, &enabled));
-    ASSERT_FALSE(enabled);
-  }
-  {
-    bool enabled = true;
-    ASSERT_TRUE(common_service_.GetToggleFeature(
-        nullptr, update_engine::kFeatureDisableConsumerAutoUpdate, &enabled));
-    ASSERT_FALSE(enabled);
-  }
-}
-
-TEST_F(UpdateEngineServiceTest, GetUnsupportedFeature) {
-  bool enabled = true;
-  brillo::ErrorPtr error_ptr;
-  ASSERT_FALSE(common_service_.GetToggleFeature(
-      &error_ptr, "foo-bar-feature", &enabled));
-}
-
-TEST_F(UpdateEngineServiceTest, GetToggleFeature) {
-  FakeSystemState::Get()->set_prefs(nullptr);
-  EXPECT_CALL(*FakeSystemState::Get()->mock_prefs(), Exists(_))
-      .Times(2)
-      .WillOnce(Return(true))
-      .WillOnce(Return(true));
-  {
-    bool enabled = false;
-    ASSERT_TRUE(common_service_.GetToggleFeature(
-        nullptr, update_engine::kFeatureRepeatedUpdates, &enabled));
-    ASSERT_TRUE(enabled);
-  }
-  {
-    bool enabled = false;
-    ASSERT_TRUE(common_service_.GetToggleFeature(
-        nullptr, update_engine::kFeatureDisableConsumerAutoUpdate, &enabled));
-    ASSERT_TRUE(enabled);
-  }
-  {
-    bool enabled = true;
-    // Unsupported.
-    brillo::ErrorPtr error_ptr;
-    ASSERT_FALSE(common_service_.GetToggleFeature(
-        &error_ptr, "foo-bar-feature", &enabled));
-  }
 }
 
 }  // namespace chromeos_update_engine

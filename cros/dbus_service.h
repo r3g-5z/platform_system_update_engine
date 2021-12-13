@@ -135,13 +135,6 @@ class DBusUpdateEngineService
                      const std::string& feature,
                      bool enable) override;
 
-  // Returns the toggle value of a feature.
-  // True indicates enabled otherwise false is disabled. Returns and error if
-  // the value cannot be retrieved.
-  bool GetToggleFeature(brillo::ErrorPtr* error,
-                        const std::string& feature,
-                        bool* out_enabled) override;
-
   // Returns the duration since the last successful update, as the
   // duration on the wallclock. Returns an error if the device has not
   // updated.

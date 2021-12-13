@@ -239,12 +239,13 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // 'cros flash' to function properly).
   bool IsAnyUpdateSourceAllowed() const;
 
-  // Set whether or not auto update is allowed.
-  // Ignored for enrolled devices and is only for consumer devices to toggle.
-  bool SetAutoUpdateAllowed(bool enabled);
+  // Changes the reapeated updates flag based on the feature value. Deletes pref
+  // if feature is false. Returns false if unable to store the change.
+  bool ChangeRepeatedUpdates(bool enable);
 
-  // Returns true iff auto update is allowed.
-  bool IsAutoUpdateAllowed();
+  // Returns whether repeated updates are enabled. Defaults to true if the pref
+  // is unset or unable to be read.
+  bool IsRepeatedUpdatesEnabled();
 
   // |DaemonStateInterface| overrides.
   bool StartUpdater() override;

@@ -3231,7 +3231,7 @@ TEST_F(OmahaRequestActionTest, MiniosCanExcludeCheck) {
 }
 
 TEST_F(OmahaRequestActionTest, OmahaResponseDifferentFp) {
-  utils::TogglePref(kPrefsAllowRepeatedUpdates, true);
+  SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
 
   // Both fingerprints in the request are different.
   // Request fps: 1.0, 1.1. Response fps: `fp`, `fp2`.
@@ -3247,7 +3247,7 @@ TEST_F(OmahaRequestActionTest, OmahaResponseDifferentFp) {
 }
 
 TEST_F(OmahaRequestActionTest, OmahaResponseSameDlcFp) {
-  utils::TogglePref(kPrefsAllowRepeatedUpdates, true);
+  SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
   // Set request fingerprints. Same fp in both request and response for Dlc.
   // Request fps: 1.0, `fp2`. Response fps: `fp`, `fp2`.
   request_params_.set_last_fp("1.0");
@@ -3266,7 +3266,7 @@ TEST_F(OmahaRequestActionTest, OmahaResponseSameDlcFp) {
 }
 
 TEST_F(OmahaRequestActionTest, OmahaResponseSameMiniOSFp) {
-  utils::TogglePref(kPrefsAllowRepeatedUpdates, true);
+  SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
   // Set request fingerprints. Same fp in both request and response for MiniOS.
   // Request fps: 1.0 (platform), `fp2` (minios). Response fps:`fp` (platform),
   // `fp2` (minios).
@@ -3284,7 +3284,7 @@ TEST_F(OmahaRequestActionTest, OmahaResponseSameMiniOSFp) {
 }
 
 TEST_F(OmahaRequestActionTest, OmahaResponseSamePlatformFp) {
-  utils::TogglePref(kPrefsAllowRepeatedUpdates, true);
+  SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
   // Set request fingerprints. Same fp in both request and response for
   // platform.  Request fps: `fp`, 1.1. Response fps: `fp`, `fp2`.
   request_params_.set_last_fp(fake_update_response_.fp);

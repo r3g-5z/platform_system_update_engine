@@ -132,7 +132,7 @@ void OmahaResponseHandlerAction::PerformAction() {
       AreSignatureChecksMandatory(response);
 
   if (response.disable_repeated_updates) {
-    utils::TogglePref(kPrefsAllowRepeatedUpdates, false);
+    SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(false);
     LOG(INFO) << "Turned off repeated updates checks per Omaha request.";
   }
 

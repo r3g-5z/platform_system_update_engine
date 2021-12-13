@@ -122,7 +122,7 @@ TEST_F(OmahaRequestBuilderXmlTest, PlatformGetAppTest) {
 TEST_F(OmahaRequestBuilderXmlTest, GetLastFpTest) {
   params_.set_device_requisition("device requisition");
   params_.set_last_fp("1.75");
-  utils::TogglePref(kPrefsAllowRepeatedUpdates, true);
+  FakeSystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
   OmahaRequestBuilderXml omaha_request{nullptr, false, false, 0, 0, 0, ""};
   OmahaAppData dlc_app_data = {.id = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
                                .version = "",
@@ -357,7 +357,7 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlDlcPingRollCallAndActive) {
 }
 
 TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlDlcFp) {
-  utils::TogglePref(kPrefsAllowRepeatedUpdates, true);
+  FakeSystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
   params_.set_dlc_apps_params({{params_.GetDlcAppId("dlc_no_0"),
                                 {.name = "dlc_no_0", .last_fp = "1.1"}}});
   OmahaRequestBuilderXml omaha_request{nullptr, false, false, 0, 0, 0, ""};
@@ -367,7 +367,7 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlDlcFp) {
 }
 
 TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlMiniOSFp) {
-  utils::TogglePref(kPrefsAllowRepeatedUpdates, true);
+  FakeSystemState::Get()->update_attempter()->ChangeRepeatedUpdates(true);
   FakeSystemState::Get()->fake_boot_control()->SetSupportsMiniOSPartitions(
       true);
   params_.set_minios_app_params({.last_fp = "1.2"});
