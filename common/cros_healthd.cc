@@ -192,6 +192,8 @@ void CrosHealthd::OnProbeTelemetryInfo(
     LOG(WARNING) << "Failed to parse non-removable block device information.";
   if (!ParseCpuResult(&result, telemetry_info_.get()))
     LOG(WARNING) << "Failed to parse physical CPU information.";
+  if (!ParseBusResult(&result, telemetry_info_.get()))
+    LOG(WARNING) << "Failed to parse bus information.";
   std::move(once_callback).Run(*telemetry_info_);
 }
 
@@ -305,6 +307,8 @@ bool CrosHealthd::ParseBusResult(
     }
     const auto& bus_devices = bus_result->get_bus_devices();
     for (const auto& bus_device : bus_devices) {
+      if (!bus_device->bus_info)
+        continue;
       switch (bus_device->bus_info->which()) {
         case chromeos::cros_healthd::mojom::BusInfo::Tag::PCI_BUS_INFO: {
           const auto& pci_bus_info = bus_device->bus_info->get_pci_bus_info();

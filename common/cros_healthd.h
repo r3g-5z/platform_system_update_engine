@@ -58,6 +58,15 @@ class CrosHealthd : public CrosHealthdInterface {
   FRIEND_TEST(CrosHealthdTest, ParseMemoryResultCheck);
   FRIEND_TEST(CrosHealthdTest, ParseNonRemovableBlockDeviceResultCheck);
   FRIEND_TEST(CrosHealthdTest, ParseCpuResultCheck);
+  FRIEND_TEST(CrosHealthdTest, ParseBusResultCheckMissingBusResult);
+  FRIEND_TEST(CrosHealthdTest, ParseBusResultCheckMissingBusInfo);
+  FRIEND_TEST(CrosHealthdTest, ParseBusResultCheckPciBusDefault);
+  FRIEND_TEST(CrosHealthdTest, ParseBusResultCheckPciBus);
+  FRIEND_TEST(CrosHealthdTest, ParseBusResultCheckUsbBusDefault);
+  FRIEND_TEST(CrosHealthdTest, ParseBusResultCheckUsbBus);
+  FRIEND_TEST(CrosHealthdTest, ParseBusResultCheckThunderboltBusDefault);
+  FRIEND_TEST(CrosHealthdTest, ParseBusResultCheckThunderboltBus);
+  FRIEND_TEST(CrosHealthdTest, ParseBusResultCheckAllBus);
 
   // Get `cros_healthd` DBus object proxy.
   dbus::ObjectProxy* GetCrosHealthdObjectProxy();
