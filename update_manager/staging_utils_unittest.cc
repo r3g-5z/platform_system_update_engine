@@ -36,7 +36,7 @@ using testing::SetArgPointee;
 
 namespace chromeos_update_manager {
 
-constexpr TimeDelta kDay = TimeDelta::FromDays(1);
+constexpr TimeDelta kDay = base::Days(1);
 constexpr int kMaxDays = 28;
 constexpr int kValidDaySum = 14;
 const StagingSchedule valid_schedule = {{2, 0}, {7, 50}, {9, 80}, {14, 100}};

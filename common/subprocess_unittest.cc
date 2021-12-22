@@ -48,7 +48,6 @@
 #include "update_engine/common/test_utils.h"
 #include "update_engine/common/utils.h"
 
-using base::TimeDelta;
 using brillo::MessageLoop;
 using std::string;
 using std::unique_ptr;
@@ -284,10 +283,9 @@ TEST_F(SubprocessTest, CancelTest) {
 
   // This test would leak a callback that runs when the child process exits
   // unless we wait for it to run.
-  brillo::MessageLoopRunUntil(
-      &loop_, TimeDelta::FromSeconds(20), base::Bind([] {
-        return Subprocess::Get().subprocess_records_.empty();
-      }));
+  brillo::MessageLoopRunUntil(&loop_, base::Seconds(20), base::Bind([] {
+    return Subprocess::Get().subprocess_records_.empty();
+  }));
   EXPECT_TRUE(Subprocess::Get().subprocess_records_.empty());
   // Check that there isn't anything else to read from the pipe.
   char c;

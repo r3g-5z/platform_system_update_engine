@@ -293,7 +293,7 @@ bool OmahaRequestAction::UpdateLastPingDays() {
   // Remember the local time that matches the server's last midnight
   // time.
   auto* prefs = SystemState::Get()->prefs();
-  Time daystart = Time::Now() - TimeDelta::FromSeconds(elapsed_seconds);
+  Time daystart = Time::Now() - base::Seconds(elapsed_seconds);
   prefs->SetInt64(kPrefsLastActivePingDay, daystart.ToInternalValue());
   prefs->SetInt64(kPrefsLastRollCallPingDay, daystart.ToInternalValue());
   return true;
@@ -865,8 +865,8 @@ void OmahaRequestAction::LookupPayloadViaP2P() {
   // working on. Otherwise we may end up in a situation where two
   // devices bounce back and forth downloading from each other,
   // neither making any forward progress until one of them decides to
-  // stop using p2p (via kMaxP2PAttempts and kMaxP2PAttemptTimeSeconds
-  // safe-guards). See http://crbug.com/297170 for an example)
+  // stop using p2p (via kMaxP2PAttempts and kMaxP2PAttemptTime safe-guards).
+  // See http://crbug.com/297170 for an example)
   size_t minimum_size = 0;
   int64_t manifest_metadata_size = 0;
   int64_t manifest_signature_size = 0;
@@ -899,7 +899,7 @@ void OmahaRequestAction::LookupPayloadViaP2P() {
     SystemState::Get()->p2p_manager()->LookupUrlForFile(
         file_id,
         minimum_size,
-        TimeDelta::FromSeconds(kMaxP2PNetworkWaitTimeSeconds),
+        kMaxP2PNetworkWaitTime,
         base::Bind(&OmahaRequestAction::OnLookupPayloadViaP2PCompleted,
                    base::Unretained(this)));
   }
@@ -974,14 +974,13 @@ OmahaRequestAction::IsWallClockBasedWaitingSatisfied() {
 
   TimeDelta elapsed_time =
       SystemState::Get()->clock()->GetWallclockTime() - update_first_seen_at;
-  TimeDelta max_scatter_period =
-      TimeDelta::FromDays(response_.max_days_to_scatter);
+  TimeDelta max_scatter_period = base::Days(response_.max_days_to_scatter);
   int64_t staging_wait_time_in_days = 0;
   // Use staging and its default max value if staging is on.
   if (SystemState::Get()->prefs()->GetInt64(kPrefsWallClockStagingWaitPeriod,
                                             &staging_wait_time_in_days) &&
       staging_wait_time_in_days > 0)
-    max_scatter_period = TimeDelta::FromDays(kMaxWaitTimeStagingInDays);
+    max_scatter_period = kMaxWaitTimeStagingIn;
 
   const auto* params = SystemState::Get()->request_params();
   LOG(INFO) << "Waiting Period = "

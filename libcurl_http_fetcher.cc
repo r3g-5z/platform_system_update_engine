@@ -36,12 +36,12 @@
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <base/threading/thread_task_runner_handle.h>
+#include <base/time/time.h>
 
 #include "update_engine/certificate_checker.h"
 #include "update_engine/common/hardware_interface.h"
 #include "update_engine/common/platform_constants.h"
 
-using base::TimeDelta;
 using brillo::MessageLoop;
 using std::max;
 using std::string;
@@ -53,7 +53,7 @@ namespace chromeos_update_engine {
 
 namespace {
 
-const int kNoNetworkRetrySeconds = 10;
+constexpr base::TimeDelta kNoNetworkRetryTime = base::Seconds(10);
 
 // libcurl's CURLOPT_SOCKOPTFUNCTION callback function. Called after the socket
 // is created but before it is connected. This callback tags the created socket
@@ -451,7 +451,7 @@ void LibcurlHttpFetcher::CurlPerformOnce() {
           FROM_HERE,
           base::Bind(&LibcurlHttpFetcher::CurlPerformOnce,
                      base::Unretained(this)),
-          TimeDelta::FromSeconds(1));
+          base::Seconds(1));
       return;
     }
     SetupMessageLoopSources();
@@ -505,7 +505,7 @@ void LibcurlHttpFetcher::CurlPerformOnce() {
         FROM_HERE,
         base::Bind(&LibcurlHttpFetcher::RetryTimeoutCallback,
                    base::Unretained(this)),
-        TimeDelta::FromSeconds(kNoNetworkRetrySeconds));
+        kNoNetworkRetryTime);
     LOG(INFO) << "No HTTP response, retry " << no_network_retry_count_;
   } else if ((!sent_byte_ && !IsHttpResponseSuccess()) ||
              IsHttpResponseError()) {
@@ -558,7 +558,7 @@ void LibcurlHttpFetcher::CurlPerformOnce() {
         FROM_HERE,
         base::Bind(&LibcurlHttpFetcher::RetryTimeoutCallback,
                    base::Unretained(this)),
-        TimeDelta::FromSeconds(retry_seconds_));
+        retry_time_);
   } else {
     LOG(INFO) << "Transfer completed (" << http_response_code_ << "), "
               << bytes_downloaded_ << " bytes downloaded";
@@ -732,12 +732,13 @@ void LibcurlHttpFetcher::SetupMessageLoopSources() {
 
   // Set up a timeout callback for libcurl.
   if (timeout_id_ == MessageLoop::kTaskIdNull) {
-    VLOG(1) << "Setting up timeout source: " << idle_seconds_ << " seconds.";
+    VLOG(1) << "Setting up timeout source: " << idle_time_.InSeconds()
+            << " seconds.";
     timeout_id_ = MessageLoop::current()->PostDelayedTask(
         FROM_HERE,
         base::Bind(&LibcurlHttpFetcher::TimeoutCallback,
                    base::Unretained(this)),
-        TimeDelta::FromSeconds(idle_seconds_));
+        idle_time_);
   }
 }
 
@@ -758,7 +759,7 @@ void LibcurlHttpFetcher::TimeoutCallback() {
   timeout_id_ = MessageLoop::current()->PostDelayedTask(
       FROM_HERE,
       base::Bind(&LibcurlHttpFetcher::TimeoutCallback, base::Unretained(this)),
-      TimeDelta::FromSeconds(idle_seconds_));
+      idle_time_);
 
   // CurlPerformOnce() may call CleanUp(), so we need to schedule our callback
   // first, since it could be canceled by this call.

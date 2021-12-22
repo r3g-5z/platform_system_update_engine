@@ -44,7 +44,7 @@ enum class StagingCase {
 
 // Calculate the bucket in which the device belongs based on a given staging
 // schedule. |staging_schedule| is assumed to have already been validated.
-int CalculateWaitTimeInDaysFromSchedule(
+base::TimeDelta CalculateWaitTimeFromSchedule(
     const StagingSchedule& staging_schedule);
 
 // Verifies that |device_policy| contains a valid staging schedule. If

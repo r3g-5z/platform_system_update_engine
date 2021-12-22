@@ -23,7 +23,6 @@
 #include "update_engine/update_manager/next_update_check_policy_impl.h"
 
 using base::Time;
-using base::TimeDelta;
 using chromeos_update_engine::ErrorCode;
 using chromeos_update_engine::FakeSystemState;
 
@@ -34,12 +33,12 @@ void UmPolicyTestBase::SetUp() {
   FakeSystemState::CreateInstance();
   fake_clock_ = FakeSystemState::Get()->fake_clock();
   SetUpDefaultClock();
-  eval_ctx_.reset(new EvaluationContext(TimeDelta::FromSeconds(5)));
+  eval_ctx_.reset(new EvaluationContext(base::Seconds(5)));
   SetUpDefaultState();
 
   evaluator_ = std::make_unique<PolicyEvaluator>(
       &fake_state_,
-      std::make_unique<EvaluationContext>(TimeDelta::FromSeconds(5)),
+      std::make_unique<EvaluationContext>(base::Seconds(5)),
       std::move(policy_2_),
       policy_data_);
 }

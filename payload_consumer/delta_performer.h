@@ -55,14 +55,14 @@ class DeltaPerformer : public FileWriter {
   static const unsigned kProgressLogMaxChunks;
   // Defines a timeout since the last progress was logged after which we want to
   // force another log message (even if the current chunk was not completed).
-  static const unsigned kProgressLogTimeoutSeconds;
+  static const base::TimeDelta kProgressLogTimeoutTime;
   // These define the relative weights (0-100) we give to the different work
   // components associated with an update when computing an overall progress.
   // Currently they include the download progress and the number of completed
   // operations. They must add up to one hundred (100).
   static const unsigned kProgressDownloadWeight;
   static const unsigned kProgressOperationsWeight;
-  static const uint64_t kCheckpointFrequencySeconds;
+  static const base::TimeDelta kCheckpointFrequencyTime;
 
   DeltaPerformer(PrefsInterface* prefs,
                  BootControlInterface* boot_control,
@@ -440,14 +440,12 @@ class DeltaPerformer : public FileWriter {
 
   // The timeout after which we should force emitting a progress log (constant),
   // and the actual point in time for the next forced log to be emitted.
-  const base::TimeDelta forced_progress_log_wait_{
-      base::TimeDelta::FromSeconds(kProgressLogTimeoutSeconds)};
+  const base::TimeDelta forced_progress_log_wait_{kProgressLogTimeoutTime};
   base::TimeTicks forced_progress_log_time_;
 
   // The frequency that we should write an update checkpoint (constant), and
   // the point in time at which the next checkpoint should be written.
-  const base::TimeDelta update_checkpoint_wait_{
-      base::TimeDelta::FromSeconds(kCheckpointFrequencySeconds)};
+  const base::TimeDelta update_checkpoint_wait_{kCheckpointFrequencyTime};
   base::TimeTicks update_checkpoint_time_;
 };
 

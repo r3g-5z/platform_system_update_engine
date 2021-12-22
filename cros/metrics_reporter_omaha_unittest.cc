@@ -52,7 +52,7 @@ class MetricsReporterOmahaTest : public ::testing::Test {
 };
 
 TEST_F(MetricsReporterOmahaTest, ReportDailyMetrics) {
-  TimeDelta age = TimeDelta::FromDays(10);
+  TimeDelta age = base::Days(10);
   EXPECT_CALL(*mock_metrics_lib_,
               SendToUMA(metrics::kMetricDailyOSAgeDays, _, _, _, _))
       .Times(1);
@@ -177,8 +177,8 @@ TEST_F(MetricsReporterOmahaTest, ReportUpdateAttemptMetrics) {
 
   int attempt_number = 1;
   PayloadType payload_type = kPayloadTypeFull;
-  TimeDelta duration = TimeDelta::FromMinutes(1000);
-  TimeDelta duration_uptime = TimeDelta::FromMinutes(1000);
+  TimeDelta duration = base::Minutes(1000);
+  TimeDelta duration_uptime = base::Minutes(1000);
 
   int64_t payload_size = 100 * kNumBytesInOneMiB;
 
@@ -302,8 +302,8 @@ TEST_F(MetricsReporterOmahaTest, ReportSuccessfulUpdateMetrics) {
   // 200MiB payload downloaded from HttpsServer.
   num_bytes_downloaded[0] = 200 * kNumBytesInOneMiB;
   int download_overhead_percentage = 20;
-  TimeDelta total_duration = TimeDelta::FromMinutes(30);
-  TimeDelta total_duration_uptime = TimeDelta::FromMinutes(20);
+  TimeDelta total_duration = base::Minutes(30);
+  TimeDelta total_duration_uptime = base::Minutes(20);
   int reboot_count = 2;
   int url_switch_count = 2;
 

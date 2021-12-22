@@ -35,7 +35,7 @@ class CurrDateVariable : public Variable<Time> {
   // TODO(garnold) Turn this into an async variable with the needed callback
   // logic for when it value changes.
   explicit CurrDateVariable(const string& name)
-      : Variable<Time>(name, TimeDelta::FromHours(1)) {}
+      : Variable<Time>(name, base::Hours(1)) {}
   CurrDateVariable(const CurrDateVariable&) = delete;
   CurrDateVariable& operator=(const CurrDateVariable&) = delete;
 
@@ -57,7 +57,7 @@ class CurrHourVariable : public Variable<int> {
   // TODO(garnold) Turn this into an async variable with the needed callback
   // logic for when it value changes.
   explicit CurrHourVariable(const string& name)
-      : Variable<int>(name, TimeDelta::FromMinutes(5)) {}
+      : Variable<int>(name, base::Minutes(5)) {}
   CurrHourVariable(const CurrHourVariable&) = delete;
   CurrHourVariable& operator=(const CurrHourVariable&) = delete;
 
@@ -72,7 +72,7 @@ class CurrHourVariable : public Variable<int> {
 class CurrMinuteVariable : public Variable<int> {
  public:
   explicit CurrMinuteVariable(const string& name)
-      : Variable<int>(name, TimeDelta::FromSeconds(15)) {}
+      : Variable<int>(name, base::Seconds(15)) {}
   CurrMinuteVariable(const CurrMinuteVariable&) = delete;
   CurrMinuteVariable& operator=(const CurrMinuteVariable&) = delete;
 

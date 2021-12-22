@@ -100,7 +100,7 @@ const int kMaxConsecutiveObeyProxyRequests = 20;
 
 // Minimum threshold to broadcast an status update in progress and time.
 const double kBroadcastThresholdProgress = 0.01;  // 1%
-const int kBroadcastThresholdSeconds = 10;
+constexpr TimeDelta kBroadcastThreshold = base::Seconds(10);
 
 // By default autest bypasses scattering. If we want to test scattering,
 // use kScheduledAUTestURLRequest. The URL used is same in both cases, but
@@ -203,7 +203,7 @@ bool UpdateAttempter::StartUpdater() {
       FROM_HERE,
       base::Bind(&ActionProcessor::StartProcessing,
                  base::Unretained(&aux_processor_)),
-      base::TimeDelta::FromSeconds(45));
+      base::Seconds(45));
 
   // Broadcast the update engine status on startup to ensure consistent system
   // state on crashes.
@@ -487,7 +487,7 @@ void UpdateAttempter::CalculateScatteringParams(bool interactive) {
     device_policy->GetScatterFactorInSeconds(&new_scatter_factor_in_secs);
     if (new_scatter_factor_in_secs < 0)  // sanitize input, just in case.
       new_scatter_factor_in_secs = 0;
-    scatter_factor_ = TimeDelta::FromSeconds(new_scatter_factor_in_secs);
+    scatter_factor_ = base::Seconds(new_scatter_factor_in_secs);
   }
 
   bool is_scatter_enabled = false;
@@ -527,7 +527,7 @@ void UpdateAttempter::CalculateScatteringParams(bool interactive) {
         // generating a new random value to improve the chances of a good
         // distribution for scattering.
         omaha_request_params_->set_waiting_period(
-            TimeDelta::FromSeconds(wait_period_in_secs));
+            base::Seconds(wait_period_in_secs));
         LOG(INFO) << "Using persisted wall-clock waiting period: "
                   << utils::FormatSecs(
                          omaha_request_params_->waiting_period().InSeconds());
@@ -576,7 +576,7 @@ void UpdateAttempter::CalculateScatteringParams(bool interactive) {
     // related code.
     omaha_request_params_->set_wall_clock_based_wait_enabled(false);
     omaha_request_params_->set_update_check_count_wait_enabled(false);
-    omaha_request_params_->set_waiting_period(TimeDelta::FromSeconds(0));
+    omaha_request_params_->set_waiting_period(base::Seconds(0));
     prefs_->Delete(kPrefsWallClockScatteringWaitPeriod);
     prefs_->Delete(kPrefsUpdateCheckCount);
     // Don't delete the UpdateFirstSeenAt file as we don't want manual checks
@@ -588,7 +588,7 @@ void UpdateAttempter::CalculateScatteringParams(bool interactive) {
 
 void UpdateAttempter::GenerateNewWaitingPeriod() {
   omaha_request_params_->set_waiting_period(
-      TimeDelta::FromSeconds(base::RandInt(1, scatter_factor_.InSeconds())));
+      base::Seconds(base::RandInt(1, scatter_factor_.InSeconds())));
 
   LOG(INFO) << "Generated new wall-clock waiting period: "
             << utils::FormatSecs(
@@ -1510,8 +1510,7 @@ void UpdateAttempter::ProgressUpdate(double progress) {
   // too slow.
   if (progress == 1.0 ||
       progress - download_progress_ >= kBroadcastThresholdProgress ||
-      TimeTicks::Now() - last_notify_time_ >=
-          TimeDelta::FromSeconds(kBroadcastThresholdSeconds)) {
+      TimeTicks::Now() - last_notify_time_ >= kBroadcastThreshold) {
     download_progress_ = progress;
     BroadcastStatus();
   }

@@ -127,7 +127,7 @@ class PostinstallRunnerActionTest : public ::testing::Test {
           FROM_HERE,
           base::Bind(&PostinstallRunnerActionTest::SuspendRunningAction,
                      base::Unretained(this)),
-          base::TimeDelta::FromMilliseconds(100));
+          base::Milliseconds(100));
     } else {
       postinstall_action_->SuspendAction();
       // Schedule to be resumed in a little bit.
@@ -135,7 +135,7 @@ class PostinstallRunnerActionTest : public ::testing::Test {
           FROM_HERE,
           base::Bind(&PostinstallRunnerActionTest::ResumeRunningAction,
                      base::Unretained(this)),
-          base::TimeDelta::FromMilliseconds(100));
+          base::Milliseconds(100));
     }
   }
 
@@ -146,7 +146,7 @@ class PostinstallRunnerActionTest : public ::testing::Test {
           FROM_HERE,
           base::Bind(&PostinstallRunnerActionTest::CancelWhenStarted,
                      base::Unretained(this)),
-          base::TimeDelta::FromMilliseconds(10));
+          base::Milliseconds(10));
     } else {
       CHECK(processor_);
       // Must |PostDelayedTask()| here to be safe that |FileDescriptorWatcher|
@@ -156,7 +156,7 @@ class PostinstallRunnerActionTest : public ::testing::Test {
           base::Bind(
               [](ActionProcessor* processor) { processor->StopProcessing(); },
               base::Unretained(processor_)),
-          base::TimeDelta::FromMilliseconds(100));
+          base::Milliseconds(100));
     }
   }
 

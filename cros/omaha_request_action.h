@@ -29,6 +29,7 @@
 
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
+#include <base/time/time.h>
 #include <brillo/secure_blob.h>
 #include <curl/curl.h>
 
@@ -75,7 +76,7 @@ class OmahaRequestAction : public Action<OmahaRequestAction>,
 
   // If staging is enabled, set the maximum wait time to 28 days, since that is
   // the predetermined wait time for staging.
-  static const int kMaxWaitTimeStagingInDays = 28;
+  static constexpr base::TimeDelta kMaxWaitTimeStagingIn = base::Days(28);
 
   // These are the possible outcome upon checking whether we satisfied
   // the wall-clock-based-wait.

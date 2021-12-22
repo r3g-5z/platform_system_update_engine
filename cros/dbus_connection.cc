@@ -22,7 +22,7 @@
 namespace chromeos_update_engine {
 
 namespace {
-const int kDBusSystemMaxWaitSeconds = 2 * 60;
+constexpr base::TimeDelta kDBusSystemMaxWait = base::Minutes(2);
 
 DBusConnection* dbus_connection_singleton = nullptr;
 }  // namespace
@@ -30,8 +30,7 @@ DBusConnection* dbus_connection_singleton = nullptr;
 DBusConnection::DBusConnection() {
   // We wait for the D-Bus connection for up two minutes to avoid re-spawning
   // the daemon too fast causing thrashing if dbus-daemon is not running.
-  bus_ = dbus_connection_.ConnectWithTimeout(
-      base::TimeDelta::FromSeconds(kDBusSystemMaxWaitSeconds));
+  bus_ = dbus_connection_.ConnectWithTimeout(kDBusSystemMaxWait);
 
   if (!bus_) {
     // TODO(deymo): Make it possible to run update_engine even if dbus-daemon

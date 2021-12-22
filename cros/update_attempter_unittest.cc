@@ -1240,7 +1240,7 @@ void UpdateAttempterTest::SetUpStagingTest(const StagingSchedule& schedule) {
   EXPECT_TRUE(
       prefs_->SetInt64(kPrefsWallClockScatteringWaitPeriod, initial_value));
   EXPECT_TRUE(prefs_->SetInt64(kPrefsUpdateCheckCount, initial_value));
-  attempter_.scatter_factor_ = TimeDelta::FromSeconds(20);
+  attempter_.scatter_factor_ = base::Seconds(20);
 
   auto device_policy = std::make_unique<policy::MockDevicePolicy>();
   EXPECT_CALL(*device_policy, LoadPolicy()).WillRepeatedly(Return(true));
@@ -1361,32 +1361,31 @@ TEST_F(UpdateAttempterTest, ReportDailyMetrics) {
   EXPECT_FALSE(attempter_.CheckAndReportDailyMetrics());
 
   // We should not report if only 10 hours has passed.
-  fake_clock->SetWallclockTime(epoch + TimeDelta::FromHours(10));
+  fake_clock->SetWallclockTime(epoch + base::Hours(10));
   EXPECT_FALSE(attempter_.CheckAndReportDailyMetrics());
 
   // We should not report if only 24 hours - 1 sec has passed.
-  fake_clock->SetWallclockTime(epoch + TimeDelta::FromHours(24) -
-                               TimeDelta::FromSeconds(1));
+  fake_clock->SetWallclockTime(epoch + base::Hours(24) - base::Seconds(1));
   EXPECT_FALSE(attempter_.CheckAndReportDailyMetrics());
 
   // We should report if 24 hours has passed.
-  fake_clock->SetWallclockTime(epoch + TimeDelta::FromHours(24));
+  fake_clock->SetWallclockTime(epoch + base::Hours(24));
   EXPECT_TRUE(attempter_.CheckAndReportDailyMetrics());
 
   // But then we should not report again..
   EXPECT_FALSE(attempter_.CheckAndReportDailyMetrics());
 
   // .. until another 24 hours has passed
-  fake_clock->SetWallclockTime(epoch + TimeDelta::FromHours(47));
+  fake_clock->SetWallclockTime(epoch + base::Hours(47));
   EXPECT_FALSE(attempter_.CheckAndReportDailyMetrics());
-  fake_clock->SetWallclockTime(epoch + TimeDelta::FromHours(48));
+  fake_clock->SetWallclockTime(epoch + base::Hours(48));
   EXPECT_TRUE(attempter_.CheckAndReportDailyMetrics());
   EXPECT_FALSE(attempter_.CheckAndReportDailyMetrics());
 
   // .. and another 24 hours
-  fake_clock->SetWallclockTime(epoch + TimeDelta::FromHours(71));
+  fake_clock->SetWallclockTime(epoch + base::Hours(71));
   EXPECT_FALSE(attempter_.CheckAndReportDailyMetrics());
-  fake_clock->SetWallclockTime(epoch + TimeDelta::FromHours(72));
+  fake_clock->SetWallclockTime(epoch + base::Hours(72));
   EXPECT_TRUE(attempter_.CheckAndReportDailyMetrics());
   EXPECT_FALSE(attempter_.CheckAndReportDailyMetrics());
 
@@ -1394,15 +1393,15 @@ TEST_F(UpdateAttempterTest, ReportDailyMetrics) {
   // negative, we report. This is in order to reset the timestamp and
   // avoid an edge condition whereby a distant point in the future is
   // in the state variable resulting in us never ever reporting again.
-  fake_clock->SetWallclockTime(epoch + TimeDelta::FromHours(71));
+  fake_clock->SetWallclockTime(epoch + base::Hours(71));
   EXPECT_TRUE(attempter_.CheckAndReportDailyMetrics());
   EXPECT_FALSE(attempter_.CheckAndReportDailyMetrics());
 
   // In this case we should not update until the clock reads 71 + 24 = 95.
   // Check that.
-  fake_clock->SetWallclockTime(epoch + TimeDelta::FromHours(94));
+  fake_clock->SetWallclockTime(epoch + base::Hours(94));
   EXPECT_FALSE(attempter_.CheckAndReportDailyMetrics());
-  fake_clock->SetWallclockTime(epoch + TimeDelta::FromHours(95));
+  fake_clock->SetWallclockTime(epoch + base::Hours(95));
   EXPECT_TRUE(attempter_.CheckAndReportDailyMetrics());
   EXPECT_FALSE(attempter_.CheckAndReportDailyMetrics());
 }
@@ -1912,7 +1911,7 @@ TEST_F(UpdateAttempterTest, TimeToUpdateAppliedOnNonEnterprise) {
 
 TEST_F(UpdateAttempterTest,
        TimeToUpdateAppliedWithTimeRestrictionMetricSuccess) {
-  constexpr int kDaysToUpdate = 15;
+  constexpr base::TimeDelta kTimeToUpdate = base::Days(15);
   auto device_policy = std::make_unique<policy::MockDevicePolicy>();
   FakeSystemState::Get()->set_device_policy(device_policy.get());
   // Make device policy return that this is enterprise enrolled
@@ -1925,19 +1924,19 @@ TEST_F(UpdateAttempterTest,
   FakeSystemState::Get()->fake_prefs()->SetInt64(
       kPrefsUpdateFirstSeenAt, update_first_seen_at.ToInternalValue());
 
-  Time update_finished_at =
-      update_first_seen_at + TimeDelta::FromDays(kDaysToUpdate);
+  Time update_finished_at = update_first_seen_at + kTimeToUpdate;
   FakeSystemState::Get()->fake_clock()->SetWallclockTime(update_finished_at);
 
-  EXPECT_CALL(*FakeSystemState::Get()->mock_metrics_reporter(),
-              ReportEnterpriseUpdateSeenToDownloadDays(true, kDaysToUpdate))
+  EXPECT_CALL(
+      *FakeSystemState::Get()->mock_metrics_reporter(),
+      ReportEnterpriseUpdateSeenToDownloadDays(true, kTimeToUpdate.InDays()))
       .Times(1);
   attempter_.ProcessingDone(nullptr, ErrorCode::kSuccess);
 }
 
 TEST_F(UpdateAttempterTest,
        TimeToUpdateAppliedWithoutTimeRestrictionMetricSuccess) {
-  constexpr int kDaysToUpdate = 15;
+  constexpr base::TimeDelta kTimeToUpdate = base::Days(15);
   auto device_policy = std::make_unique<policy::MockDevicePolicy>();
   FakeSystemState::Get()->set_device_policy(device_policy.get());
   // Make device policy return that this is enterprise enrolled
@@ -1950,12 +1949,12 @@ TEST_F(UpdateAttempterTest,
   FakeSystemState::Get()->fake_prefs()->SetInt64(
       kPrefsUpdateFirstSeenAt, update_first_seen_at.ToInternalValue());
 
-  Time update_finished_at =
-      update_first_seen_at + TimeDelta::FromDays(kDaysToUpdate);
+  Time update_finished_at = update_first_seen_at + kTimeToUpdate;
   FakeSystemState::Get()->fake_clock()->SetWallclockTime(update_finished_at);
 
-  EXPECT_CALL(*FakeSystemState::Get()->mock_metrics_reporter(),
-              ReportEnterpriseUpdateSeenToDownloadDays(false, kDaysToUpdate))
+  EXPECT_CALL(
+      *FakeSystemState::Get()->mock_metrics_reporter(),
+      ReportEnterpriseUpdateSeenToDownloadDays(false, kTimeToUpdate.InDays()))
       .Times(1);
   attempter_.ProcessingDone(nullptr, ErrorCode::kSuccess);
 }

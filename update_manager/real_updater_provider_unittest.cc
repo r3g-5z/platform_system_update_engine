@@ -107,7 +107,7 @@ class UmRealUpdaterProviderTest : public ::testing::Test {
   // |valid| determines whether the returned time is valid. Returns the expected
   // update completed time value.
   Time SetupUpdateCompletedTime(bool valid) {
-    const TimeDelta kDurationSinceUpdate = TimeDelta::FromMinutes(7);
+    const TimeDelta kDurationSinceUpdate = base::Minutes(7);
     const Time kUpdateBootTime = Time() + kDurationSinceUpdate * 2;
     const Time kCurrBootTime = (valid ? kUpdateBootTime + kDurationSinceUpdate
                                       : kUpdateBootTime - kDurationSinceUpdate);

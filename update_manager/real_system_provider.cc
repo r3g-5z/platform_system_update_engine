@@ -42,7 +42,7 @@ namespace {
 const int kRetryPollVariableMaxRetry = 5;
 
 // The polling interval to be used whenever GetValue() returns an error.
-const int kRetryPollVariableRetryIntervalSeconds = 5 * 60;
+const base::TimeDelta kRetryPollVariableRetryInterval = base::Minutes(5);
 
 // The RetryPollVariable variable is a polling variable that allows the function
 // returning the value to fail a few times and shortens the polling rate when
@@ -56,8 +56,7 @@ class RetryPollVariable : public Variable<T> {
       : Variable<T>(name, poll_interval),
         func_(func),
         base_interval_(poll_interval) {
-    DCHECK_LT(kRetryPollVariableRetryIntervalSeconds,
-              base_interval_.InSeconds());
+    DCHECK_LT(kRetryPollVariableRetryInterval, base_interval_);
   }
   RetryPollVariable(const RetryPollVariable&) = delete;
   RetryPollVariable& operator=(const RetryPollVariable&) = delete;
@@ -75,8 +74,7 @@ class RetryPollVariable : public Variable<T> {
         // the result could not be fetched.
         return result.release();
       }
-      this->SetPollInterval(
-          base::TimeDelta::FromSeconds(kRetryPollVariableRetryIntervalSeconds));
+      this->SetPollInterval(kRetryPollVariableRetryInterval);
       failed_attempts_++;
       return nullptr;
     }
@@ -117,7 +115,7 @@ bool RealSystemProvider::Init() {
 
   var_kiosk_required_platform_version_.reset(new RetryPollVariable<string>(
       "kiosk_required_platform_version",
-      base::TimeDelta::FromHours(5),  // Same as Chrome's CWS poll.
+      base::Hours(5),  // Same as Chrome's CWS poll.
       base::Bind(&RealSystemProvider::GetKioskAppRequiredPlatformVersion,
                  base::Unretained(this))));
 

@@ -108,14 +108,13 @@ EvalStatus NextUpdateCheckTimePolicyImpl::NextUpdateCheckTime(
             ? FuzzedInterval(&prng,
                              constants.timeout_initial_interval,
                              constants.timeout_regular_fuzz)
-            : TimeDelta::FromSeconds(*interval_timeout);
+            : base::Seconds(*interval_timeout);
     *next_update_check = *updater_started_time + time_diff;
     return EvalStatus::kSucceeded;
   }
 
   if (interval_timeout != nullptr) {
-    *next_update_check =
-        *last_checked_time + TimeDelta::FromSeconds(*interval_timeout);
+    *next_update_check = *last_checked_time + base::Seconds(*interval_timeout);
     return EvalStatus::kSucceeded;
   }
   // Check whether the server is enforcing a poll interval; if not, this value
@@ -172,7 +171,7 @@ TimeDelta NextUpdateCheckTimePolicyImpl::FuzzedInterval(PRNG* prng,
   // This guarantees the output interval is non negative.
   int interval_min = max(interval - half_fuzz, 0);
   int interval_max = interval + half_fuzz;
-  return TimeDelta::FromSeconds(prng->RandMinMax(interval_min, interval_max));
+  return base::Seconds(prng->RandMinMax(interval_min, interval_max));
 }
 
 }  // namespace chromeos_update_manager

@@ -692,7 +692,7 @@ int FuzzInt(int value, unsigned int range) {
 }
 
 string FormatSecs(unsigned secs) {
-  return FormatTimeDelta(TimeDelta::FromSeconds(secs));
+  return FormatTimeDelta(base::Seconds(secs));
 }
 
 string FormatTimeDelta(TimeDelta delta) {
@@ -706,13 +706,13 @@ string FormatTimeDelta(TimeDelta delta) {
 
   // Canonicalize into days, hours, minutes, seconds and microseconds.
   unsigned days = delta.InDays();
-  delta -= TimeDelta::FromDays(days);
+  delta -= base::Days(days);
   unsigned hours = delta.InHours();
-  delta -= TimeDelta::FromHours(hours);
+  delta -= base::Hours(hours);
   unsigned mins = delta.InMinutes();
-  delta -= TimeDelta::FromMinutes(mins);
+  delta -= base::Minutes(mins);
   unsigned secs = delta.InSeconds();
-  delta -= TimeDelta::FromSeconds(secs);
+  delta -= base::Seconds(secs);
   unsigned usecs = delta.InMicroseconds();
 
   if (days)

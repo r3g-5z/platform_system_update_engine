@@ -46,7 +46,7 @@ namespace {
 // needs to be long enough to prevent busywork and/or DDoS attacks on Omaha, but
 // at the same time short enough to allow the machine to update itself
 // reasonably soon.
-const int kCheckIntervalInSeconds = 15 * 60;
+constexpr base::TimeDelta kCheckInterval = base::Minutes(15);
 
 }  // namespace
 
@@ -132,9 +132,8 @@ EvalStatus UpdateCheckAllowedPolicy::EvaluateDefault(
   // Ensure that the minimum interval is set. If there's no clock, this defaults
   // to always allowing the update.
   if (!aux_state_->IsLastCheckAllowedTimeSet() ||
-      ec->IsMonotonicTimeGreaterThan(
-          aux_state_->last_check_allowed_time() +
-          base::TimeDelta::FromSeconds(kCheckIntervalInSeconds))) {
+      ec->IsMonotonicTimeGreaterThan(aux_state_->last_check_allowed_time() +
+                                     kCheckInterval)) {
     aux_state_->set_last_check_allowed_time(
         SystemState::Get()->clock()->GetMonotonicTime());
     return EvalStatus::kSucceeded;

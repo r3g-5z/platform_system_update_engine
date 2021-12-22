@@ -60,43 +60,39 @@ TEST_P(WeeklyTimeDurationTest, GetDurationTo) {
   EXPECT_EQ(result(), start.GetDurationTo(end));
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    SameMinutes,
-    WeeklyTimeDurationTest,
-    testing::Values(std::make_tuple(kThursday,
-                                    TimeDelta::FromMinutes(30),
-                                    kSaturday,
-                                    TimeDelta::FromMinutes(30),
-                                    TimeDelta::FromDays(2))));
+INSTANTIATE_TEST_SUITE_P(SameMinutes,
+                         WeeklyTimeDurationTest,
+                         testing::Values(std::make_tuple(kThursday,
+                                                         base::Minutes(30),
+                                                         kSaturday,
+                                                         base::Minutes(30),
+                                                         base::Days(2))));
 
 INSTANTIATE_TEST_SUITE_P(
     DifferentMinutes,
     WeeklyTimeDurationTest,
     testing::Values(std::make_tuple(kMonday,
-                                    TimeDelta::FromMinutes(10),
+                                    base::Minutes(10),
                                     kWednesday,
-                                    TimeDelta::FromMinutes(30),
-                                    TimeDelta::FromDays(2) +
-                                        TimeDelta::FromMinutes(20))));
+                                    base::Minutes(30),
+                                    base::Days(2) + base::Minutes(20))));
 
-INSTANTIATE_TEST_SUITE_P(
-    EndLessThanStartSameMinutes,
-    WeeklyTimeDurationTest,
-    testing::Values(std::make_tuple(kSaturday,
-                                    TimeDelta::FromMinutes(100),
-                                    kTuesday,
-                                    TimeDelta::FromMinutes(100),
-                                    TimeDelta::FromDays(3))));
+INSTANTIATE_TEST_SUITE_P(EndLessThanStartSameMinutes,
+                         WeeklyTimeDurationTest,
+                         testing::Values(std::make_tuple(kSaturday,
+                                                         base::Minutes(100),
+                                                         kTuesday,
+                                                         base::Minutes(100),
+                                                         base::Days(3))));
 
 INSTANTIATE_TEST_SUITE_P(
     EndLessThanStartDifferentMinutes,
     WeeklyTimeDurationTest,
     testing::Values(std::make_tuple(kSaturday,
-                                    TimeDelta::FromMinutes(150),
+                                    base::Minutes(150),
                                     kMonday,
-                                    TimeDelta::FromMinutes(10),
-                                    TimeDelta::FromDays(2) -
-                                        TimeDelta::FromMinutes(140))));
+                                    base::Minutes(10),
+                                    base::Days(2) - base::Minutes(140))));
 
 class WeeklyTimeOffsetTest
     : public testing::TestWithParam<tuple<int /* day_of_week */,
@@ -121,27 +117,25 @@ INSTANTIATE_TEST_SUITE_P(
     SameDayTest,
     WeeklyTimeOffsetTest,
     testing::Values(std::make_tuple(kTuesday,
-                                    TimeDelta::FromMinutes(200),
-                                    TimeDelta::FromMinutes(400),
-                                    WeeklyTime(kTuesday,
-                                               TimeDelta::FromMinutes(600)))));
+                                    base::Minutes(200),
+                                    base::Minutes(400),
+                                    WeeklyTime(kTuesday, base::Minutes(600)))));
 
-INSTANTIATE_TEST_SUITE_P(DayChangeTest,
-                         WeeklyTimeOffsetTest,
-                         testing::Values(std::make_tuple(
-                             kThursday,
-                             TimeDelta::FromHours(23),
-                             TimeDelta::FromHours(2),
-                             WeeklyTime(kFriday, TimeDelta::FromHours(1)))));
+INSTANTIATE_TEST_SUITE_P(
+    DayChangeTest,
+    WeeklyTimeOffsetTest,
+    testing::Values(std::make_tuple(kThursday,
+                                    base::Hours(23),
+                                    base::Hours(2),
+                                    WeeklyTime(kFriday, base::Hours(1)))));
 
 INSTANTIATE_TEST_SUITE_P(
     DayChangeTestOver7,
     WeeklyTimeOffsetTest,
     testing::Values(std::make_tuple(kSunday,
-                                    TimeDelta::FromHours(20),
-                                    TimeDelta::FromDays(3),
-                                    WeeklyTime(kWednesday,
-                                               TimeDelta::FromHours(20)))));
+                                    base::Hours(20),
+                                    base::Days(3),
+                                    WeeklyTime(kWednesday, base::Hours(20)))));
 
 class WeeklyTimeIntervalRangeTest
     : public testing::TestWithParam<tuple<int /* test_day_of_week */,
@@ -158,18 +152,17 @@ class WeeklyTimeIntervalRangeTest
 };
 
 TEST_P(WeeklyTimeIntervalRangeTest, InRange) {
-  WeeklyTime test =
-      WeeklyTime(day_of_week(), TimeDelta::FromMinutes(minutes()));
+  WeeklyTime test = WeeklyTime(day_of_week(), base::Minutes(minutes()));
   WeeklyTimeInterval interval_regular =
-      WeeklyTimeInterval(WeeklyTime(kMonday, TimeDelta::FromMinutes(10)),
-                         WeeklyTime(kWednesday, TimeDelta::FromMinutes(30)));
+      WeeklyTimeInterval(WeeklyTime(kMonday, base::Minutes(10)),
+                         WeeklyTime(kWednesday, base::Minutes(30)));
   WeeklyTimeInterval interval_short =
-      WeeklyTimeInterval(WeeklyTime(kThursday, TimeDelta::FromMinutes(10)),
-                         WeeklyTime(kThursday, TimeDelta::FromMinutes(11)));
+      WeeklyTimeInterval(WeeklyTime(kThursday, base::Minutes(10)),
+                         WeeklyTime(kThursday, base::Minutes(11)));
 
   WeeklyTimeInterval interval_wraparound =
-      WeeklyTimeInterval(WeeklyTime(kFriday, TimeDelta::FromMinutes(10)),
-                         WeeklyTime(kTuesday, TimeDelta::FromMinutes(30)));
+      WeeklyTimeInterval(WeeklyTime(kFriday, base::Minutes(10)),
+                         WeeklyTime(kTuesday, base::Minutes(30)));
 
   EXPECT_EQ(regular_result(), interval_regular.InRange(test));
   EXPECT_EQ(short_result(), interval_short.InRange(test));

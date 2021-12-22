@@ -48,16 +48,16 @@ namespace chromeos_update_engine {
 
 using metrics_utils::GetPersistedValue;
 
-const TimeDelta PayloadState::kDurationSlack = TimeDelta::FromSeconds(600);
+constexpr TimeDelta PayloadState::kDurationSlack = base::Minutes(10);
 
 // We want to upperbound backoffs to 16 days
-static const int kMaxBackoffDays = 16;
+static constexpr TimeDelta kMaxBackoff = base::Days(16);
 
 // We want to randomize retry attempts after the backoff by +/- 6 hours.
 static const uint32_t kMaxBackoffFuzzMinutes = 12 * 60;
 
 // Limit persisting current update duration uptime to once per second
-static const uint64_t kUptimeResolution = 1;
+static const TimeDelta kUptimeResolution = base::Seconds(1);
 
 PayloadState::PayloadState()
     : prefs_(nullptr),
@@ -553,7 +553,7 @@ void PayloadState::UpdateBackoffExpiryTime() {
 
   // Since we're doing left-shift below, make sure we don't shift more
   // than this. E.g. if int is 4-bytes, don't left-shift more than 30 bits,
-  // since we don't expect value of kMaxBackoffDays to be more than 100 anyway.
+  // since we don't expect value of kMaxBackoff to be more than 100 anyway.
   int num_days = 1;  // the value to be shifted.
   const int kMaxShifts = (sizeof(num_days) * 8) - 2;
 
@@ -562,14 +562,14 @@ void PayloadState::UpdateBackoffExpiryTime() {
   int power = min(GetFullPayloadAttemptNumber() - 1, kMaxShifts);
 
   // The number of days is the minimum of 2 raised to (payload_attempt_number
-  // - 1) or kMaxBackoffDays.
-  num_days = min(num_days << power, kMaxBackoffDays);
+  // - 1) or kMaxBackoff.
+  num_days = min(num_days << power, kMaxBackoff.InDays());
 
   // We don't want all retries to happen exactly at the same time when
   // retrying after backoff. So add some random minutes to fuzz.
   int fuzz_minutes = utils::FuzzInt(0, kMaxBackoffFuzzMinutes);
   TimeDelta next_backoff_interval =
-      TimeDelta::FromDays(num_days) + TimeDelta::FromMinutes(fuzz_minutes);
+      base::Days(num_days) + base::Minutes(fuzz_minutes);
   LOG(INFO) << "Incrementing the backoff expiry time by "
             << utils::FormatTimeDelta(next_backoff_interval);
   SetBackoffExpiryTime(Time::Now() + next_backoff_interval);
@@ -826,7 +826,7 @@ void PayloadState::ResetPersistedState() {
   UpdateBackoffExpiryTime();  // This will reset the backoff expiry time.
   SetUpdateTimestampStart(SystemState::Get()->clock()->GetWallclockTime());
   SetUpdateTimestampEnd(Time());  // Set to null time
-  SetUpdateDurationUptime(TimeDelta::FromSeconds(0));
+  SetUpdateDurationUptime(base::Seconds(0));
   ResetDownloadSourcesOnNewUpdate();
   ResetRollbackVersion();
   SetP2PNumAttempts(0);
@@ -951,7 +951,7 @@ void PayloadState::SetUrlIndex(uint32_t url_index) {
 }
 
 void PayloadState::LoadScatteringWaitPeriod() {
-  SetScatteringWaitPeriod(TimeDelta::FromSeconds(
+  SetScatteringWaitPeriod(base::Seconds(
       GetPersistedValue(kPrefsWallClockScatteringWaitPeriod, prefs_)));
 }
 
@@ -968,7 +968,7 @@ void PayloadState::SetScatteringWaitPeriod(TimeDelta wait_period) {
 }
 
 void PayloadState::LoadStagingWaitPeriod() {
-  SetStagingWaitPeriod(TimeDelta::FromSeconds(
+  SetStagingWaitPeriod(base::Seconds(
       GetPersistedValue(kPrefsWallClockStagingWaitPeriod, prefs_)));
 }
 
@@ -1013,7 +1013,7 @@ void PayloadState::LoadBackoffExpiryTime() {
     return;
 
   Time stored_time = Time::FromInternalValue(stored_value);
-  if (stored_time > Time::Now() + TimeDelta::FromDays(kMaxBackoffDays)) {
+  if (stored_time > Time::Now() + kMaxBackoff) {
     LOG(ERROR) << "Invalid backoff expiry time ("
                << utils::ToString(stored_time)
                << ") in persisted state. Resetting.";
@@ -1093,9 +1093,9 @@ void PayloadState::LoadUpdateDurationUptime() {
     // we'll use zero as the delta
   } else if (!prefs_->GetInt64(kPrefsUpdateDurationUptime, &stored_value)) {
     LOG(ERROR) << "Invalid UpdateDurationUptime value. Resetting.";
-    stored_delta = TimeDelta::FromSeconds(0);
+    stored_delta = base::Seconds(0);
   } else {
-    stored_delta = TimeDelta::FromInternalValue(stored_value);
+    stored_delta = base::TimeDelta::FromInternalValue(stored_value);
   }
 
   // Validation check: Uptime can never be greater than the wall-clock
@@ -1170,7 +1170,7 @@ void PayloadState::CalculateUpdateDurationUptime() {
   Time now = SystemState::Get()->clock()->GetMonotonicTime();
   TimeDelta uptime_since_last_update = now - update_duration_uptime_timestamp_;
 
-  if (uptime_since_last_update > TimeDelta::FromSeconds(kUptimeResolution)) {
+  if (uptime_since_last_update > kUptimeResolution) {
     TimeDelta new_uptime = update_duration_uptime_ + uptime_since_last_update;
     // We're frequently called so avoid logging this write
     SetUpdateDurationUptimeExtended(new_uptime, now, false);
@@ -1419,12 +1419,11 @@ bool PayloadState::P2PAttemptAllowed() {
                  << " - disallowing p2p.";
       return false;
     }
-    if (time_spent_attempting_p2p.InSeconds() > kMaxP2PAttemptTimeSeconds) {
+    if (time_spent_attempting_p2p > kMaxP2PAttemptTime) {
       LOG(INFO) << "Time spent attempting p2p is "
                 << utils::FormatTimeDelta(time_spent_attempting_p2p)
                 << " which is greater than "
-                << utils::FormatTimeDelta(
-                       TimeDelta::FromSeconds(kMaxP2PAttemptTimeSeconds))
+                << utils::FormatTimeDelta(kMaxP2PAttemptTime)
                 << " - disallowing p2p.";
       return false;
     }

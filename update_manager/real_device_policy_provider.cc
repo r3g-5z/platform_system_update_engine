@@ -39,7 +39,7 @@ using std::vector;
 
 namespace {
 
-const int kDevicePolicyRefreshRateInMinutes = 60;
+const TimeDelta kDevicePolicyRefreshRateTime = base::Minutes(60);
 
 constexpr char kMarketSegmentUnknown[] = "unknown";
 constexpr char kMarketSegmentEducation[] = "education";
@@ -102,7 +102,7 @@ void RealDevicePolicyProvider::RefreshDevicePolicyAndReschedule() {
       FROM_HERE,
       base::Bind(&RealDevicePolicyProvider::RefreshDevicePolicyAndReschedule,
                  base::Unretained(this)),
-      TimeDelta::FromMinutes(kDevicePolicyRefreshRateInMinutes));
+      kDevicePolicyRefreshRateTime);
 }
 
 template <typename T>
@@ -181,7 +181,7 @@ bool RealDevicePolicyProvider::ConvertScatterFactor(
                  << scatter_factor_in_seconds;
     return false;
   }
-  *scatter_factor = TimeDelta::FromSeconds(scatter_factor_in_seconds);
+  *scatter_factor = base::Seconds(scatter_factor_in_seconds);
   return true;
 }
 

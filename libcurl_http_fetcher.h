@@ -126,10 +126,14 @@ class LibcurlHttpFetcher : public HttpFetcher {
   //     currently has no stored timeout value. You must not wait too long
   //     (more than a few seconds perhaps) before you call
   //     curl_multi_perform() again.
-  void set_idle_seconds(int seconds) override { idle_seconds_ = seconds; }
+  void set_idle_seconds(int seconds) override {
+    idle_time_ = base::Seconds(seconds);
+  }
 
   // Sets the retry timeout. Useful for testing.
-  void set_retry_seconds(int seconds) override { retry_seconds_ = seconds; }
+  void set_retry_seconds(int seconds) override {
+    retry_time_ = base::Seconds(seconds);
+  }
 
   void set_no_network_max_retries(int retries) {
     no_network_max_retries_ = retries;
@@ -299,7 +303,7 @@ class LibcurlHttpFetcher : public HttpFetcher {
   int max_retry_count_{kDownloadMaxRetryCount};
 
   // Seconds to wait before retrying a resume.
-  int retry_seconds_{20};
+  base::TimeDelta retry_time_{base::Seconds(20)};
 
   // When waiting for a retry, the task id of the retry callback.
   brillo::MessageLoop::TaskId retry_task_id_{brillo::MessageLoop::kTaskIdNull};
@@ -309,7 +313,7 @@ class LibcurlHttpFetcher : public HttpFetcher {
   int no_network_max_retries_{0};
 
   // Seconds to wait before asking libcurl to "perform".
-  int idle_seconds_{1};
+  base::TimeDelta idle_time_{base::Seconds(1)};
 
   // If true, we are currently performing a write callback on the delegate.
   bool in_write_callback_{false};

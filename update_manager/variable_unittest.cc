@@ -73,13 +73,13 @@ TEST_F(UmBaseVariableTest, DefaultPollIntervalTest) {
   DefaultVariable<int> const_var("const_var", kVariableModeConst);
   EXPECT_EQ(const_var.GetPollInterval(), TimeDelta());
   DefaultVariable<int> poll_var("poll_var", kVariableModePoll);
-  EXPECT_EQ(poll_var.GetPollInterval(), TimeDelta::FromMinutes(5));
+  EXPECT_EQ(poll_var.GetPollInterval(), base::Minutes(5));
 }
 
 TEST_F(UmBaseVariableTest, GetPollIntervalTest) {
-  DefaultVariable<int> var("var", TimeDelta::FromMinutes(3));
+  DefaultVariable<int> var("var", base::Minutes(3));
   EXPECT_EQ(var.GetMode(), kVariableModePoll);
-  EXPECT_EQ(var.GetPollInterval(), TimeDelta::FromMinutes(3));
+  EXPECT_EQ(var.GetPollInterval(), base::Minutes(3));
 }
 
 class BaseVariableObserver : public BaseVariable::ObserverInterface {

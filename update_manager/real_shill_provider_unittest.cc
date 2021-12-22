@@ -34,7 +34,6 @@
 #include "update_engine/update_manager/umtest_utils.h"
 
 using base::Time;
-using base::TimeDelta;
 using chromeos_update_engine::ConnectionTethering;
 using chromeos_update_engine::ConnectionType;
 using chromeos_update_engine::FakeSystemState;
@@ -99,7 +98,7 @@ class UmRealShillProviderTest : public ::testing::Test {
     return time;
   }
 
-  Time ConnChangedTime() { return InitTime() + TimeDelta::FromSeconds(10); }
+  Time ConnChangedTime() { return InitTime() + base::Seconds(10); }
 
   // Sets the default_service object path in the response from the
   // ManagerProxyMock instance.
@@ -133,8 +132,8 @@ class UmRealShillProviderTest : public ::testing::Test {
     ASSERT_TRUE(manager_property_changed_.IsHandlerRegistered());
     manager_property_changed_.signal_callback().Run(
         shill::kDefaultServiceProperty, dbus::ObjectPath(service_path));
-    FakeSystemState::Get()->fake_clock()->SetWallclockTime(
-        conn_change_time + TimeDelta::FromSeconds(5));
+    FakeSystemState::Get()->fake_clock()->SetWallclockTime(conn_change_time +
+                                                           base::Seconds(5));
     if (conn_change_time_p)
       *conn_change_time_p = conn_change_time;
   }

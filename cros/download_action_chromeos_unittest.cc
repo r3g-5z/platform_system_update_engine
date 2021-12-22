@@ -66,8 +66,8 @@ class DownloadActionChromeosTest : public ::testing::Test {
 };
 
 namespace {
-constexpr base::TimeDelta kHour = base::TimeDelta::FromHours(1);
-constexpr base::TimeDelta kMinute = base::TimeDelta::FromMinutes(1);
+constexpr base::TimeDelta kHour = base::Hours(1);
+constexpr base::TimeDelta kMinute = base::Minutes(1);
 
 class DownloadActionTestProcessorDelegate : public ActionProcessorDelegate {
  public:
@@ -535,7 +535,7 @@ class P2PDownloadActionTest : public testing::Test {
     // Setup p2p.
     FakeP2PManagerConfiguration* test_conf = new FakeP2PManagerConfiguration();
     p2p_manager_.reset(P2PManager::Construct(
-        test_conf, &fake_um_, "cros_au", 3, base::TimeDelta::FromDays(5)));
+        test_conf, &fake_um_, "cros_au", 3, base::Days(5)));
     FakeSystemState::Get()->set_p2p_manager(p2p_manager_.get());
   }
 

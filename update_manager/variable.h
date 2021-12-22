@@ -107,8 +107,7 @@ class BaseVariable {
  protected:
   // Creates a BaseVariable using the default polling interval (5 minutes).
   BaseVariable(const std::string& name, VariableMode mode)
-      : BaseVariable(
-            name, mode, base::TimeDelta::FromMinutes(kDefaultPollMinutes)) {}
+      : BaseVariable(name, mode, kDefaultPollInterval) {}
 
   // Creates a BaseVariable with mode kVariableModePoll and the provided
   // polling interval.
@@ -168,8 +167,8 @@ class BaseVariable {
     }
   }
 
-  // The default PollInterval in minutes.
-  static constexpr int kDefaultPollMinutes = 5;
+  // The default PollInterval.
+  static constexpr base::TimeDelta kDefaultPollInterval = base::Minutes(5);
 
   // The variable's name as a string.
   const std::string name_;

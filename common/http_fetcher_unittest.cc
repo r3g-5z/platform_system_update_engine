@@ -624,7 +624,7 @@ void UnpausingTimeoutCallback(PausingHttpFetcherTestDelegate* delegate,
   *my_id = MessageLoop::current()->PostDelayedTask(
       FROM_HERE,
       base::Bind(&UnpausingTimeoutCallback, delegate, my_id),
-      base::TimeDelta::FromMilliseconds(200));
+      base::Milliseconds(200));
 }
 }  // namespace
 
@@ -642,7 +642,7 @@ TYPED_TEST(HttpFetcherTest, PauseTest) {
   callback_id = this->loop_.PostDelayedTask(
       FROM_HERE,
       base::Bind(&UnpausingTimeoutCallback, &delegate, &callback_id),
-      base::TimeDelta::FromMilliseconds(200));
+      base::Milliseconds(200));
   fetcher->BeginTransfer(this->test_.BigUrl(server->GetPort()));
 
   this->loop_.Run();
@@ -915,8 +915,7 @@ TYPED_TEST(HttpFetcherTest, NoResponseTest) {
   bool timeout = false;
   auto callback = base::Bind([](bool* timeout) { *timeout = true; },
                              base::Unretained(&timeout));
-  this->loop_.PostDelayedTask(
-      FROM_HERE, callback, base::TimeDelta::FromSeconds(2));
+  this->loop_.PostDelayedTask(FROM_HERE, callback, base::Seconds(2));
   EXPECT_TRUE(this->loop_.RunOnce(true));
   EXPECT_TRUE(timeout);
 }
@@ -986,7 +985,7 @@ TYPED_TEST(HttpFetcherTest, TerminateTransferWhenServerDiedTest) {
   this->loop_.PostDelayedTask(FROM_HERE,
                               base::Bind(&HttpFetcher::TerminateTransfer,
                                          base::Unretained(fetcher.get())),
-                              base::TimeDelta::FromSeconds(3));
+                              base::Seconds(3));
 
   // Exiting and testing happens in the delegate.
   this->loop_.Run();
@@ -998,8 +997,7 @@ TYPED_TEST(HttpFetcherTest, TerminateTransferWhenServerDiedTest) {
   bool timeout = false;
   auto callback = base::Bind([](bool* timeout) { *timeout = true; },
                              base::Unretained(&timeout));
-  this->loop_.PostDelayedTask(
-      FROM_HERE, callback, base::TimeDelta::FromSeconds(2));
+  this->loop_.PostDelayedTask(FROM_HERE, callback, base::Seconds(2));
   EXPECT_TRUE(this->loop_.RunOnce(true));
   EXPECT_TRUE(timeout);
 }

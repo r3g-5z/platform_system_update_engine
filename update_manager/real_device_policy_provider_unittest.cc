@@ -35,7 +35,6 @@
 #include "update_engine/cros/dbus_test_utils.h"
 #include "update_engine/update_manager/umtest_utils.h"
 
-using base::TimeDelta;
 using brillo::MessageLoop;
 using chromeos_update_engine::ConnectionType;
 using chromeos_update_engine::dbus_test_utils::MockSignalHandler;
@@ -265,7 +264,7 @@ TEST_F(UmRealDevicePolicyProviderTest, ScatterFactorConverted) {
   EXPECT_TRUE(provider_->Init());
   loop_.RunOnce(false);
 
-  UmTestUtils::ExpectVariableHasValue(TimeDelta::FromSeconds(1234),
+  UmTestUtils::ExpectVariableHasValue(base::Seconds(1234),
                                       provider_->var_scatter_factor());
 }
 
@@ -299,8 +298,8 @@ TEST_F(UmRealDevicePolicyProviderTest, DisallowedIntervalsConverted) {
   SetUpExistentDevicePolicy();
 
   vector<DevicePolicy::WeeklyTimeInterval> intervals = {
-      {5, TimeDelta::FromHours(5), 6, TimeDelta::FromHours(8)},
-      {1, TimeDelta::FromHours(1), 3, TimeDelta::FromHours(10)}};
+      {5, base::Hours(5), 6, base::Hours(8)},
+      {1, base::Hours(1), 3, base::Hours(10)}};
 
   EXPECT_CALL(mock_device_policy_, GetDisallowedTimeIntervals(_))
       .WillRepeatedly(DoAll(SetArgPointee<0>(intervals), Return(true)));
@@ -309,10 +308,10 @@ TEST_F(UmRealDevicePolicyProviderTest, DisallowedIntervalsConverted) {
 
   UmTestUtils::ExpectVariableHasValue(
       WeeklyTimeIntervalVector{
-          WeeklyTimeInterval(WeeklyTime(5, TimeDelta::FromHours(5)),
-                             WeeklyTime(6, TimeDelta::FromHours(8))),
-          WeeklyTimeInterval(WeeklyTime(1, TimeDelta::FromHours(1)),
-                             WeeklyTime(3, TimeDelta::FromHours(10)))},
+          WeeklyTimeInterval(WeeklyTime(5, base::Hours(5)),
+                             WeeklyTime(6, base::Hours(8))),
+          WeeklyTimeInterval(WeeklyTime(1, base::Hours(1)),
+                             WeeklyTime(3, base::Hours(10)))},
       provider_->var_disallowed_time_intervals());
 }
 

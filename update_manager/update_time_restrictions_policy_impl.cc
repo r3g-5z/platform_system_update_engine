@@ -26,7 +26,6 @@
 #include "update_engine/update_manager/weekly_time.h"
 
 using base::Time;
-using base::TimeDelta;
 using chromeos_update_engine::ErrorCode;
 using std::string;
 
@@ -62,8 +61,7 @@ EvalStatus UpdateTimeRestrictionsPolicyImpl::Evaluate(
   }
 
   WeeklyTime now = WeeklyTime::FromTime(*curr_date);
-  now.AddTime(TimeDelta::FromHours(*curr_hour) +
-              TimeDelta::FromMinutes(*curr_minute));
+  now.AddTime(base::Hours(*curr_hour) + base::Minutes(*curr_minute));
 
   const WeeklyTimeIntervalVector* intervals =
       ec->GetValue(dp_provider->var_disallowed_time_intervals());

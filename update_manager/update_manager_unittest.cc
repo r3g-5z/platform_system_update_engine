@@ -41,7 +41,6 @@
 using base::Bind;
 using base::Callback;
 using base::Time;
-using base::TimeDelta;
 using brillo::MessageLoop;
 using brillo::MessageLoopRunMaxIterations;
 using chromeos_update_engine::ErrorCode;
@@ -70,8 +69,8 @@ class UmUpdateManagerTest : public ::testing::Test {
     loop_.SetAsCurrent();
     FakeSystemState::CreateInstance();
     fake_state_ = new FakeState();
-    umut_.reset(new UpdateManager(
-        TimeDelta::FromSeconds(5), TimeDelta::FromSeconds(1), fake_state_));
+    umut_.reset(
+        new UpdateManager(base::Seconds(5), base::Seconds(1), fake_state_));
   }
 
   void TearDown() override { EXPECT_FALSE(loop_.PendingTasks()); }
@@ -243,7 +242,7 @@ TEST_F(UmUpdateManagerTest, AsyncPolicyRequestTimeoutDoesNotFire) {
   EXPECT_EQ(EvalStatus::kSucceeded, calls[0]);
   // Wait for the timeout to expire, run the main loop again, ensure that
   // nothing happened.
-  test_clock_.Advance(TimeDelta::FromSeconds(2));
+  test_clock_.Advance(base::Seconds(2));
   MessageLoopRunMaxIterations(MessageLoop::current(), 10);
   EXPECT_EQ(1, num_called);
   EXPECT_EQ(1U, calls.size());
@@ -259,9 +258,7 @@ TEST_F(UmUpdateManagerTest, AsyncPolicyRequestTimesOut) {
 
   int num_called = 0;
   auto policy = std::make_unique<DelayPolicy>(
-      0,
-      fake_clock->GetWallclockTime() + TimeDelta::FromSeconds(3),
-      &num_called);
+      0, fake_clock->GetWallclockTime() + base::Seconds(3), &num_called);
   umut_->PolicyRequest(
       std::move(policy), std::make_shared<PolicyDataInterface>(), callback);
   // Run the main loop, ensure that policy was attempted once but the callback
@@ -272,17 +269,17 @@ TEST_F(UmUpdateManagerTest, AsyncPolicyRequestTimesOut) {
   // Wait for the expiration timeout to expire, run the main loop again,
   // ensure that reevaluation occurred but callback was not invoked (i.e.
   // default policy was not consulted).
-  test_clock_.Advance(TimeDelta::FromSeconds(2));
+  test_clock_.Advance(base::Seconds(2));
   fake_clock->SetWallclockTime(fake_clock->GetWallclockTime() +
-                               TimeDelta::FromSeconds(2));
+                               base::Seconds(2));
   MessageLoopRunMaxIterations(MessageLoop::current(), 10);
   EXPECT_EQ(2, num_called);
   EXPECT_EQ(0U, calls.size());
   // Wait for reevaluation due to delay to happen, ensure that it occurs and
   // that the callback is invoked.
-  test_clock_.Advance(TimeDelta::FromSeconds(2));
+  test_clock_.Advance(base::Seconds(2));
   fake_clock->SetWallclockTime(fake_clock->GetWallclockTime() +
-                               TimeDelta::FromSeconds(2));
+                               base::Seconds(2));
   MessageLoopRunMaxIterations(MessageLoop::current(), 10);
   EXPECT_EQ(3, num_called);
   ASSERT_EQ(1U, calls.size());

@@ -27,7 +27,7 @@ namespace chromeos_update_manager {
 // Maximum number of times we'll allow using P2P for the same update payload.
 extern const int kMaxP2PAttempts;
 // Maximum period of time allowed for download a payload via P2P, in seconds.
-extern const int kMaxP2PAttemptsPeriodInSeconds;
+extern const base::TimeDelta kMaxP2PAttemptsPeriod;
 
 class P2PEnabledPolicyData : public PolicyDataInterface {
  public:

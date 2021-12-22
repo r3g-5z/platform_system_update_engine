@@ -130,7 +130,7 @@ class UmUpdateCanStartPolicyTest : public UmPolicyTestBase {
     // threshold (none allowed).
     update_state.scatter_wait_period = TimeDelta();
     update_state.scatter_check_threshold = 0;
-    update_state.scatter_wait_period_max = TimeDelta::FromDays(7);
+    update_state.scatter_wait_period_max = base::Days(7);
     update_state.scatter_check_threshold_min = 0;
     update_state.scatter_check_threshold_max = 0;
 
@@ -147,7 +147,7 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedNoDevicePolicy) {
       new bool(false));
 
   // Check that the UpdateCanStart returns true with no further attributes.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(ucs_data_->result.update_can_start);
   EXPECT_FALSE(ucs_data_->result.p2p_downloading_allowed);
@@ -163,7 +163,7 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedBlankPolicy) {
   // no restrictions on updating.
 
   // Check that the UpdateCanStart returns true.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(ucs_data_->result.update_can_start);
   EXPECT_FALSE(ucs_data_->result.p2p_downloading_allowed);
@@ -179,16 +179,12 @@ TEST_F(UmUpdateCanStartPolicyTest, NotAllowedBackoffNewWaitPeriodApplies) {
   // backoff period is enacted.
 
   const Time curr_time = fake_clock_->GetWallclockTime();
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(10));
   ucs_data_->update_state.download_errors_max = 1;
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(8));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(8));
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(2));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(2));
 
   // Check that UpdateCanStart returns false and a new backoff expiry is
   // generated.
@@ -206,19 +202,14 @@ TEST_F(UmUpdateCanStartPolicyTest,
   // period still applies.
 
   const Time curr_time = fake_clock_->GetWallclockTime();
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(10));
   ucs_data_->update_state.download_errors_max = 1;
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(8));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(8));
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(2));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(2));
   ucs_data_->update_state.failures_last_updated = curr_time;
-  ucs_data_->update_state.backoff_expiry =
-      curr_time + TimeDelta::FromMinutes(3);
+  ucs_data_->update_state.backoff_expiry = curr_time + base::Minutes(3);
 
   // Check that UpdateCanStart returns false and a new backoff expiry is
   // generated.
@@ -235,20 +226,14 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedBackoffSatisfied) {
   // has elapsed, we're good to go.
 
   const Time curr_time = fake_clock_->GetWallclockTime();
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(10));
   ucs_data_->update_state.download_errors_max = 1;
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(8));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(8));
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(2));
-  ucs_data_->update_state.failures_last_updated =
-      curr_time - TimeDelta::FromSeconds(1);
-  ucs_data_->update_state.backoff_expiry =
-      curr_time - TimeDelta::FromSeconds(1);
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(2));
+  ucs_data_->update_state.failures_last_updated = curr_time - base::Seconds(1);
+  ucs_data_->update_state.backoff_expiry = curr_time - base::Seconds(1);
 
   // Check that UpdateCanStart returns false and a new backoff expiry is
   // generated.
@@ -268,16 +253,12 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedBackoffDisabled) {
   // is disabled.
 
   const Time curr_time = fake_clock_->GetWallclockTime();
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(10));
   ucs_data_->update_state.download_errors_max = 1;
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(8));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(8));
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(2));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(2));
   ucs_data_->update_state.is_backoff_disabled = true;
 
   // Check that UpdateCanStart returns false and a new backoff expiry is
@@ -298,16 +279,12 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedNoBackoffInteractive) {
   // an interactive update check.
 
   const Time curr_time = fake_clock_->GetWallclockTime();
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(10));
   ucs_data_->update_state.download_errors_max = 1;
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(8));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(8));
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(2));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(2));
   ucs_data_->update_state.interactive = true;
 
   // Check that UpdateCanStart returns false and a new backoff expiry is
@@ -328,16 +305,12 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedNoBackoffDelta) {
   // a delta payload.
 
   const Time curr_time = fake_clock_->GetWallclockTime();
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(10));
   ucs_data_->update_state.download_errors_max = 1;
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(8));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(8));
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(2));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(2));
   ucs_data_->update_state.is_delta_payload = true;
 
   // Check that UpdateCanStart returns false and a new backoff expiry is
@@ -358,16 +331,12 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedNoBackoffUnofficialBuild) {
   // an unofficial build.
 
   const Time curr_time = fake_clock_->GetWallclockTime();
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(10));
   ucs_data_->update_state.download_errors_max = 1;
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(8));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(8));
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(2));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(2));
 
   fake_state_.system_provider()->var_is_official_build()->reset(
       new bool(false));
@@ -391,9 +360,9 @@ TEST_F(UmUpdateCanStartPolicyTest, NotAllowedScatteringNewWaitPeriodApplies) {
   // generated.
 
   fake_state_.device_policy_provider()->var_scatter_factor()->reset(
-      new TimeDelta(TimeDelta::FromMinutes(2)));
+      new TimeDelta(base::Minutes(2)));
 
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(1));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(1));
 
   // Check that the UpdateCanStart returns false and a new wait period
   // generated.
@@ -412,10 +381,10 @@ TEST_F(UmUpdateCanStartPolicyTest,
   // of the scattering values has changed.
 
   fake_state_.device_policy_provider()->var_scatter_factor()->reset(
-      new TimeDelta(TimeDelta::FromMinutes(2)));
+      new TimeDelta(base::Minutes(2)));
 
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(1));
-  ucs_data_->update_state.scatter_wait_period = TimeDelta::FromSeconds(35);
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(1));
+  ucs_data_->update_state.scatter_wait_period = base::Seconds(35);
 
   // Check that the UpdateCanStart returns false and a new wait period
   // generated.
@@ -423,7 +392,7 @@ TEST_F(UmUpdateCanStartPolicyTest,
   EXPECT_FALSE(ucs_data_->result.update_can_start);
   EXPECT_EQ(UpdateCannotStartReason::kScattering,
             ucs_data_->result.cannot_start_reason);
-  EXPECT_EQ(TimeDelta::FromSeconds(35), ucs_data_->result.scatter_wait_period);
+  EXPECT_EQ(base::Seconds(35), ucs_data_->result.scatter_wait_period);
   EXPECT_EQ(0, ucs_data_->result.scatter_check_threshold);
 }
 
@@ -436,9 +405,9 @@ TEST_F(UmUpdateCanStartPolicyTest,
   // with a non-zero wait period (for which we cannot reliably control).
 
   fake_state_.device_policy_provider()->var_scatter_factor()->reset(
-      new TimeDelta(TimeDelta::FromSeconds(1)));
+      new TimeDelta(base::Seconds(1)));
 
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(1));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(1));
   ucs_data_->update_state.scatter_check_threshold_min = 2;
   ucs_data_->update_state.scatter_check_threshold_max = 5;
 
@@ -457,9 +426,9 @@ TEST_F(UmUpdateCanStartPolicyTest,
   // scattering due to a previously generated count threshold still applies.
 
   fake_state_.device_policy_provider()->var_scatter_factor()->reset(
-      new TimeDelta(TimeDelta::FromSeconds(1)));
+      new TimeDelta(base::Seconds(1)));
 
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(1));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(1));
   ucs_data_->update_state.scatter_check_threshold = 3;
   ucs_data_->update_state.scatter_check_threshold_min = 2;
   ucs_data_->update_state.scatter_check_threshold_max = 5;
@@ -478,11 +447,11 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedScatteringSatisfied) {
   // satisfied.
 
   fake_state_.device_policy_provider()->var_scatter_factor()->reset(
-      new TimeDelta(TimeDelta::FromSeconds(120)));
+      new TimeDelta(base::Seconds(120)));
 
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(75));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(75));
   ucs_data_->update_state.num_checks = 4;
-  ucs_data_->update_state.scatter_wait_period = TimeDelta::FromSeconds(60);
+  ucs_data_->update_state.scatter_wait_period = base::Seconds(60);
   ucs_data_->update_state.scatter_check_threshold = 3;
   ucs_data_->update_state.scatter_check_threshold_min = 2;
   ucs_data_->update_state.scatter_check_threshold_max = 5;
@@ -504,9 +473,9 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedInteractivePreventsScattering) {
   // and so it is suppressed.
 
   fake_state_.device_policy_provider()->var_scatter_factor()->reset(
-      new TimeDelta(TimeDelta::FromSeconds(1)));
+      new TimeDelta(base::Seconds(1)));
 
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(1));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(1));
   ucs_data_->update_state.interactive = true;
   ucs_data_->update_state.scatter_check_threshold = 0;
   ucs_data_->update_state.scatter_check_threshold_min = 2;
@@ -529,10 +498,10 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedOobePreventsScattering) {
   // is suppressed.
 
   fake_state_.device_policy_provider()->var_scatter_factor()->reset(
-      new TimeDelta(TimeDelta::FromSeconds(1)));
+      new TimeDelta(base::Seconds(1)));
   fake_state_.system_provider()->var_is_oobe_complete()->reset(new bool(false));
 
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(1));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(1));
   ucs_data_->update_state.interactive = true;
   ucs_data_->update_state.scatter_check_threshold = 0;
   ucs_data_->update_state.scatter_check_threshold_min = 2;
@@ -560,7 +529,7 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedWithAttributes) {
       new bool(true));
 
   // Check that the UpdateCanStart returns true.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(ucs_data_->result.update_can_start);
   EXPECT_TRUE(ucs_data_->result.p2p_downloading_allowed);
@@ -580,7 +549,7 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedWithP2PFromUpdater) {
   fake_state_.updater_provider()->var_p2p_enabled()->reset(new bool(true));
 
   // Check that the UpdateCanStart returns true.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(ucs_data_->result.update_can_start);
   EXPECT_TRUE(ucs_data_->result.p2p_downloading_allowed);
@@ -603,7 +572,7 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedP2PDownloadingBlockedDueToOmaha) {
       new bool(true));
 
   // Check that the UpdateCanStart returns true.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   ucs_data_->update_state.p2p_downloading_disabled = true;
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(ucs_data_->result.update_can_start);
@@ -623,7 +592,7 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedP2PSharingBlockedDueToOmaha) {
       new bool(true));
 
   // Check that the UpdateCanStart returns true.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   ucs_data_->update_state.p2p_sharing_disabled = true;
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(ucs_data_->result.update_can_start);
@@ -644,7 +613,7 @@ TEST_F(UmUpdateCanStartPolicyTest,
       new bool(true));
 
   // Check that the UpdateCanStart returns true.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   ucs_data_->update_state.p2p_num_attempts = kMaxP2PAttempts;
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(ucs_data_->result.update_can_start);
@@ -665,11 +634,11 @@ TEST_F(UmUpdateCanStartPolicyTest,
       new bool(true));
 
   // Check that the UpdateCanStart returns true.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   ucs_data_->update_state.p2p_num_attempts = 1;
   ucs_data_->update_state.p2p_first_attempted =
       fake_clock_->GetWallclockTime() -
-      TimeDelta::FromSeconds(kMaxP2PAttemptsPeriodInSeconds + 1);
+      (kMaxP2PAttemptsPeriod + base::Seconds(1));
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(ucs_data_->result.update_can_start);
   EXPECT_FALSE(ucs_data_->result.p2p_downloading_allowed);
@@ -688,7 +657,7 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedWithHttpUrlForUnofficialBuild) {
       new bool(false));
 
   // Check that the UpdateCanStart returns true.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(ucs_data_->result.update_can_start);
   EXPECT_EQ(0, ucs_data_->result.download_url_idx);
@@ -706,7 +675,7 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedWithHttpsUrl) {
       new bool(false));
 
   // Add an HTTPS URL.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   ucs_data_->update_state.download_urls.emplace_back("https://secure/url/");
 
   // Check that the UpdateCanStart returns true.
@@ -725,15 +694,15 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedMaxErrorsNotExceeded) {
 
   // Add a second URL; update with this URL attempted and failed enough times to
   // disqualify the current (first) URL.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   ucs_data_->update_state.num_checks = 5;
   ucs_data_->update_state.download_urls.emplace_back(
       "http://another/fake/url/");
-  Time t = fake_clock_->GetWallclockTime() - TimeDelta::FromSeconds(12);
+  Time t = fake_clock_->GetWallclockTime() - base::Seconds(12);
   for (int i = 0; i < 5; i++) {
     ucs_data_->update_state.download_errors.emplace_back(
         0, ErrorCode::kDownloadTransferError, t);
-    t += TimeDelta::FromSeconds(1);
+    t += base::Seconds(1);
   }
 
   // Check that the UpdateCanStart returns true.
@@ -751,15 +720,15 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedWithSecondUrlMaxExceeded) {
 
   // Add a second URL; update with this URL attempted and failed enough times to
   // disqualify the current (first) URL.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   ucs_data_->update_state.num_checks = 10;
   ucs_data_->update_state.download_urls.emplace_back(
       "http://another/fake/url/");
-  Time t = fake_clock_->GetWallclockTime() - TimeDelta::FromSeconds(12);
+  Time t = fake_clock_->GetWallclockTime() - base::Seconds(12);
   for (int i = 0; i < 11; i++) {
     ucs_data_->update_state.download_errors.emplace_back(
         0, ErrorCode::kDownloadTransferError, t);
-    t += TimeDelta::FromSeconds(1);
+    t += base::Seconds(1);
   }
 
   // Check that the UpdateCanStart returns true.
@@ -777,14 +746,14 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedWithSecondUrlHardError) {
 
   // Add a second URL; update with this URL attempted and failed in a way that
   // causes it to switch directly to the next URL.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   ucs_data_->update_state.num_checks = 10;
   ucs_data_->update_state.download_urls.emplace_back(
       "http://another/fake/url/");
   ucs_data_->update_state.download_errors.emplace_back(
       0,
       ErrorCode::kPayloadHashMismatchError,
-      fake_clock_->GetWallclockTime() - TimeDelta::FromSeconds(1));
+      fake_clock_->GetWallclockTime() - base::Seconds(1));
 
   // Check that the UpdateCanStart returns true.
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
@@ -802,7 +771,7 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedUrlWrapsAround) {
   // Add a second URL; update with this URL attempted and failed in a way that
   // causes it to switch directly to the next URL. We must disable backoff in
   // order for it not to interfere.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   ucs_data_->update_state.num_checks = 1;
   ucs_data_->update_state.is_backoff_disabled = true;
   ucs_data_->update_state.download_urls.emplace_back(
@@ -810,7 +779,7 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedUrlWrapsAround) {
   ucs_data_->update_state.download_errors.emplace_back(
       1,
       ErrorCode::kPayloadHashMismatchError,
-      fake_clock_->GetWallclockTime() - TimeDelta::FromSeconds(1));
+      fake_clock_->GetWallclockTime() - base::Seconds(1));
 
   // Check that the UpdateCanStart returns true.
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
@@ -835,7 +804,7 @@ TEST_F(UmUpdateCanStartPolicyTest, NotAllowedNoUsableUrls) {
       new bool(false));
 
   // Check that the UpdateCanStart returns false.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_FALSE(ucs_data_->result.update_can_start);
   EXPECT_EQ(UpdateCannotStartReason::kCannotDownload,
@@ -858,7 +827,7 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedNoUsableUrlsButP2PEnabled) {
       new bool(false));
 
   // Check that the UpdateCanStart returns true.
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromMinutes(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Minutes(10));
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(ucs_data_->result.update_can_start);
   EXPECT_TRUE(ucs_data_->result.p2p_downloading_allowed);
@@ -875,11 +844,11 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedScatteringSupressedDueToP2P) {
   // are download URL values, albeit the latter are not allowed to be used.
 
   fake_state_.device_policy_provider()->var_scatter_factor()->reset(
-      new TimeDelta(TimeDelta::FromMinutes(2)));
+      new TimeDelta(base::Minutes(2)));
   fake_state_.updater_provider()->var_p2p_enabled()->reset(new bool(true));
 
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(1));
-  ucs_data_->update_state.scatter_wait_period = TimeDelta::FromSeconds(35);
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(1));
+  ucs_data_->update_state.scatter_wait_period = base::Seconds(35);
 
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(ucs_data_->result.update_can_start);
@@ -889,7 +858,7 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedScatteringSupressedDueToP2P) {
   EXPECT_TRUE(ucs_data_->result.p2p_downloading_allowed);
   EXPECT_TRUE(ucs_data_->result.p2p_sharing_allowed);
   EXPECT_FALSE(ucs_data_->result.do_increment_failures);
-  EXPECT_EQ(TimeDelta::FromSeconds(35), ucs_data_->result.scatter_wait_period);
+  EXPECT_EQ(base::Seconds(35), ucs_data_->result.scatter_wait_period);
   EXPECT_EQ(0, ucs_data_->result.scatter_check_threshold);
 }
 
@@ -899,16 +868,12 @@ TEST_F(UmUpdateCanStartPolicyTest, AllowedBackoffSupressedDueToP2P) {
   // are download URL values, albeit the latter are not allowed to be used.
 
   const Time curr_time = fake_clock_->GetWallclockTime();
-  ucs_data_->update_state = GetDefaultUpdateState(TimeDelta::FromSeconds(10));
+  ucs_data_->update_state = GetDefaultUpdateState(base::Seconds(10));
   ucs_data_->update_state.download_errors_max = 1;
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(8));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(8));
   ucs_data_->update_state.download_errors.emplace_back(
-      0,
-      ErrorCode::kDownloadTransferError,
-      curr_time - TimeDelta::FromSeconds(2));
+      0, ErrorCode::kDownloadTransferError, curr_time - base::Seconds(2));
   fake_state_.updater_provider()->var_p2p_enabled()->reset(new bool(true));
 
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());

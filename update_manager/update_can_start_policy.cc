@@ -298,9 +298,8 @@ EvalStatus UpdateCanStartPolicy::Evaluate(EvaluationContext* ec,
       LOG(INFO) << "Blocked P2P downloading as it was attempted too many "
                    "times.";
     } else if (!update_state.p2p_first_attempted.is_null() &&
-               ec->IsWallclockTimeGreaterThan(
-                   update_state.p2p_first_attempted +
-                   TimeDelta::FromSeconds(kMaxP2PAttemptsPeriodInSeconds))) {
+               ec->IsWallclockTimeGreaterThan(update_state.p2p_first_attempted +
+                                              kMaxP2PAttemptsPeriod)) {
       LOG(INFO) << "Blocked P2P downloading as its usage timespan exceeds "
                    "limit.";
     } else {
@@ -526,10 +525,10 @@ EvalStatus UpdateBackoffAndDownloadUrl(
     PRNG prng(*seed);
     int exp = std::min(update_state.num_failures,
                        static_cast<int>(sizeof(int)) * 8 - 2);
-    TimeDelta backoff_interval = TimeDelta::FromDays(std::min(
+    TimeDelta backoff_interval = base::Days(std::min(
         1 << exp,
         kNextUpdateCheckPolicyConstants.attempt_backoff_max_interval_in_days));
-    TimeDelta backoff_fuzz = TimeDelta::FromHours(
+    TimeDelta backoff_fuzz = base::Hours(
         kNextUpdateCheckPolicyConstants.attempt_backoff_fuzz_in_hours);
     TimeDelta wait_period = NextUpdateCheckTimePolicyImpl::FuzzedInterval(
         &prng, backoff_interval.InSeconds(), backoff_fuzz.InSeconds());
@@ -586,8 +585,8 @@ EvalStatus UpdateScattering(EvaluationContext* ec,
   // scatter factor, then generate a new one. Otherwise, keep the one we have.
   TimeDelta wait_period = update_state.scatter_wait_period;
   if (wait_period == kZeroInterval || wait_period > *scatter_factor_p) {
-    wait_period = TimeDelta::FromSeconds(
-        prng.RandMinMax(1, scatter_factor_p->InSeconds()));
+    wait_period =
+        base::Seconds(prng.RandMinMax(1, scatter_factor_p->InSeconds()));
   }
 
   // If we surpassed the wait period or the max scatter period associated with

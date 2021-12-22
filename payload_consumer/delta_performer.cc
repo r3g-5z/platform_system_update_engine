@@ -71,10 +71,12 @@ using std::vector;
 
 namespace chromeos_update_engine {
 const unsigned DeltaPerformer::kProgressLogMaxChunks = 10;
-const unsigned DeltaPerformer::kProgressLogTimeoutSeconds = 30;
+const base::TimeDelta DeltaPerformer::kProgressLogTimeoutTime =
+    base::Seconds(30);
 const unsigned DeltaPerformer::kProgressDownloadWeight = 50;
 const unsigned DeltaPerformer::kProgressOperationsWeight = 50;
-const uint64_t DeltaPerformer::kCheckpointFrequencySeconds = 1;
+const base::TimeDelta DeltaPerformer::kCheckpointFrequencyTime =
+    base::Seconds(1);
 
 namespace {
 const int kUpdateStateOperationInvalid = -1;
@@ -538,8 +540,8 @@ MetadataParseResult DeltaPerformer::ParsePayloadMetadata(
   LOCAL_HISTOGRAM_CUSTOM_TIMES(                                              \
       "UpdateEngine.DownloadAction.InstallOperation::" _op_name ".Duration", \
       (base::TimeTicks::Now() - _start_time),                                \
-      base::TimeDelta::FromMilliseconds(10),                                 \
-      base::TimeDelta::FromMinutes(5),                                       \
+      base::Milliseconds(10),                                                \
+      base::Minutes(5),                                                      \
       20);
 
 // Wrapper around write. Returns true if all requested bytes

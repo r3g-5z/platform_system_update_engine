@@ -30,6 +30,7 @@
 #include <base/strings/string_split.h>
 #include <base/threading/platform_thread.h>
 #include <base/threading/thread_task_runner_handle.h>
+#include <base/time/time.h>
 #include <brillo/daemons/daemon.h>
 #include <brillo/flag_helper.h>
 #include <brillo/key_value_store.h>
@@ -64,7 +65,7 @@ const int kContinueRunning = -1;
 // The ShowStatus request will be retried `kShowStatusRetryCount` times at
 // `kShowStatusRetryInterval` second intervals on failure.
 const int kShowStatusRetryCount = 30;
-const int kShowStatusRetryIntervalInSeconds = 2;
+constexpr base::TimeDelta kShowStatusRetryInterval = base::Seconds(2);
 
 class UpdateEngineClient : public brillo::Daemon {
  public:
@@ -164,8 +165,7 @@ bool UpdateEngineClient::ShowStatus() {
            " the update-engine service is needed."
            " Will try "
         << retry_count << " more times!";
-    base::PlatformThread::Sleep(
-        base::TimeDelta::FromSeconds(kShowStatusRetryIntervalInSeconds));
+    base::PlatformThread::Sleep(kShowStatusRetryInterval);
   }
 
   printf("%s", UpdateEngineStatusToString(status).c_str());

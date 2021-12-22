@@ -80,7 +80,7 @@ int GetStagingSchedule(const DevicePolicy* device_policy,
   return previous_days;
 }
 
-int CalculateWaitTimeInDaysFromSchedule(
+base::TimeDelta CalculateWaitTimeFromSchedule(
     const StagingSchedule& staging_schedule) {
   int prev_days = 0;
   int percentage_position = base::RandInt(1, 100);
@@ -88,13 +88,13 @@ int CalculateWaitTimeInDaysFromSchedule(
     int days = staging_pair.days;
     if (percentage_position <= staging_pair.percentage) {
       // Scatter between the start of the range and the end.
-      return prev_days + base::RandInt(1, days - prev_days);
+      return base::Days(prev_days + base::RandInt(1, days - prev_days));
     }
     prev_days = days;
   }
   // Something went wrong.
   NOTREACHED();
-  return 0;
+  return base::Days(0);
 }
 
 StagingCase CalculateStagingCase(const DevicePolicy* device_policy,
@@ -107,8 +107,8 @@ StagingCase CalculateStagingCase(const DevicePolicy* device_policy,
     return StagingCase::kOff;
 
   // Calculate the new wait time.
-  TimeDelta new_staging_wait_time = TimeDelta::FromDays(
-      CalculateWaitTimeInDaysFromSchedule(new_staging_schedule));
+  TimeDelta new_staging_wait_time =
+      CalculateWaitTimeFromSchedule(new_staging_schedule);
   DCHECK_GT(new_staging_wait_time.InSeconds(), 0);
   if (staging_wait_time->InSeconds() > 0) {
     // If there hasn't been any changes to the schedule and there is a value
@@ -130,7 +130,7 @@ StagingCase CalculateStagingCase(const DevicePolicy* device_policy,
   if (SystemState::Get()->prefs()->GetInt64(kPrefsWallClockStagingWaitPeriod,
                                             &wait_period_in_days) &&
       wait_period_in_days > 0 && wait_period_in_days <= max_days) {
-    *staging_wait_time = TimeDelta::FromDays(wait_period_in_days);
+    *staging_wait_time = base::Days(wait_period_in_days);
     return StagingCase::kSetStagingFromPref;
   }
 

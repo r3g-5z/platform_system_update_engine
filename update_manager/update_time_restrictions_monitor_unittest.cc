@@ -37,9 +37,9 @@ namespace chromeos_update_manager {
 
 namespace {
 
-constexpr base::TimeDelta kDurationOffset = base::TimeDelta::FromMinutes(1);
-constexpr base::TimeDelta kHourDuration = base::TimeDelta::FromHours(1);
-constexpr base::TimeDelta kMinuteDuration = base::TimeDelta::FromMinutes(1);
+constexpr base::TimeDelta kDurationOffset = base::Minutes(1);
+constexpr base::TimeDelta kHourDuration = base::Hours(1);
+constexpr base::TimeDelta kMinuteDuration = base::Minutes(1);
 // Initial time: Monday, May 4th 2020 8:13 AM before interval.
 constexpr base::Time::Exploded kInitialTimeBeforeInterval{
     2020, 5, 0, 4, 10, 13, 0, 0};

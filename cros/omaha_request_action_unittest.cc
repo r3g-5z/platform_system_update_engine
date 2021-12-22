@@ -1175,7 +1175,7 @@ TEST_F(OmahaRequestActionTest, AllowMiniOsWithoutOOBE) {
 TEST_F(OmahaRequestActionTest, WallClockBasedWaitAloneCausesScattering) {
   request_params_.set_wall_clock_based_wait_enabled(true);
   request_params_.set_update_check_count_wait_enabled(false);
-  request_params_.set_waiting_period(TimeDelta::FromDays(2));
+  request_params_.set_waiting_period(base::Days(2));
   FakeSystemState::Get()->fake_clock()->SetWallclockTime(Time::Now());
   tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
   tuc_params_.expected_code = ErrorCode::kOmahaUpdateDeferredPerPolicy;
@@ -1190,7 +1190,7 @@ TEST_F(OmahaRequestActionTest,
        WallClockBasedWaitAloneCausesScatteringInteractive) {
   request_params_.set_wall_clock_based_wait_enabled(true);
   request_params_.set_update_check_count_wait_enabled(false);
-  request_params_.set_waiting_period(TimeDelta::FromDays(2));
+  request_params_.set_waiting_period(base::Days(2));
   request_params_.set_interactive(true);
   FakeSystemState::Get()->fake_clock()->SetWallclockTime(Time::Now());
   tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
@@ -1203,7 +1203,7 @@ TEST_F(OmahaRequestActionTest,
 
 TEST_F(OmahaRequestActionTest, NoWallClockBasedWaitCausesNoScattering) {
   request_params_.set_wall_clock_based_wait_enabled(false);
-  request_params_.set_waiting_period(TimeDelta::FromDays(2));
+  request_params_.set_waiting_period(base::Days(2));
   request_params_.set_update_check_count_wait_enabled(true);
   request_params_.set_min_update_checks_needed(1);
   request_params_.set_max_update_checks_allowed(8);
@@ -1216,7 +1216,7 @@ TEST_F(OmahaRequestActionTest, NoWallClockBasedWaitCausesNoScattering) {
 
 TEST_F(OmahaRequestActionTest, ZeroMaxDaysToScatterCausesNoScattering) {
   request_params_.set_wall_clock_based_wait_enabled(true);
-  request_params_.set_waiting_period(TimeDelta::FromDays(2));
+  request_params_.set_waiting_period(base::Days(2));
   request_params_.set_update_check_count_wait_enabled(true);
   request_params_.set_min_update_checks_needed(1);
   request_params_.set_max_update_checks_allowed(8);
@@ -1325,7 +1325,7 @@ TEST_F(OmahaRequestActionTest, StagingTurnedOnCausesScattering) {
   // If staging is on, the value for max days to scatter should be ignored, and
   // staging's scatter value should be used.
   request_params_.set_wall_clock_based_wait_enabled(true);
-  request_params_.set_waiting_period(TimeDelta::FromDays(6));
+  request_params_.set_waiting_period(base::Days(6));
   request_params_.set_update_check_count_wait_enabled(false);
   FakeSystemState::Get()->fake_clock()->SetWallclockTime(Time::Now());
 
@@ -2077,9 +2077,9 @@ void OmahaRequestActionTest::PingTest(bool ping_only) {
   EXPECT_CALL(prefs, SetInt64(_, _)).Times(AnyNumber());
   // Add a few hours to the day difference to test no rounding, etc.
   int64_t five_days_ago =
-      (Time::Now() - TimeDelta::FromHours(5 * 24 + 13)).ToInternalValue();
+      (Time::Now() - base::Hours(5 * 24 + 13)).ToInternalValue();
   int64_t six_days_ago =
-      (Time::Now() - TimeDelta::FromHours(6 * 24 + 11)).ToInternalValue();
+      (Time::Now() - base::Hours(6 * 24 + 11)).ToInternalValue();
   EXPECT_CALL(prefs, GetInt64(kPrefsInstallDateDays, _))
       .WillOnce(DoAll(SetArgPointee<1>(0), Return(true)));
   EXPECT_CALL(prefs, GetInt64(kPrefsLastActivePingDay, _))
@@ -2120,7 +2120,7 @@ TEST_F(OmahaRequestActionTest, ActivePingTest) {
       .Times(AnyNumber());
   EXPECT_CALL(prefs, SetInt64(_, _)).Times(AnyNumber());
   int64_t three_days_ago =
-      (Time::Now() - TimeDelta::FromHours(3 * 24 + 12)).ToInternalValue();
+      (Time::Now() - base::Hours(3 * 24 + 12)).ToInternalValue();
   int64_t now = Time::Now().ToInternalValue();
   EXPECT_CALL(prefs, GetInt64(kPrefsInstallDateDays, _))
       .WillOnce(DoAll(SetArgPointee<1>(0), Return(true)));
@@ -2144,8 +2144,7 @@ TEST_F(OmahaRequestActionTest, RollCallPingTest) {
   EXPECT_CALL(prefs, GetInt64(kPrefsMetricsCheckLastReportingTime, _))
       .Times(AnyNumber());
   EXPECT_CALL(prefs, SetInt64(_, _)).Times(AnyNumber());
-  int64_t four_days_ago =
-      (Time::Now() - TimeDelta::FromHours(4 * 24)).ToInternalValue();
+  int64_t four_days_ago = (Time::Now() - base::Hours(4 * 24)).ToInternalValue();
   int64_t now = Time::Now().ToInternalValue();
   EXPECT_CALL(prefs, GetInt64(kPrefsInstallDateDays, _))
       .WillOnce(DoAll(SetArgPointee<1>(0), Return(true)));
@@ -2170,8 +2169,7 @@ TEST_F(OmahaRequestActionTest, NoPingTest) {
   EXPECT_CALL(prefs, GetInt64(kPrefsMetricsCheckLastReportingTime, _))
       .Times(AnyNumber());
   EXPECT_CALL(prefs, SetInt64(_, _)).Times(AnyNumber());
-  int64_t one_hour_ago =
-      (Time::Now() - TimeDelta::FromHours(1)).ToInternalValue();
+  int64_t one_hour_ago = (Time::Now() - base::Hours(1)).ToInternalValue();
   EXPECT_CALL(prefs, GetInt64(kPrefsInstallDateDays, _))
       .WillOnce(DoAll(SetArgPointee<1>(0), Return(true)));
   EXPECT_CALL(prefs, GetInt64(kPrefsLastActivePingDay, _))
@@ -2221,8 +2219,7 @@ TEST_F(OmahaRequestActionTest, BackInTimePingTest) {
   EXPECT_CALL(prefs, GetInt64(kPrefsMetricsCheckLastReportingTime, _))
       .Times(AnyNumber());
   EXPECT_CALL(prefs, SetInt64(_, _)).Times(AnyNumber());
-  int64_t future =
-      (Time::Now() + TimeDelta::FromHours(3 * 24 + 4)).ToInternalValue();
+  int64_t future = (Time::Now() + base::Hours(3 * 24 + 4)).ToInternalValue();
   EXPECT_CALL(prefs, GetInt64(kPrefsInstallDateDays, _))
       .WillOnce(DoAll(SetArgPointee<1>(0), Return(true)));
   EXPECT_CALL(prefs, GetInt64(kPrefsLastActivePingDay, _))
@@ -2251,10 +2248,8 @@ TEST_F(OmahaRequestActionTest, LastPingDayUpdateTest) {
   // minus 200 seconds with a slack of 5 seconds. Therefore, the test
   // may fail if it runs for longer than 5 seconds. It shouldn't run
   // that long though.
-  int64_t midnight =
-      (Time::Now() - TimeDelta::FromSeconds(200)).ToInternalValue();
-  int64_t midnight_slack =
-      (Time::Now() - TimeDelta::FromSeconds(195)).ToInternalValue();
+  int64_t midnight = (Time::Now() - base::Seconds(200)).ToInternalValue();
+  int64_t midnight_slack = (Time::Now() - base::Seconds(195)).ToInternalValue();
   NiceMock<MockPrefs> prefs;
   FakeSystemState::Get()->set_prefs(&prefs);
   EXPECT_CALL(prefs, GetInt64(_, _)).Times(AnyNumber());
@@ -2361,7 +2356,7 @@ TEST_F(OmahaRequestActionTest, NetworkFailureBadHTTPCodeTest) {
 
 TEST_F(OmahaRequestActionTest, TestUpdateFirstSeenAtGetsPersistedFirstTime) {
   request_params_.set_wall_clock_based_wait_enabled(true);
-  request_params_.set_waiting_period(TimeDelta().FromDays(1));
+  request_params_.set_waiting_period(base::Days(1));
   request_params_.set_update_check_count_wait_enabled(false);
 
   Time arbitrary_date;
@@ -2390,7 +2385,7 @@ TEST_F(OmahaRequestActionTest, TestUpdateFirstSeenAtGetsPersistedFirstTime) {
 
 TEST_F(OmahaRequestActionTest, TestUpdateFirstSeenAtGetsUsedIfAlreadyPresent) {
   request_params_.set_wall_clock_based_wait_enabled(true);
-  request_params_.set_waiting_period(TimeDelta().FromDays(1));
+  request_params_.set_waiting_period(base::Days(1));
   request_params_.set_update_check_count_wait_enabled(false);
 
   Time t1, t2;
@@ -2570,7 +2565,7 @@ void OmahaRequestActionTest::P2PTest(bool initial_allow_p2p_for_downloading,
   FakeSystemState::Get()->set_p2p_manager(&mock_p2p_manager);
   mock_p2p_manager.fake().SetLookupUrlForFileResult(p2p_client_result_url);
 
-  TimeDelta timeout = TimeDelta::FromSeconds(kMaxP2PNetworkWaitTimeSeconds);
+  TimeDelta timeout = kMaxP2PNetworkWaitTime;
   EXPECT_CALL(mock_p2p_manager, LookupUrlForFile(_, _, timeout, _))
       .Times(expect_p2p_client_lookup ? 1 : 0);
 

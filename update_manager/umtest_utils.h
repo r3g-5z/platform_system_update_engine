@@ -32,9 +32,7 @@ namespace chromeos_update_manager {
 class UmTestUtils {
  public:
   // A default timeout to use when making various queries.
-  static const base::TimeDelta DefaultTimeout() {
-    return base::TimeDelta::FromSeconds(kDefaultTimeoutInSeconds);
-  }
+  static constexpr base::TimeDelta DefaultTimeout() { return kDefaultTimeout; }
 
   // Calls GetValue on |variable| and expects its result to be |expected|.
   template <typename T>
@@ -56,7 +54,7 @@ class UmTestUtils {
   }
 
  private:
-  static const unsigned kDefaultTimeoutInSeconds;
+  static constexpr base::TimeDelta kDefaultTimeout = base::Seconds(1);
 };
 
 // PrintTo() functions are used by gtest to print these values. They need to be

@@ -100,9 +100,9 @@ class UmUpdateCheckAllowedPolicyTest : public UmPolicyTestBase {
     SetUpDefaultDevicePolicy();
     Time curr_time = next_update_check;
     if (allow_check)
-      curr_time += TimeDelta::FromSeconds(1);
+      curr_time += base::Seconds(1);
     else
-      curr_time -= TimeDelta::FromSeconds(1);
+      curr_time -= base::Seconds(1);
     fake_clock_->SetWallclockTime(curr_time);
   }
 
@@ -115,7 +115,7 @@ TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedWaitsForTheTimeout) {
   // case.
   Time next_update_check;
   Time last_checked_time =
-      fake_clock_->GetWallclockTime() + TimeDelta::FromMinutes(1234);
+      fake_clock_->GetWallclockTime() + base::Minutes(1234);
 
   fake_state_.updater_provider()->var_last_checked_time()->reset(
       new Time(last_checked_time));
@@ -128,7 +128,7 @@ TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedWaitsForTheTimeout) {
   SetUpDefaultState();
   fake_state_.updater_provider()->var_last_checked_time()->reset(
       new Time(last_checked_time));
-  fake_clock_->SetWallclockTime(next_update_check - TimeDelta::FromSeconds(1));
+  fake_clock_->SetWallclockTime(next_update_check - base::Seconds(1));
 
   EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 
@@ -136,7 +136,7 @@ TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedWaitsForTheTimeout) {
   SetUpDefaultState();
   fake_state_.updater_provider()->var_last_checked_time()->reset(
       new Time(last_checked_time));
-  fake_clock_->SetWallclockTime(next_update_check + TimeDelta::FromSeconds(1));
+  fake_clock_->SetWallclockTime(next_update_check + base::Seconds(1));
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
   EXPECT_FALSE(uca_data_->update_check_params.interactive);
@@ -148,7 +148,7 @@ TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedWaitsForOOBE) {
   // Ensure that update is not allowed even if wait period is satisfied.
   Time next_update_check;
   Time last_checked_time =
-      fake_clock_->GetWallclockTime() + TimeDelta::FromMinutes(1234);
+      fake_clock_->GetWallclockTime() + base::Minutes(1234);
 
   fake_state_.updater_provider()->var_last_checked_time()->reset(
       new Time(last_checked_time));
@@ -160,7 +160,7 @@ TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedWaitsForOOBE) {
   SetUpDefaultState();
   fake_state_.updater_provider()->var_last_checked_time()->reset(
       new Time(last_checked_time));
-  fake_clock_->SetWallclockTime(next_update_check + TimeDelta::FromSeconds(1));
+  fake_clock_->SetWallclockTime(next_update_check + base::Seconds(1));
   fake_state_.system_provider()->var_is_oobe_complete()->reset(new bool(false));
 
   EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
@@ -170,7 +170,7 @@ TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedWaitsForOOBE) {
   SetUpDefaultState();
   fake_state_.updater_provider()->var_last_checked_time()->reset(
       new Time(last_checked_time));
-  fake_clock_->SetWallclockTime(next_update_check + TimeDelta::FromSeconds(1));
+  fake_clock_->SetWallclockTime(next_update_check + base::Seconds(1));
 
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
@@ -224,7 +224,7 @@ TEST_F(UmUpdateCheckAllowedPolicyTest, TestUpdateCheckIntervalTimeout) {
   // After moving the time forward more than the update check interval, it
   // should now allow for update.
   fake_clock_->SetWallclockTime(fake_clock_->GetWallclockTime() +
-                                TimeDelta::FromSeconds(11));
+                                base::Seconds(11));
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
 }
 

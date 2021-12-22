@@ -26,9 +26,7 @@ namespace chromeos_update_manager {
 class FakeUpdateManager : public UpdateManager {
  public:
   FakeUpdateManager()
-      : UpdateManager(base::TimeDelta::FromSeconds(5),
-                      base::TimeDelta::FromHours(1),
-                      new FakeState()) {}
+      : UpdateManager(base::Seconds(5), base::Hours(1), new FakeState()) {}
   FakeUpdateManager(const FakeUpdateManager&) = delete;
   FakeUpdateManager& operator=(const FakeUpdateManager&) = delete;
 

@@ -35,7 +35,7 @@ const WeeklyTimeInterval* FindNextNearestInterval(
   const WeeklyTimeInterval* result_interval = nullptr;
   // As we are dealing with weekly time here, the maximum duration can be one
   // week.
-  TimeDelta duration_till_next_interval = TimeDelta::FromDays(7);
+  TimeDelta duration_till_next_interval = base::Days(7);
   for (const auto& interval : intervals) {
     if (interval.InRange(now)) {
       return &interval;
@@ -96,7 +96,7 @@ void UpdateTimeRestrictionsMonitor::WaitForRestrictedIntervalStarts(
   // If |current_interval| happens right now, set delay to zero.
   const TimeDelta duration_till_start =
       current_interval->InRange(Now())
-          ? TimeDelta::FromMicroseconds(0)
+          ? base::Microseconds(0)
           : Now().GetDurationTo(current_interval->start());
   LOG(INFO) << "Found restricted interval starting at "
             << (SystemState::Get()->clock()->GetWallclockTime() +

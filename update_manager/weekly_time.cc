@@ -24,37 +24,36 @@ using base::TimeDelta;
 using std::string;
 
 namespace {
-const int kDaysInWeek = 7;
+const TimeDelta kTimeInWeek = base::Days(7);
 }
 
 namespace chromeos_update_manager {
 
 TimeDelta WeeklyTime::GetDurationTo(const WeeklyTime& other) const {
   if (other.TimeFromStartOfWeek() < TimeFromStartOfWeek()) {
-    return other.TimeFromStartOfWeek() +
-           (TimeDelta::FromDays(kDaysInWeek) - TimeFromStartOfWeek());
+    return other.TimeFromStartOfWeek() + (kTimeInWeek - TimeFromStartOfWeek());
   }
   return other.TimeFromStartOfWeek() - TimeFromStartOfWeek();
 }
 
 TimeDelta WeeklyTime::TimeFromStartOfWeek() const {
-  return TimeDelta::FromDays(day_of_week_) + time_;
+  return base::Days(day_of_week_) + time_;
 }
 
 void WeeklyTime::AddTime(const TimeDelta& offset) {
   time_ += offset;
   int days_over = time_.InDays();
-  time_ -= TimeDelta::FromDays(days_over);
-  day_of_week_ = (day_of_week_ + days_over - 1) % kDaysInWeek + 1;
+  time_ -= base::Days(days_over);
+  day_of_week_ = (day_of_week_ + days_over - 1) % kTimeInWeek.InDays() + 1;
 }
 
 // static
 WeeklyTime WeeklyTime::FromTime(const Time& time) {
   Time::Exploded exploded;
   time.LocalExplode(&exploded);
-  return WeeklyTime(exploded.day_of_week,
-                    TimeDelta::FromHours(exploded.hour) +
-                        TimeDelta::FromMinutes(exploded.minute));
+  return WeeklyTime(
+      exploded.day_of_week,
+      base::Hours(exploded.hour) + base::Minutes(exploded.minute));
 }
 
 bool WeeklyTimeInterval::InRange(const WeeklyTime& time) const {

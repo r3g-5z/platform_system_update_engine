@@ -23,7 +23,7 @@ using std::string;
 namespace chromeos_update_manager {
 
 const int kMaxP2PAttempts = 10;
-const int kMaxP2PAttemptsPeriodInSeconds = 5 * 24 * 60 * 60;
+const base::TimeDelta kMaxP2PAttemptsPeriod = base::Days(5);
 
 EvalStatus P2PEnabledPolicy::Evaluate(EvaluationContext* ec,
                                       State* state,

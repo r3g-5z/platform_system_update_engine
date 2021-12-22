@@ -20,8 +20,6 @@
 
 namespace chromeos_update_manager {
 
-const unsigned UmTestUtils::kDefaultTimeoutInSeconds = 1;
-
 void PrintTo(const EvalStatus& status, ::std::ostream* os) {
   *os << ToString(status);
 }

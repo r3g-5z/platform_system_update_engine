@@ -715,7 +715,7 @@ static void CheckPayloadBackoffState(PayloadState* payload_state,
   EXPECT_TRUE(payload_state->ShouldBackoffDownload());
   Time backoff_expiry_time = payload_state->GetBackoffExpiryTime();
   // Add 1 hour extra to the 6 hour fuzz check to tolerate edge cases.
-  TimeDelta max_fuzz_delta = TimeDelta::FromHours(7);
+  TimeDelta max_fuzz_delta = base::Hours(7);
   Time expected_min_time = Time::Now() + expected_days - max_fuzz_delta;
   Time expected_max_time = Time::Now() + expected_days + max_fuzz_delta;
   EXPECT_LT(expected_min_time.ToInternalValue(),
@@ -732,16 +732,16 @@ TEST_F(PayloadStateTest, BackoffPeriodsAreInCorrectRange) {
   SetupPayloadStateWith2Urls(
       "Hash8939", true, false, &payload_state, &response);
 
-  CheckPayloadBackoffState(&payload_state, 1, TimeDelta::FromDays(1));
-  CheckPayloadBackoffState(&payload_state, 2, TimeDelta::FromDays(2));
-  CheckPayloadBackoffState(&payload_state, 3, TimeDelta::FromDays(4));
-  CheckPayloadBackoffState(&payload_state, 4, TimeDelta::FromDays(8));
-  CheckPayloadBackoffState(&payload_state, 5, TimeDelta::FromDays(16));
-  CheckPayloadBackoffState(&payload_state, 6, TimeDelta::FromDays(16));
-  CheckPayloadBackoffState(&payload_state, 7, TimeDelta::FromDays(16));
-  CheckPayloadBackoffState(&payload_state, 8, TimeDelta::FromDays(16));
-  CheckPayloadBackoffState(&payload_state, 9, TimeDelta::FromDays(16));
-  CheckPayloadBackoffState(&payload_state, 10, TimeDelta::FromDays(16));
+  CheckPayloadBackoffState(&payload_state, 1, base::Days(1));
+  CheckPayloadBackoffState(&payload_state, 2, base::Days(2));
+  CheckPayloadBackoffState(&payload_state, 3, base::Days(4));
+  CheckPayloadBackoffState(&payload_state, 4, base::Days(8));
+  CheckPayloadBackoffState(&payload_state, 5, base::Days(16));
+  CheckPayloadBackoffState(&payload_state, 6, base::Days(16));
+  CheckPayloadBackoffState(&payload_state, 7, base::Days(16));
+  CheckPayloadBackoffState(&payload_state, 8, base::Days(16));
+  CheckPayloadBackoffState(&payload_state, 9, base::Days(16));
+  CheckPayloadBackoffState(&payload_state, 10, base::Days(16));
 }
 
 TEST_F(PayloadStateTest, BackoffLogicCanBeDisabled) {
@@ -1517,8 +1517,7 @@ TEST_F(PayloadStateTest, DisallowP2PAfterDeadline) {
   EXPECT_TRUE(payload_state.P2PAttemptAllowed());
 
   // Set clock to half the deadline - this should work.
-  fake_clock->SetWallclockTime(
-      epoch + TimeDelta::FromSeconds(kMaxP2PAttemptTimeSeconds) / 2);
+  fake_clock->SetWallclockTime(epoch + kMaxP2PAttemptTime / 2);
   EXPECT_TRUE(payload_state.P2PAttemptAllowed());
 
   // Check that the first attempt timestamp hasn't changed just
@@ -1526,13 +1525,11 @@ TEST_F(PayloadStateTest, DisallowP2PAfterDeadline) {
   EXPECT_EQ(epoch, payload_state.GetP2PFirstAttemptTimestamp());
 
   // Set clock to _just_ before the deadline - this should work.
-  fake_clock->SetWallclockTime(
-      epoch + TimeDelta::FromSeconds(kMaxP2PAttemptTimeSeconds - 1));
+  fake_clock->SetWallclockTime(epoch + kMaxP2PAttemptTime - base::Seconds(1));
   EXPECT_TRUE(payload_state.P2PAttemptAllowed());
 
   // Set clock to _just_ after the deadline - this should not work.
-  fake_clock->SetWallclockTime(
-      epoch + TimeDelta::FromSeconds(kMaxP2PAttemptTimeSeconds + 1));
+  fake_clock->SetWallclockTime(epoch + kMaxP2PAttemptTime + base::Seconds(1));
   EXPECT_FALSE(payload_state.P2PAttemptAllowed());
 }
 

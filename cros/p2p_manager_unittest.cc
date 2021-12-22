@@ -82,7 +82,7 @@ class P2PManagerSimpleTest : public testing::Test {
 
     // Construct the P2P manager under test.
     manager_.reset(P2PManager::Construct(
-        test_conf_, fake_um_, "cros_au", 3, TimeDelta::FromDays(5)));
+        test_conf_, fake_um_, "cros_au", 3, base::Days(5)));
   }
 
   base::SimpleTestClock test_clock_;
@@ -107,7 +107,7 @@ TEST_F(P2PManagerSimpleTest, P2PEnabledInitAndNotChangedAndChanged) {
   brillo::MessageLoopRunMaxIterations(MessageLoop::current(), 100);
 
   // Move clock a few minutes so the timeout causes the policy be re-evaluated.
-  test_clock_.Advance(TimeDelta::FromMinutes(6));
+  test_clock_.Advance(base::Minutes(6));
 
   fake_um_->state()->updater_provider()->var_p2p_enabled()->reset(
       new bool(true));
@@ -161,7 +161,7 @@ TEST_F(P2PManagerTest, HousekeepingCountLimit) {
   for (int n = 0; n < 5; n++) {
     base::FilePath path = test_conf_->GetP2PDir().Append(
         base::StringPrintf("file_%d.cros_au.p2p", n));
-    base::Time file_time = start_time + TimeDelta::FromMinutes(n);
+    base::Time file_time = start_time + base::Minutes(n);
     EXPECT_EQ(0, base::WriteFile(path, nullptr, 0));
     EXPECT_TRUE(base::TouchFile(path, file_time, file_time));
 
@@ -202,7 +202,7 @@ TEST_F(P2PManagerTest, HousekeepingAgeLimit) {
   // flakiness) since the epoch and then we put two files before that
   // date and three files after.
   base::Time cutoff_time = base::Time::FromTimeT(1000000000);
-  TimeDelta age_limit = TimeDelta::FromDays(5);
+  TimeDelta age_limit = base::Days(5);
 
   // Set the clock just so files with a timestamp before |cutoff_time|
   // will be deleted at housekeeping.
@@ -230,8 +230,8 @@ TEST_F(P2PManagerTest, HousekeepingAgeLimit) {
     //                            |
     //                       cutoff_time
     //
-    base::Time file_date = cutoff_time + (n - 2) * TimeDelta::FromDays(1) +
-                           TimeDelta::FromHours(12);
+    base::Time file_date =
+        cutoff_time + (n - 2) * base::Days(1) + base::Hours(12);
 
     EXPECT_EQ(0, base::WriteFile(path, nullptr, 0));
     EXPECT_TRUE(base::TouchFile(path, file_date, file_date));
@@ -524,10 +524,8 @@ TEST_F(P2PManagerTest, LookupURL) {
        "sleep_pid=$!; "
        "echo http://1.2.3.4/; "
        "wait"});
-  manager_->LookupUrlForFile("foobar",
-                             42,
-                             TimeDelta::FromMilliseconds(500),
-                             base::Bind(ExpectUrl, ""));
+  manager_->LookupUrlForFile(
+      "foobar", 42, base::Milliseconds(500), base::Bind(ExpectUrl, ""));
   loop_.Run();
 }
 

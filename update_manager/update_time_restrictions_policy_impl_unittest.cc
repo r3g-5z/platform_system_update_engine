@@ -32,8 +32,8 @@ using std::string;
 
 namespace chromeos_update_manager {
 
-constexpr TimeDelta kHour = TimeDelta::FromHours(1);
-constexpr TimeDelta kMinute = TimeDelta::FromMinutes(1);
+constexpr TimeDelta kHour = base::Hours(1);
+constexpr TimeDelta kMinute = base::Minutes(1);
 
 const WeeklyTimeIntervalVector kTestIntervals{
     // Monday 10:15 AM to Monday 3:30 PM.
