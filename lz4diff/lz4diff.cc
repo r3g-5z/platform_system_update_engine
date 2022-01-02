@@ -122,8 +122,7 @@ bool TryFindDeflates(puffin::Buffer data,
 static bool ConstructLz4diffPatch(Blob inner_patch,
                                   const Lz4diffHeader& header,
                                   Blob* output) {
-  Blob patch;
-  patch.resize(kLz4diffHeaderSize);
+  Blob patch(kLz4diffHeaderSize);
   std::memcpy(patch.data(), kLz4diffMagic.data(), kLz4diffMagic.size());
   *reinterpret_cast<uint32_t*>(patch.data() + kLz4diffMagic.size()) =
       htobe32(kLz4diffVersion);
@@ -165,6 +164,8 @@ static bool TryPuffdiff(puffin::Buffer src,
 static void StoreSrcCompressedFileInfo(const CompressedFile& src_file_info,
                                        Lz4diffHeader* header) {
   *header->mutable_src_info()->mutable_algo() = src_file_info.algo;
+  header->mutable_src_info()->set_zero_padding_enabled(
+      src_file_info.zero_padding_enabled);
   auto& src_blocks = *header->mutable_src_info()->mutable_block_info();
   src_blocks.Clear();
   for (const auto& block : src_file_info.blocks) {
@@ -180,16 +181,15 @@ bool Lz4Diff(std::string_view src,
              std::string_view dst,
              const CompressedFile& src_file_info,
              const CompressedFile& dst_file_info,
-             const bool zero_padding_enabled,
              Blob* output,
              InstallOperation::Type* op_type) noexcept {
   const auto& src_block_info = src_file_info.blocks;
   const auto& dst_block_info = dst_file_info.blocks;
 
-  auto decompressed_src =
-      TryDecompressBlob(src, src_block_info, zero_padding_enabled);
-  auto decompressed_dst =
-      TryDecompressBlob(dst, dst_block_info, zero_padding_enabled);
+  auto decompressed_src = TryDecompressBlob(
+      src, src_block_info, src_file_info.zero_padding_enabled);
+  auto decompressed_dst = TryDecompressBlob(
+      dst, dst_block_info, dst_file_info.zero_padding_enabled);
   if (decompressed_src.empty() || decompressed_dst.empty()) {
     LOG(ERROR) << "Failed to decompress input data";
     return false;
@@ -220,7 +220,7 @@ bool Lz4Diff(std::string_view src,
 
   auto recompressed_blob = TryCompressBlob(ToStringView(decompressed_dst),
                                            dst_block_info,
-                                           zero_padding_enabled,
+                                           dst_file_info.zero_padding_enabled,
                                            dst_file_info.algo);
   TEST_AND_RETURN_FALSE(recompressed_blob.size() > 0);
 
@@ -234,14 +234,12 @@ bool Lz4Diff(const Blob& src,
              const Blob& dst,
              const CompressedFile& src_file_info,
              const CompressedFile& dst_file_info,
-             const bool zero_padding_enabled,
              Blob* output,
              InstallOperation::Type* op_type) noexcept {
   return Lz4Diff(ToStringView(src),
                  ToStringView(dst),
                  src_file_info,
                  dst_file_info,
-                 zero_padding_enabled,
                  output,
                  op_type);
 }
