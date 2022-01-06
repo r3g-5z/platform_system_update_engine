@@ -33,7 +33,7 @@ class CrosHealthdStub : public CrosHealthdInterface {
   ~CrosHealthdStub() = default;
 
   // CrosHealthdInterface overrides.
-  bool Init() override;
+  void BootstrapMojo(BootstrapMojoCallback callback) override;
   TelemetryInfo* const GetTelemetryInfo() override;
   void ProbeTelemetryInfo(
       const std::unordered_set<TelemetryCategoryEnum>& categories,

@@ -26,8 +26,8 @@ std::unique_ptr<CrosHealthdInterface> CreateCrosHealthd() {
   return std::make_unique<CrosHealthdStub>();
 }
 
-bool CrosHealthdStub::Init() {
-  return true;
+void CrosHealthdStub::BootstrapMojo(BootstrapMojoCallback callback) {
+  std::move(callback).Run(true);
 }
 
 TelemetryInfo* const CrosHealthdStub::GetTelemetryInfo() {

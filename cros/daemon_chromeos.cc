@@ -75,22 +75,30 @@ void DaemonChromeOS::OnDBusRegistered(bool succeeded) {
     return;
   }
 
-  // Need to wait for DBus ownership as bootstraping requires requesting
-  // `cros_healthd` DBus API calls.
-  auto* cros_healthd = SystemState::Get()->cros_healthd();
-  LOG(INFO) << "Requesting telemetry info from cros_healthd.";
   // Update the telemetry information before starting the updater, to request
   // once and continue caching on boot.
-  cros_healthd->ProbeTelemetryInfo(
-      {
-          TelemetryCategoryEnum::kNonRemovableBlockDevices,
-          TelemetryCategoryEnum::kCpu,
-          TelemetryCategoryEnum::kMemory,
-          TelemetryCategoryEnum::kSystem2,
-          TelemetryCategoryEnum::kBus,
-      },
-      base::BindOnce([](const TelemetryInfo&) {
-        SystemState::Get()->update_attempter()->StartUpdater();
+  SystemState::Get()->cros_healthd()->BootstrapMojo(
+      base::BindOnce([](bool success) {
+        if (!success) {
+          LOG(ERROR) << "Failed to bootstrap cros_healthd mojo.";
+          brillo::MessageLoop::current()->PostTask(
+              FROM_HERE, base::BindOnce([]() {
+                SystemState::Get()->update_attempter()->StartUpdater();
+              }));
+          return;
+        }
+        LOG(INFO) << "Probing cros_healthd for telemetry info.";
+        SystemState::Get()->cros_healthd()->ProbeTelemetryInfo(
+            {
+                TelemetryCategoryEnum::kNonRemovableBlockDevices,
+                TelemetryCategoryEnum::kCpu,
+                TelemetryCategoryEnum::kMemory,
+                TelemetryCategoryEnum::kSystem2,
+                TelemetryCategoryEnum::kBus,
+            },
+            base::BindOnce([](const TelemetryInfo&) {
+              SystemState::Get()->update_attempter()->StartUpdater();
+            }));
       }));
 }
 

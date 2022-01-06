@@ -79,7 +79,7 @@ bool RealSystemState::Initialize() {
   }
 
   cros_healthd_ = CreateCrosHealthd();
-  if (!cros_healthd_ || !cros_healthd_->Init()) {
+  if (!cros_healthd_) {
     LOG(ERROR) << "Error initializing the CrosHealthdInterface,";
     return false;
   }

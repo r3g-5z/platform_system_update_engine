@@ -36,7 +36,12 @@ class CrosHealthdInterface {
 
   virtual ~CrosHealthdInterface() = default;
 
-  virtual bool Init() = 0;
+  // Bootstraps connection to `cros_healthd` mojo from DBus.
+  // Also waits for `cros_healthd` service to be available.
+  // Must be called prior to using any `cros_healthd` DBus method invocations.
+  // Returns true on success into the callback.
+  using BootstrapMojoCallback = base::OnceCallback<void(bool)>;
+  virtual void BootstrapMojo(BootstrapMojoCallback callback) = 0;
 
   virtual TelemetryInfo* const GetTelemetryInfo() = 0;
 

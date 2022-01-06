@@ -44,8 +44,10 @@ class CrosHealthd : public CrosHealthdInterface {
 
   ~CrosHealthd() = default;
 
+  void Init();
+
   // CrosHealthdInterface overrides.
-  bool Init() override;
+  void BootstrapMojo(BootstrapMojoCallback callback) override;
   TelemetryInfo* const GetTelemetryInfo() override;
   void ProbeTelemetryInfo(
       const std::unordered_set<TelemetryCategoryEnum>& categories,
@@ -60,8 +62,8 @@ class CrosHealthd : public CrosHealthdInterface {
   // Get `cros_healthd` DBus object proxy.
   dbus::ObjectProxy* GetCrosHealthdObjectProxy();
 
-  // Bootstraps connection to `cros_healthd` mojo from DBus.
-  bool BootstrapMojo();
+  void FinalizeBootstrap(BootstrapMojoCallback callback,
+                         bool service_available);
 
   void OnProbeTelemetryInfo(
       ProbeTelemetryInfoCallback once_callback,

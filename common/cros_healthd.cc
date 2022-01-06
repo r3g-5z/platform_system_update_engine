@@ -72,20 +72,19 @@ void PrintError(const chromeos::cros_healthd::mojom::ProbeErrorPtr& error,
 }  // namespace
 
 std::unique_ptr<CrosHealthdInterface> CreateCrosHealthd() {
-  return std::make_unique<CrosHealthd>();
+  auto cros_healthd = std::make_unique<CrosHealthd>();
+  // Call init, instead of in constructor as testing/mocks don't require the
+  // `Init()` call.
+  cros_healthd->Init();
+  return cros_healthd;
 }
 
-bool CrosHealthd::Init() {
-  if (cros_healthd_service_factory_.is_bound()) {
-    LOG(WARNING) << "cros_healthd is already bound, ignoring initialization.";
-    return true;
-  }
+void CrosHealthd::Init() {
   mojo::core::Init();
   ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
       base::ThreadTaskRunnerHandle::Get() /* io_thread_task_runner */,
       mojo::core::ScopedIPCSupport::ShutdownPolicy::
           CLEAN /* blocking shutdown */);
-  return BootstrapMojo();
 }
 
 TelemetryInfo* const CrosHealthd::GetTelemetryInfo() {
@@ -116,7 +115,28 @@ dbus::ObjectProxy* CrosHealthd::GetCrosHealthdObjectProxy() {
       dbus::ObjectPath(diagnostics::kCrosHealthdServicePath));
 }
 
-bool CrosHealthd::BootstrapMojo() {
+void CrosHealthd::BootstrapMojo(BootstrapMojoCallback callback) {
+  if (cros_healthd_service_factory_.is_bound()) {
+    LOG(WARNING) << "cros_healthd is already bound, ignoring initialization.";
+    std::move(callback).Run(true);
+    return;
+  }
+
+  // `cros_healthd` service must be available for bootstrapping.
+  GetCrosHealthdObjectProxy()->WaitForServiceToBeAvailable(
+      base::BindOnce(&CrosHealthd::FinalizeBootstrap,
+                     weak_ptr_factory_.GetWeakPtr(),
+                     std::move(callback)));
+}
+
+void CrosHealthd::FinalizeBootstrap(BootstrapMojoCallback callback,
+                                    bool service_available) {
+  if (!service_available) {
+    LOG(ERROR) << "cros_healthd service not available.";
+    std::move(callback).Run(false);
+    return;
+  }
+
   mojo::PlatformChannel channel;
   brillo::dbus_utils::FileDescriptor fd(
       channel.TakeRemoteEndpoint().TakePlatformHandle().TakeFD().release());
@@ -130,14 +150,16 @@ bool CrosHealthd::BootstrapMojo() {
       /*is_chrome=*/false);
   if (!response) {
     LOG(ERROR) << "Failed to bootstrap mojo connection with cros_healthd.";
-    return false;
+    std::move(callback).Run(false);
+    return;
   }
 
   std::string token;
   dbus::MessageReader reader(response.get());
   if (!reader.PopString(&token)) {
     LOG(ERROR) << "Failed to get token from cros_healthd DBus response.";
-    return false;
+    std::move(callback).Run(false);
+    return;
   }
 
   mojo::IncomingInvitation invitation =
@@ -147,11 +169,11 @@ bool CrosHealthd::BootstrapMojo() {
       invitation.ExtractMessagePipe(token), 0u /* version */);
   if (!opt_pending_service_factory) {
     LOG(ERROR) << "Failed to create pending service factory for cros_healthd.";
-    return false;
+    std::move(callback).Run(false);
+    return;
   }
   cros_healthd_service_factory_.Bind(std::move(opt_pending_service_factory));
-
-  return true;
+  std::move(callback).Run(true);
 }
 
 void CrosHealthd::OnProbeTelemetryInfo(

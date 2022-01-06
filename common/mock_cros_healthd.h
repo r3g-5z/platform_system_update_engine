@@ -27,7 +27,10 @@ namespace chromeos_update_engine {
 
 class MockCrosHealthd : public CrosHealthdInterface {
  public:
-  MOCK_METHOD(bool, Init, (), (override));
+  MOCK_METHOD(void,
+              BootstrapMojo,
+              (BootstrapMojoCallback callback),
+              (override));
   MOCK_METHOD(TelemetryInfo* const, GetTelemetryInfo, (), (override));
   MOCK_METHOD(void,
               ProbeTelemetryInfo,
