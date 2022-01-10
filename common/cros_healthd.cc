@@ -210,15 +210,15 @@ bool CrosHealthd::ParseSystemResultV2(
 
     const auto& dmi_info = system_info_v2->dmi_info;
     if (dmi_info) {
-      if (dmi_info->board_vendor.has_value())
-        telemetry_info->system_v2_info.dmi_info.board_vendor =
-            dmi_info->board_vendor.value();
-      if (dmi_info->board_name.has_value())
-        telemetry_info->system_v2_info.dmi_info.board_name =
-            dmi_info->board_name.value();
-      if (dmi_info->board_version.has_value())
-        telemetry_info->system_v2_info.dmi_info.board_version =
-            dmi_info->board_version.value();
+      if (dmi_info->sys_vendor.has_value())
+        telemetry_info->system_v2_info.dmi_info.sys_vendor =
+            dmi_info->sys_vendor.value();
+      if (dmi_info->product_name.has_value())
+        telemetry_info->system_v2_info.dmi_info.product_name =
+            dmi_info->product_name.value();
+      if (dmi_info->product_version.has_value())
+        telemetry_info->system_v2_info.dmi_info.product_version =
+            dmi_info->product_version.value();
       if (dmi_info->bios_version.has_value())
         telemetry_info->system_v2_info.dmi_info.bios_version =
             dmi_info->bios_version.value();

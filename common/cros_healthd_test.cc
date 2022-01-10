@@ -37,9 +37,9 @@ TEST_F(CrosHealthdTest, ParseSystemResultV2Check) {
     auto telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
     cros_healthd_.ParseSystemResultV2(&telemetry_info_ptr, &telemetry_info);
-    EXPECT_EQ("", telemetry_info.system_v2_info.dmi_info.board_vendor);
-    EXPECT_EQ("", telemetry_info.system_v2_info.dmi_info.board_name);
-    EXPECT_EQ("", telemetry_info.system_v2_info.dmi_info.board_version);
+    EXPECT_EQ("", telemetry_info.system_v2_info.dmi_info.sys_vendor);
+    EXPECT_EQ("", telemetry_info.system_v2_info.dmi_info.product_name);
+    EXPECT_EQ("", telemetry_info.system_v2_info.dmi_info.product_version);
     EXPECT_EQ("", telemetry_info.system_v2_info.dmi_info.bios_version);
     EXPECT_EQ(TelemetryInfo::SystemV2Info::OsInfo::BootMode::kUnknown,
               telemetry_info.system_v2_info.os_info.boot_mode);
@@ -59,7 +59,7 @@ TEST_F(CrosHealthdTest, ParseSystemResultV2Check) {
         chromeos::cros_healthd::mojom::DmiInfo::New();
     auto& dmi_info_ptr = system_info_v2_ptr->dmi_info;
     // Missing values.
-    dmi_info_ptr->board_name = "fake-board-name";
+    dmi_info_ptr->product_name = "fake-product-name";
     dmi_info_ptr->bios_version = "fake-bios-version";
 
     system_info_v2_ptr->os_info = chromeos::cros_healthd::mojom::OsInfo::New();
@@ -67,8 +67,8 @@ TEST_F(CrosHealthdTest, ParseSystemResultV2Check) {
     os_info_ptr->boot_mode = chromeos::cros_healthd::mojom::BootMode::kCrosEfi;
 
     cros_healthd_.ParseSystemResultV2(&telemetry_info_ptr, &telemetry_info);
-    EXPECT_EQ("fake-board-name",
-              telemetry_info.system_v2_info.dmi_info.board_name);
+    EXPECT_EQ("fake-product-name",
+              telemetry_info.system_v2_info.dmi_info.product_name);
     EXPECT_EQ("fake-bios-version",
               telemetry_info.system_v2_info.dmi_info.bios_version);
     EXPECT_EQ(TelemetryInfo::SystemV2Info::OsInfo::BootMode::kCrosEfi,
@@ -88,9 +88,9 @@ TEST_F(CrosHealthdTest, ParseSystemResultV2Check) {
     system_info_v2_ptr->dmi_info =
         chromeos::cros_healthd::mojom::DmiInfo::New();
     auto& dmi_info_ptr = system_info_v2_ptr->dmi_info;
-    dmi_info_ptr->board_vendor = "fake-board-vendor";
-    dmi_info_ptr->board_name = "fake-board-name";
-    dmi_info_ptr->board_version = "fake-board-version";
+    dmi_info_ptr->sys_vendor = "fake-sys-vendor";
+    dmi_info_ptr->product_name = "fake-product-name";
+    dmi_info_ptr->product_version = "fake-product-version";
     dmi_info_ptr->bios_version = "fake-bios-version";
 
     system_info_v2_ptr->os_info = chromeos::cros_healthd::mojom::OsInfo::New();
@@ -98,12 +98,12 @@ TEST_F(CrosHealthdTest, ParseSystemResultV2Check) {
     os_info_ptr->boot_mode = chromeos::cros_healthd::mojom::BootMode::kCrosEfi;
 
     cros_healthd_.ParseSystemResultV2(&telemetry_info_ptr, &telemetry_info);
-    EXPECT_EQ("fake-board-vendor",
-              telemetry_info.system_v2_info.dmi_info.board_vendor);
-    EXPECT_EQ("fake-board-name",
-              telemetry_info.system_v2_info.dmi_info.board_name);
-    EXPECT_EQ("fake-board-version",
-              telemetry_info.system_v2_info.dmi_info.board_version);
+    EXPECT_EQ("fake-sys-vendor",
+              telemetry_info.system_v2_info.dmi_info.sys_vendor);
+    EXPECT_EQ("fake-product-name",
+              telemetry_info.system_v2_info.dmi_info.product_name);
+    EXPECT_EQ("fake-product-version",
+              telemetry_info.system_v2_info.dmi_info.product_version);
     EXPECT_EQ("fake-bios-version",
               telemetry_info.system_v2_info.dmi_info.bios_version);
     EXPECT_EQ(TelemetryInfo::SystemV2Info::OsInfo::BootMode::kCrosEfi,

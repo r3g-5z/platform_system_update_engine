@@ -533,9 +533,9 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
   MockCrosHealthd mock_cros_healthd;
   FakeSystemState::Get()->set_cros_healthd(&mock_cros_healthd);
 
-  const string board_vendor = "fake-board-vendor",
-               board_name = "fake-board-name",
-               board_version = "fake-board-version",
+  const string sys_vendor = "fake-sys-vendor",
+               product_name = "fake-product-name",
+               product_version = "fake-product-version",
                bios_version = "fake-bios-version",
                model_name = "fake-model-name";
   auto boot_mode = TelemetryInfo::SystemV2Info::OsInfo::BootMode::kCrosEfi;
@@ -549,9 +549,9 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
           .dmi_info =
               // NOLINTNEXTLINE(whitespace/braces)
           {
-              .board_vendor = board_vendor,
-              .board_name = board_name,
-              .board_version = board_version,
+              .sys_vendor = sys_vendor,
+              .product_name = product_name,
+              .product_version = product_version,
               .bios_version = bios_version,
           },
           .os_info =
@@ -668,9 +668,9 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
                                    " wireless_ids=\"%s\""
                                    " gpu_ids=\"%s\""
                                    " />\n",
-                                   board_vendor.c_str(),
-                                   board_name.c_str(),
-                                   board_version.c_str(),
+                                   sys_vendor.c_str(),
+                                   product_name.c_str(),
+                                   product_version.c_str(),
                                    bios_version.c_str(),
                                    static_cast<int32_t>(boot_mode),
                                    total_memory_kib,

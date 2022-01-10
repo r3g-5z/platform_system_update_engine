@@ -45,9 +45,9 @@ enum class TelemetryCategoryEnum {
 typedef struct TelemetryInfo {
   typedef struct SystemV2Info {
     typedef struct DmiInfo {
-      std::string board_vendor;
-      std::string board_name;
-      std::string board_version;
+      std::string sys_vendor;
+      std::string product_name;
+      std::string product_version;
       std::string bios_version;
     } DmiInfo;
     DmiInfo dmi_info;

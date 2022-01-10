@@ -528,12 +528,12 @@ string OmahaRequestBuilderXml::GetHw() const {
       " wireless_ids=\"%s\""
       " gpu_ids=\"%s\""
       " />\n",
-      XmlEncodeWithDefault(telemetry_info->system_v2_info.dmi_info.board_vendor)
+      XmlEncodeWithDefault(telemetry_info->system_v2_info.dmi_info.sys_vendor)
           .c_str(),
-      XmlEncodeWithDefault(telemetry_info->system_v2_info.dmi_info.board_name)
+      XmlEncodeWithDefault(telemetry_info->system_v2_info.dmi_info.product_name)
           .c_str(),
       XmlEncodeWithDefault(
-          telemetry_info->system_v2_info.dmi_info.board_version)
+          telemetry_info->system_v2_info.dmi_info.product_version)
           .c_str(),
       XmlEncodeWithDefault(telemetry_info->system_v2_info.dmi_info.bios_version)
           .c_str(),
