@@ -239,10 +239,6 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // 'cros flash' to function properly).
   bool IsAnyUpdateSourceAllowed() const;
 
-  // Changes the reapeated updates flag based on the feature value. Deletes pref
-  // if feature is false. Returns false if unable to store the change.
-  bool ChangeRepeatedUpdates(bool enable);
-
   // Returns whether repeated updates are enabled. Defaults to true if the pref
   // is unset or unable to be read.
   virtual bool IsRepeatedUpdatesEnabled();

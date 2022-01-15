@@ -280,4 +280,31 @@ TEST_F(UmUpdateCheckAllowedPolicyTest,
   EXPECT_FALSE(uca_data_->update_check_params.interactive);
 }
 
+TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedConsumerEnabled) {
+  // Needed to allow next update check to pass the interval check.
+  SetUpdateCheckAllowed(true);
+  fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
+      new bool(false));
+  fake_state_.updater_provider()->var_consumer_auto_update()->reset(
+      new bool(true));
+
+  EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
+  EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
+  EXPECT_FALSE(uca_data_->update_check_params.interactive);
+}
+
+TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedConsumerDisabled) {
+  // Can be omitted, but allows that consumer update is actually what led to
+  // `kAskMeAgainLater`.
+  SetUpdateCheckAllowed(false);
+  fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
+      new bool(false));
+  fake_state_.updater_provider()->var_consumer_auto_update()->reset(
+      new bool(false));
+
+  EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
+  EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
+  EXPECT_FALSE(uca_data_->update_check_params.interactive);
+}
+
 }  // namespace chromeos_update_manager

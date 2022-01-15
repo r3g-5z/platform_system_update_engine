@@ -1997,22 +1997,6 @@ bool UpdateAttempter::IsAnyUpdateSourceAllowed() const {
   return false;
 }
 
-bool UpdateAttempter::ChangeRepeatedUpdates(bool enable) {
-  if (!enable &&
-      SystemState::Get()->prefs()->Delete(kPrefsAllowRepeatedUpdates)) {
-    LOG(INFO) << "Repeated updates has been disabled.";
-    return true;
-  }
-  if (enable && SystemState::Get()->prefs()->SetBoolean(
-                    kPrefsAllowRepeatedUpdates, enable)) {
-    LOG(INFO) << "Repeated updates has been enabled.";
-    return true;
-  }
-  LOG(ERROR) << "Could not change " << kPrefsAllowRepeatedUpdates
-             << " feature to " << (enable ? "enabled." : "disabled.");
-  return false;
-}
-
 bool UpdateAttempter::IsRepeatedUpdatesEnabled() {
   auto* prefs = SystemState::Get()->prefs();
 

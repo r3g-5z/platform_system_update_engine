@@ -89,6 +89,10 @@ class FakeUpdaterProvider : public UpdaterProvider {
     return &var_test_update_check_interval_timeout_;
   }
 
+  FakeVariable<bool>* var_consumer_auto_update() override {
+    return &var_consumer_auto_update_;
+  }
+
  private:
   FakeVariable<base::Time> var_updater_started_time_{"updater_started_time",
                                                      kVariableModePoll};
@@ -116,6 +120,8 @@ class FakeUpdaterProvider : public UpdaterProvider {
       "forced_update_requested", kVariableModeAsync};
   FakeVariable<int64_t> var_test_update_check_interval_timeout_{
       "test_update_check_interval_timeout", kVariableModePoll};
+  FakeVariable<bool> var_consumer_auto_update_{"consumer_auto_update",
+                                               kVariableModeAsync};
 };
 
 }  // namespace chromeos_update_manager

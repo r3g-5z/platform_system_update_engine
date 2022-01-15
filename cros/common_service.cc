@@ -345,20 +345,14 @@ bool UpdateEngineService::ToggleFeature(ErrorPtr* error,
                                         const std::string& feature,
                                         bool enable) {
   if (feature == update_engine::kFeatureRepeatedUpdates) {
-    if (!SystemState::Get()->update_attempter()->ChangeRepeatedUpdates(
-            enable)) {
-      LogAndSetError(error,
-                     FROM_HERE,
-                     string("Error setting AllowRepeatedUpdates to ") +
-                         (enable ? "true" : "false"));
-      return false;
-    }
-    return true;
-  } else {
-    LogAndSetError(
-        error, FROM_HERE, string("Feature ") + feature + " is not supported");
-    return false;
+    return utils::TogglePref(kPrefsAllowRepeatedUpdates, enable);
   }
+  if (feature == update_engine::kFeatureConsumerAutoUpdate) {
+    return utils::TogglePref(kPrefsConsumerAutoUpdate, enable);
+  }
+  LogAndSetError(
+      error, FROM_HERE, string("Feature ") + feature + " is not supported");
+  return false;
 }
 
 bool UpdateEngineService::GetDurationSinceUpdate(ErrorPtr* error,

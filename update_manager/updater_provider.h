@@ -121,6 +121,9 @@ class UpdaterProvider : public Provider {
   // happen.
   virtual Variable<int64_t>* var_test_update_check_interval_timeout() = 0;
 
+  // A variable that returns whether consumers devices allow auto updates.
+  virtual Variable<bool>* var_consumer_auto_update() = 0;
+
  protected:
   UpdaterProvider() {}
 };
