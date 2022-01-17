@@ -21,8 +21,6 @@
 #include <set>
 #include <vector>
 
-#include <base/macros.h>
-
 #include "update_engine/update_metadata.pb.h"
 
 // An ExtentRanges object represents an unordered collection of extents (and

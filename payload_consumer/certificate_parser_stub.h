@@ -21,8 +21,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
-
 #include "update_engine/payload_consumer/certificate_parser_interface.h"
 
 namespace chromeos_update_engine {

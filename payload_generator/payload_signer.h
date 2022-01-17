@@ -20,7 +20,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
 #include <brillo/key_value_store.h>
 #include <brillo/secure_blob.h>
 
@@ -33,6 +32,10 @@ namespace chromeos_update_engine {
 
 class PayloadSigner {
  public:
+  PayloadSigner() = delete;
+  PayloadSigner(const PayloadSigner&) = delete;
+  PayloadSigner& operator=(const PayloadSigner&) = delete;
+
   // Returns true if the payload in |payload_path| is signed and its hash can be
   // verified using the public key in |public_key_path| with the signature
   // of a given version in the signature blob. Returns false otherwise.
@@ -129,7 +132,6 @@ class PayloadSigner {
 
  private:
   // This should never be constructed
-  DISALLOW_IMPLICIT_CONSTRUCTORS(PayloadSigner);
 };
 
 }  // namespace chromeos_update_engine

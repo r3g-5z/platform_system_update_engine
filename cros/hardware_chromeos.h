@@ -21,7 +21,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
 #include <base/time/time.h>
 #include <debugd/dbus-proxies.h>
 

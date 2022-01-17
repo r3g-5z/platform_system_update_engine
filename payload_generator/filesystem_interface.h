@@ -31,7 +31,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
 #include <brillo/key_value_store.h>
 #include <puffin/utils.h>
 

@@ -20,8 +20,6 @@
 
 #include <cstdlib>
 
-#include <base/macros.h>
-
 namespace chromeos_update_engine {
 
 const char* GetHttpResponseDescription(HttpResponseCode code) {

@@ -20,7 +20,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
 #include <brillo/secure_blob.h>
 
 #include "update_engine/client_library/include/update_engine/update_status.h"

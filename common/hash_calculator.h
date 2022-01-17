@@ -24,7 +24,6 @@
 #include <vector>
 
 #include <base/logging.h>
-#include <base/macros.h>
 #include <brillo/secure_blob.h>
 
 // This class provides a simple wrapper around OpenSSL providing a hash of data

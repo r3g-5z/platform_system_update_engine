@@ -21,8 +21,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
-
 #include "update_engine/common/prefs_interface.h"
 
 namespace chromeos_update_engine {

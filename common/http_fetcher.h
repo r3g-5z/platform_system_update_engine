@@ -24,7 +24,6 @@
 
 #include <base/callback.h>
 #include <base/logging.h>
-#include <base/macros.h>
 #include <brillo/message_loops/message_loop.h>
 
 #include "update_engine/common/http_common.h"

@@ -19,8 +19,6 @@
 
 #include <memory>
 
-#include <base/macros.h>
-
 namespace chromeos_update_engine {
 
 class PowerManagerInterface {

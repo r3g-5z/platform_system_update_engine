@@ -19,8 +19,6 @@
 
 #include <memory>
 
-#include <base/macros.h>
-
 #include "update_engine/common/connection_utils.h"
 
 namespace chromeos_update_engine {

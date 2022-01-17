@@ -22,7 +22,6 @@
 #include <utility>
 
 #include <base/logging.h>
-#include <base/macros.h>
 #include <brillo/message_loops/message_loop.h>
 #include <brillo/streams/stream.h>
 

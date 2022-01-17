@@ -20,7 +20,6 @@
 #include <memory>
 #include <string>
 
-#include <base/macros.h>
 #include <dbus/object_path.h>
 
 #include "update_engine/cros/connection_manager_interface.h"

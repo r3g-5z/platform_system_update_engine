@@ -21,7 +21,6 @@
 #include <memory>
 #include <string>
 
-#include <base/macros.h>
 #include <shill/dbus-proxies.h>
 #include <shill/dbus-proxy-mocks.h>
 

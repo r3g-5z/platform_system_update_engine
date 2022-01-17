@@ -21,8 +21,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
-
 namespace chromeos_update_engine {
 
 // The abstract dlcservice interface defines the interaction with the

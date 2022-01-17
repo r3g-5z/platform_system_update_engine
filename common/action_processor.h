@@ -21,7 +21,6 @@
 #include <memory>
 #include <vector>
 
-#include <base/macros.h>
 #include <brillo/errors/error.h>
 
 #include "update_engine/common/error_code.h"

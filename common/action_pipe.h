@@ -24,7 +24,6 @@
 #include <string>
 
 #include <base/logging.h>
-#include <base/macros.h>
 
 // The structure of these classes (Action, ActionPipe, ActionProcessor, etc.)
 // is based on the KSAction* classes from the Google Update Engine code at

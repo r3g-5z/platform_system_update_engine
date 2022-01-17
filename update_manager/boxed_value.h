@@ -20,8 +20,6 @@
 #include <memory>
 #include <string>
 
-#include <base/macros.h>
-
 namespace chromeos_update_manager {
 
 // BoxedValue is a class to hold pointers of a given type that deletes them when

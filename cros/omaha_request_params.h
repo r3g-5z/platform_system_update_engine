@@ -24,7 +24,6 @@
 #include <string>
 #include <vector>
 
-#include <base/macros.h>
 #include <base/time/time.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
