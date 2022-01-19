@@ -69,8 +69,8 @@ TEST_F(TelemetryInfoTest, GetWirelessIds) {
               TelemetryInfo::BusDevice::BusDeviceClass::kWirelessController,
           .bus_type_info =
               TelemetryInfo::BusDevice::PciBusInfo{
-                  .vendor_id = 1,
-                  .device_id = 2,
+                  .vendor_id = 0x0001,
+                  .device_id = 0x0002,
               },
       },
       {
@@ -78,8 +78,8 @@ TEST_F(TelemetryInfoTest, GetWirelessIds) {
               TelemetryInfo::BusDevice::BusDeviceClass::kWirelessController,
           .bus_type_info =
               TelemetryInfo::BusDevice::PciBusInfo{
-                  .vendor_id = 3,
-                  .device_id = 4,
+                  .vendor_id = 0x0003,
+                  .device_id = 0x0004,
               },
       },
       {
@@ -87,8 +87,8 @@ TEST_F(TelemetryInfoTest, GetWirelessIds) {
               TelemetryInfo::BusDevice::BusDeviceClass::kWirelessController,
           .bus_type_info =
               TelemetryInfo::BusDevice::UsbBusInfo{
-                  .vendor_id = 5,
-                  .product_id = 6,
+                  .vendor_id = 0x0005,
+                  .product_id = 0x0006,
               },
       },
       // Should ignore non wireless controller.
@@ -97,12 +97,12 @@ TEST_F(TelemetryInfoTest, GetWirelessIds) {
               TelemetryInfo::BusDevice::BusDeviceClass::kDisplayController,
           .bus_type_info =
               TelemetryInfo::BusDevice::PciBusInfo{
-                  .vendor_id = 7,
-                  .device_id = 8,
+                  .vendor_id = 0x0007,
+                  .device_id = 0x0008,
               },
       },
   };
-  EXPECT_EQ("0100:0200 0300:0400 0500:0600", telemetry_info.GetWirelessIds());
+  EXPECT_EQ("0001:0002 0003:0004 0005:0006", telemetry_info.GetWirelessIds());
 }
 
 TEST_F(TelemetryInfoTest, GetGpuIds) {
@@ -112,8 +112,8 @@ TEST_F(TelemetryInfoTest, GetGpuIds) {
               TelemetryInfo::BusDevice::BusDeviceClass::kDisplayController,
           .bus_type_info =
               TelemetryInfo::BusDevice::PciBusInfo{
-                  .vendor_id = 1,
-                  .device_id = 2,
+                  .vendor_id = 0x8086,
+                  .device_id = 0x0002,
               },
       },
       // Should ignore non display controller.
@@ -122,12 +122,12 @@ TEST_F(TelemetryInfoTest, GetGpuIds) {
               TelemetryInfo::BusDevice::BusDeviceClass::kWirelessController,
           .bus_type_info =
               TelemetryInfo::BusDevice::PciBusInfo{
-                  .vendor_id = 3,
-                  .device_id = 4,
+                  .vendor_id = 0x0003,
+                  .device_id = 0x0004,
               },
       },
   };
-  EXPECT_EQ("0100:0200", telemetry_info.GetGpuIds());
+  EXPECT_EQ("8086:0002", telemetry_info.GetGpuIds());
 }
 
 }  // namespace chromeos_update_engine

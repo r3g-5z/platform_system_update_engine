@@ -591,8 +591,8 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
                   TelemetryInfo::BusDevice::BusDeviceClass::kWirelessController,
               .bus_type_info =
                   TelemetryInfo::BusDevice::PciBusInfo{
-                      .vendor_id = 1,
-                      .device_id = 2,
+                      .vendor_id = 0x0001,
+                      .device_id = 0x0002,
                       .driver = "fake-driver-1",
                   },
           },
@@ -601,8 +601,8 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
                   TelemetryInfo::BusDevice::BusDeviceClass::kWirelessController,
               .bus_type_info =
                   TelemetryInfo::BusDevice::UsbBusInfo{
-                      .vendor_id = 3,
-                      .product_id = 4,
+                      .vendor_id = 0x0003,
+                      .product_id = 0x0004,
                   },
           },
           {
@@ -610,8 +610,8 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
                   TelemetryInfo::BusDevice::BusDeviceClass::kDisplayController,
               .bus_type_info =
                   TelemetryInfo::BusDevice::PciBusInfo{
-                      .vendor_id = 5,
-                      .device_id = 6,
+                      .vendor_id = 0x0005,
+                      .device_id = 0x0006,
                       .driver = "fake-driver-2",
                   },
           },
@@ -620,8 +620,8 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
                   TelemetryInfo::BusDevice::BusDeviceClass::kDisplayController,
               .bus_type_info =
                   TelemetryInfo::BusDevice::UsbBusInfo{
-                      .vendor_id = 7,
-                      .product_id = 8,
+                      .vendor_id = 0x00AA,
+                      .product_id = 0x1111,
                   },
           },
           // Should be ignored.
@@ -630,8 +630,8 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
                   TelemetryInfo::BusDevice::BusDeviceClass::kEthernetController,
               .bus_type_info =
                   TelemetryInfo::BusDevice::PciBusInfo{
-                      .vendor_id = 9,
-                      .device_id = 10,
+                      .vendor_id = 0x0009,
+                      .device_id = 0x000A,
                       .driver = "fake-driver-3",
                   },
           },
@@ -640,8 +640,8 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
                   TelemetryInfo::BusDevice::BusDeviceClass::kEthernetController,
               .bus_type_info =
                   TelemetryInfo::BusDevice::UsbBusInfo{
-                      .vendor_id = 11,
-                      .product_id = 12,
+                      .vendor_id = 0x000B,
+                      .product_id = 0x000C,
                   },
           },
       },
@@ -677,8 +677,8 @@ TEST_F(OmahaRequestBuilderXmlTest, GetRequestXmlHwCheck) {
                                    size,
                                    model_name.c_str(),
                                    "fake-driver-1",
-                                   "0100:0200 0300:0400",
-                                   "0500:0600 0700:0800")))
+                                   "0001:0002 0003:0004",
+                                   "0005:0006 00AA:1111")))
       << request_xml;
 }
 

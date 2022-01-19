@@ -18,6 +18,7 @@
 
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
+#include <base/strings/stringprintf.h>
 
 namespace chromeos_update_engine {
 
@@ -55,20 +56,16 @@ std::string TelemetryInfo::GetBusDeviceIds(
             std::get_if<BusDevice::PciBusInfo>(&bus_device.bus_type_info)) {
       ids.push_back(base::JoinString(
           {
-              base::HexEncode(&pci_bus_info->vendor_id,
-                              sizeof(decltype(pci_bus_info->vendor_id))),
-              base::HexEncode(&pci_bus_info->device_id,
-                              sizeof(decltype(pci_bus_info->device_id))),
+              base::StringPrintf("%04X", pci_bus_info->vendor_id),
+              base::StringPrintf("%04X", pci_bus_info->device_id),
           },
           ":"));
     } else if (const auto* usb_bus_info = std::get_if<BusDevice::UsbBusInfo>(
                    &bus_device.bus_type_info)) {
       ids.push_back(base::JoinString(
           {
-              base::HexEncode(&usb_bus_info->vendor_id,
-                              sizeof(decltype(usb_bus_info->vendor_id))),
-              base::HexEncode(&usb_bus_info->product_id,
-                              sizeof(decltype(usb_bus_info->product_id))),
+              base::StringPrintf("%04X", usb_bus_info->vendor_id),
+              base::StringPrintf("%04X", usb_bus_info->product_id),
           },
           ":"));
     }
