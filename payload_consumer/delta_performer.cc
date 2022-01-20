@@ -1516,6 +1516,11 @@ bool DeltaPerformer::ExtractSignatureMessage() {
 bool DeltaPerformer::GetPublicKey(string* out_public_key) {
   out_public_key->clear();
 
+  if (!install_plan_->signature_checks_mandatory) {
+    LOG(INFO) << "Skipping get public key -- signature checks not required.";
+    return true;
+  }
+
   if (utils::FileExists(public_key_path_.c_str())) {
     LOG(INFO) << "Verifying using public key: " << public_key_path_;
     return utils::ReadFile(public_key_path_, out_public_key);
@@ -1804,7 +1809,7 @@ ErrorCode DeltaPerformer::VerifyPayload(
   // NOLINTNEXTLINE(whitespace/braces)
   auto [payload_verifier, perform_verification] = CreatePayloadVerifier();
   if (!perform_verification) {
-    LOG(WARNING) << "Not verifying signed delta payload -- missing public key.";
+    LOG(WARNING) << "Not verifying payload -- verification is disabled.";
     return ErrorCode::kSuccess;
   }
   if (!payload_verifier) {

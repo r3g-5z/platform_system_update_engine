@@ -1105,7 +1105,7 @@ TEST_F(DeltaPerformerIntegrationTest,
                    -1,
                    kSignatureGeneratedShellBadKey,
                    false,
-                   false,
+                   true,
                    kSourceMinorPayloadVersion);
 }
 

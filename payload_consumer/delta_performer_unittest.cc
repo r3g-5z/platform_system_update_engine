@@ -1069,13 +1069,16 @@ TEST_F(DeltaPerformerTest, NonMandatoryValidMetadataSignatureTest) {
 }
 
 TEST_F(DeltaPerformerTest, UsePublicKeyFromResponse) {
-  // The result of the GetPublicKeyResponse() method is based on three things
+  // The result of the GetPublicKey() method is based on four things
   //
   //  1. Whether it's an official build; and
   //  2. Whether the Public RSA key to be used is in the root filesystem; and
-  //  3. Whether the response has a public key
+  //  3. Whether the response has a public key; and
+  //  4. Whether the install_plan mandates signature checks.
   //
-  // We test all eight combinations to ensure that we only use the
+  // We test when the install_plan does not mandate signature checks and
+  // when the signature checks are mandated,
+  // we test all eight combinations to ensure that we only use the
   // public key in the response if
   //
   //  a. it's not an official build; and
@@ -1144,6 +1147,11 @@ TEST_F(DeltaPerformerTest, UsePublicKeyFromResponse) {
   performer_.public_key_path_ = non_existing_file;
   install_plan_.public_key_rsa = "not-valid-base64";
   EXPECT_FALSE(performer_.GetPublicKey(&public_key));
+
+  // Install plan does not mandate signature checks -> no key
+  install_plan_.signature_checks_mandatory = false;
+  EXPECT_TRUE(performer_.GetPublicKey(&public_key));
+  EXPECT_TRUE(public_key.empty());
 }
 
 TEST_F(DeltaPerformerTest, ConfVersionsMatch) {
