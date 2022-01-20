@@ -21,7 +21,6 @@
 #include <unordered_set>
 
 #include <base/callback.h>
-#include <base/optional.h>
 
 #include "update_engine/common/telemetry_info.h"
 

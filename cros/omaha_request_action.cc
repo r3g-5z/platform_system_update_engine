@@ -19,6 +19,7 @@
 #include <inttypes.h>
 
 #include <limits>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <utility>

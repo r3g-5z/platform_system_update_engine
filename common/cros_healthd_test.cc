@@ -16,6 +16,7 @@
 
 #include "update_engine/common/cros_healthd.h"
 
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -293,7 +294,7 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckPciBus) {
   uint16_t vendor_id = 4;
   uint16_t device_id = 5;
   // Don't use driver after std::move.
-  absl::optional<std::string> driver = "some-driver";
+  std::optional<std::string> driver = "some-driver";
   bus_info_ptr->set_pci_bus_info(
       chromeos::cros_healthd::mojom::PciBusInfo::New(class_id,
                                                      subclass_id,
@@ -455,7 +456,7 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckAllBus) {
     auto& bus_info_ptr = bus_device_ptr->bus_info;
     bus_info_ptr = chromeos::cros_healthd::mojom::BusInfo::New();
     // Don't use driver after std::move.
-    absl::optional<std::string> driver = "some-driver";
+    std::optional<std::string> driver = "some-driver";
     bus_info_ptr->set_pci_bus_info(
         chromeos::cros_healthd::mojom::PciBusInfo::New(class_id,
                                                        subclass_id,
