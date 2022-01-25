@@ -42,10 +42,8 @@ class ConnectionManager : public ConnectionManagerInterface {
 
   // ConnectionManagerInterface overrides.
   bool GetConnectionProperties(ConnectionType* out_type,
-                               ConnectionTethering* out_tethering,
                                bool* out_metered) override;
-  bool IsUpdateAllowedOver(ConnectionType type,
-                           ConnectionTethering tethering) const override;
+  bool IsUpdateAllowedOverMetered() const override;
   bool IsAllowedConnectionTypesForUpdateSet() const override;
 
  private:
@@ -55,7 +53,6 @@ class ConnectionManager : public ConnectionManagerInterface {
 
   bool GetServicePathProperties(const dbus::ObjectPath& path,
                                 ConnectionType* out_type,
-                                ConnectionTethering* out_tethering,
                                 bool* out_metered);
 
   // The mockable interface to access the shill DBus proxies.

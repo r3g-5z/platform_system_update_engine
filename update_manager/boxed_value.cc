@@ -33,7 +33,6 @@
 #include "update_engine/update_manager/updater_provider.h"
 #include "update_engine/update_manager/weekly_time.h"
 
-using chromeos_update_engine::ConnectionTethering;
 using chromeos_update_engine::ConnectionType;
 using chromeos_update_engine::connection_utils::StringForConnectionType;
 using std::set;
@@ -116,24 +115,6 @@ string BoxedValue::ValuePrinter<set<ConnectionType>>(const void* value) {
     ret += StringForConnectionType(type);
   }
   return ret;
-}
-
-template <>
-string BoxedValue::ValuePrinter<ConnectionTethering>(const void* value) {
-  const ConnectionTethering* val =
-      reinterpret_cast<const ConnectionTethering*>(value);
-  switch (*val) {
-    case ConnectionTethering::kNotDetected:
-      return "Not Detected";
-    case ConnectionTethering::kSuspected:
-      return "Suspected";
-    case ConnectionTethering::kConfirmed:
-      return "Confirmed";
-    case ConnectionTethering::kUnknown:
-      return "Unknown";
-  }
-  NOTREACHED();
-  return "Unknown";
 }
 
 template <>

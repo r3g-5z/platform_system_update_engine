@@ -34,18 +34,15 @@ class ConnectionManagerInterface {
 
   virtual ~ConnectionManagerInterface() = default;
 
-  // Populates |out_type| with the type of the network connection
-  // that we are currently connected and |out_tethering| with the estimate of
-  // whether that network is being tethered.
+  // Populates `out_type` with the type of the network connection
+  // that we are currently connected and `out_metered` with the estimate of
+  // whether that network is metered.
   virtual bool GetConnectionProperties(ConnectionType* out_type,
-                                       ConnectionTethering* out_tethering,
                                        bool* out_metered) = 0;
 
   // Returns true if we're allowed to update the system when we're
-  // connected to the internet through the given network connection type and the
-  // given tethering state.
-  virtual bool IsUpdateAllowedOver(ConnectionType type,
-                                   ConnectionTethering tethering) const = 0;
+  // connected to the internet through the given network connection type
+  virtual bool IsUpdateAllowedOverMetered() const = 0;
 
   // Returns true if the allowed connection types for update is set in the
   // device policy. Otherwise, returns false.

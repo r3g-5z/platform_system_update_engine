@@ -1376,46 +1376,34 @@ bool OmahaRequestAction::IsUpdateAllowedOverCellularByPrefs() const {
 bool OmahaRequestAction::IsUpdateAllowedOverCurrentConnection(
     ErrorCode* error) const {
   ConnectionType type;
-  ConnectionTethering tethering;
   bool metered = false;
   ConnectionManagerInterface* connection_manager =
       SystemState::Get()->connection_manager();
-  if (!connection_manager->GetConnectionProperties(
-          &type, &tethering, &metered)) {
+  if (!connection_manager->GetConnectionProperties(&type, &metered)) {
     LOG(INFO) << "We could not determine our connection type. "
               << "Defaulting to allow updates.";
     return true;
   }
 
-  bool is_allowed = connection_manager->IsUpdateAllowedOver(type, tethering);
-  bool is_device_policy_set =
-      connection_manager->IsAllowedConnectionTypesForUpdateSet();
-  // Treats tethered connection as if it is cellular connection.
-  bool is_over_cellular = type == ConnectionType::kCellular ||
-                          tethering == ConnectionTethering::kConfirmed;
+  if (!metered) {
+    LOG(INFO) << "We are connected via an unmetered network, type: "
+              << connection_utils::StringForConnectionType(type);
+    return true;
+  }
 
-  if (!is_over_cellular) {
-    // There's no need to further check user preferences as we are not over
-    // cellular connection.
-    if (!is_allowed) {
-      *error = ErrorCode::kOmahaUpdateIgnoredPerPolicy;
-    } else if (metered) {
-      // Ignores update on metered network.
-      is_allowed = IsUpdateAllowedOverCellularByPrefs();
-      if (!is_allowed)
-        *error = ErrorCode::kOmahaUpdateIgnoredOverMetered;
-    }
-  } else if (is_device_policy_set) {
+  bool is_allowed = true;
+  if (connection_manager->IsAllowedConnectionTypesForUpdateSet()) {
     // There's no need to further check user preferences as the device policy
-    // is set regarding updates over cellular.
-    if (!is_allowed)
+    // is set regarding updates over metered network.
+    LOG(INFO) << "Current connection is metered, checking device policy.";
+    if (!(is_allowed = connection_manager->IsUpdateAllowedOverMetered()))
       *error = ErrorCode::kOmahaUpdateIgnoredPerPolicy;
-  } else {
+  } else if (!(is_allowed = IsUpdateAllowedOverCellularByPrefs())) {
     // Deivce policy is not set, so user preferences overwrite whether to
-    // allow updates over cellular.
-    is_allowed = IsUpdateAllowedOverCellularByPrefs();
-    if (!is_allowed)
-      *error = ErrorCode::kOmahaUpdateIgnoredOverCellular;
+    // allow updates over metered network.
+    *error = type == ConnectionType::kCellular
+                 ? ErrorCode::kOmahaUpdateIgnoredOverCellular
+                 : ErrorCode::kOmahaUpdateIgnoredOverMetered;
   }
 
   LOG(INFO) << "We are connected via "

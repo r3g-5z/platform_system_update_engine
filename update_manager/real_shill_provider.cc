@@ -89,7 +89,7 @@ void RealShillProvider::OnSignalConnected(const string& interface_name,
 bool RealShillProvider::ProcessDefaultService(
     const dbus::ObjectPath& default_service_path) {
   // We assume that if the service path didn't change, then the connection
-  // type and the tethering status of it also didn't change.
+  // type of it also didn't change.
   if (default_service_path_ == default_service_path)
     return true;
 
@@ -103,7 +103,7 @@ bool RealShillProvider::ProcessDefaultService(
 
   if (!is_connected) {
     var_conn_type_.UnsetValue();
-    var_conn_tethering_.UnsetValue();
+    var_is_metered_.UnsetValue();
     return true;
   }
 
@@ -116,32 +116,28 @@ bool RealShillProvider::ProcessDefaultService(
   brillo::ErrorPtr error;
   if (!service->GetProperties(&properties, &error)) {
     var_conn_type_.UnsetValue();
-    var_conn_tethering_.UnsetValue();
+    var_is_metered_.UnsetValue();
     return false;
   }
 
-  // Get the connection tethering mode.
-  const auto& prop_tethering = properties.find(shill::kTetheringProperty);
-  if (prop_tethering == properties.end()) {
-    // Remove the value if not present on the service. This most likely means an
-    // error in shill and the policy will handle it, but we will print a log
-    // message as well for accessing an unused variable.
-    var_conn_tethering_.UnsetValue();
-    LOG(ERROR) << "Could not find connection type (service: "
+  // Get the connection metered property.
+  const auto& prop_metered = properties.find(shill::kMeteredProperty);
+  if (prop_metered == properties.end()) {
+    var_is_metered_.SetValue(false);
+    LOG(ERROR) << "Could not find connection metered property, treat as "
+                  "unmetered (service: "
                << default_service_path_.value() << ")";
   } else {
-    // If the property doesn't contain a string value, the empty string will
-    // become kUnknown.
-    var_conn_tethering_.SetValue(
-        chromeos_update_engine::connection_utils::ParseConnectionTethering(
-            prop_tethering->second.TryGet<string>()));
+    var_is_metered_.SetValue(prop_metered->second.IsTypeCompatible<bool>()
+                                 ? prop_metered->second.Get<bool>()
+                                 : false);
   }
 
   // Get the connection type.
   const auto& prop_type = properties.find(shill::kTypeProperty);
   if (prop_type == properties.end()) {
     var_conn_type_.UnsetValue();
-    LOG(ERROR) << "Could not find connection tethering mode (service: "
+    LOG(ERROR) << "Could not find connection type (service: "
                << default_service_path_.value() << ")";
   } else {
     string type_str = prop_type->second.TryGet<string>();

@@ -29,17 +29,9 @@ enum class ConnectionType {
   kUnknown
 };
 
-enum class ConnectionTethering {
-  kNotDetected,
-  kSuspected,
-  kConfirmed,
-  kUnknown,
-};
-
 namespace connection_utils {
 // Helper methods for converting shill strings into symbolic values.
 ConnectionType ParseConnectionType(const std::string& type_str);
-ConnectionTethering ParseConnectionTethering(const std::string& tethering_str);
 
 // Returns the string representation corresponding to the given connection type.
 const char* StringForConnectionType(ConnectionType type);

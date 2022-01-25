@@ -35,7 +35,6 @@
 #include "update_engine/update_manager/umtest_utils.h"
 
 using base::Time;
-using chromeos_update_engine::ConnectionTethering;
 using chromeos_update_engine::ConnectionType;
 using chromeos_update_engine::FakeSystemState;
 using org::chromium::flimflam::ManagerProxyMock;
@@ -55,6 +54,9 @@ const char* const kFakeWifiServicePath = "/fake/wifi/service";
 const char* const kFakeCellularServicePath = "/fake/cellular/service";
 const char* const kFakeVpnServicePath = "/fake/vpn/service";
 const char* const kFakeUnknownServicePath = "/fake/unknown/service";
+
+const bool kMetered = true;
+const bool kUnmetered = false;
 
 }  // namespace
 
@@ -105,15 +107,14 @@ class UmRealShillProviderTest : public ::testing::Test {
   // ManagerProxyMock instance.
   void SetManagerReply(const char* default_service, bool reply_succeeds);
 
-  // Sets the |service_type|, |physical_technology| and |service_tethering|
-  // properties in the mocked service |service_path|. If any of the three
-  // const char* is a nullptr, the corresponding property will not be included
-  // in the response.
-  // Returns the mock object pointer, owned by the |fake_shill_proxy_|.
+  // Sets the `service_type`, `physical_technology` and `service_metered`
+  // properties in the mocked service `service_path`. If any of the pointers is
+  // a nullptr, the corresponding property will not be included in the response.
+  // Returns the mock object pointer, owned by the `fake_shill_proxy_`.
   ServiceProxyMock* SetServiceReply(const std::string& service_path,
                                     const char* service_type,
                                     const char* physical_technology,
-                                    const char* service_tethering);
+                                    const bool* service_metered);
 
   void InitWithDefaultService(const char* default_service) {
     SetManagerReply(default_service, true);
@@ -124,8 +125,8 @@ class UmRealShillProviderTest : public ::testing::Test {
   }
 
   // Sends a signal informing the provider about a default connection
-  // |service_path|. Sets the fake connection change time in
-  // |conn_change_time_p| if provided.
+  // `service_path`. Sets the fake connection change time in
+  // `conn_change_time_p` if provided.
   void SendDefaultServiceSignal(const std::string& service_path,
                                 Time* conn_change_time_p) {
     const Time conn_change_time = ConnChangedTime();
@@ -139,17 +140,16 @@ class UmRealShillProviderTest : public ::testing::Test {
       *conn_change_time_p = conn_change_time;
   }
 
-  // Sets up expectations for detection of a connection |service_path| with type
-  // |shill_type_str| and tethering mode |shill_tethering_str|. Ensures that the
-  // new connection status and change time are properly detected by the
-  // provider. Writes the fake connection change time to |conn_change_time_p|,
-  // if provided.
+  // Sets up expectations for detection of a connection `service_path` with type
+  // `shill_type_str`. Ensures that the new connection status and change time
+  // are properly detected by the provider. Writes the fake connection change
+  // time to `conn_change_time_p`, if provided.
   void SetupConnectionAndAttrs(const std::string& service_path,
                                const char* shill_type,
-                               const char* shill_tethering,
+                               const bool* shill_metered,
                                Time* conn_change_time_p) {
-    SetServiceReply(service_path, shill_type, nullptr, shill_tethering);
-    // Note: We don't setup this |service_path| as the default service path but
+    SetServiceReply(service_path, shill_type, nullptr, shill_metered);
+    // Note: We don't setup this `service_path` as the default service path but
     // we instead send a signal notifying the change since the code won't call
     // GetProperties on the Manager object at this point.
 
@@ -174,10 +174,8 @@ class UmRealShillProviderTest : public ::testing::Test {
                                   ConnectionType expected_conn_type) {
     // Set up and test the connection, record the change time.
     Time conn_change_time;
-    SetupConnectionAndAttrs(service_path,
-                            shill_type,
-                            shill::kTetheringNotDetectedState,
-                            &conn_change_time);
+    SetupConnectionAndAttrs(
+        service_path, shill_type, nullptr, &conn_change_time);
 
     // Query the connection type, ensure last change time did not change.
     UmTestUtils::ExpectVariableHasValue(expected_conn_type,
@@ -186,20 +184,19 @@ class UmRealShillProviderTest : public ::testing::Test {
                                         provider_->var_conn_last_changed());
   }
 
-  // Sets up a connection and tests that its tethering mode is being properly
+  // Sets up a connection and tests that its metered property is being properly
   // detected by the provider.
-  void SetupConnectionAndTestTethering(
-      const char* service_path,
-      const char* shill_tethering,
-      ConnectionTethering expected_conn_tethering) {
+  void SetupConnectionAndTestMetered(const char* service_path,
+                                     const bool* shill_metered,
+                                     bool expected_metered) {
     // Set up and test the connection, record the change time.
     Time conn_change_time;
     SetupConnectionAndAttrs(
-        service_path, shill::kTypeEthernet, shill_tethering, &conn_change_time);
+        service_path, shill::kTypeWifi, shill_metered, &conn_change_time);
 
-    // Query the connection tethering, ensure last change time did not change.
-    UmTestUtils::ExpectVariableHasValue(expected_conn_tethering,
-                                        provider_->var_conn_tethering());
+    // Query the metered property, ensure last change time did not change.
+    UmTestUtils::ExpectVariableHasValue(expected_metered,
+                                        provider_->var_is_metered());
     UmTestUtils::ExpectVariableHasValue(conn_change_time,
                                         provider_->var_conn_last_changed());
   }
@@ -241,7 +238,7 @@ ServiceProxyMock* UmRealShillProviderTest::SetServiceReply(
     const std::string& service_path,
     const char* service_type,
     const char* physical_technology,
-    const char* service_tethering) {
+    const bool* service_metered) {
   brillo::VariantDictionary reply_dict;
   reply_dict["SomeOtherProperty"] = 0xC0FFEE;
 
@@ -253,8 +250,8 @@ ServiceProxyMock* UmRealShillProviderTest::SetServiceReply(
         std::string(physical_technology);
   }
 
-  if (service_tethering)
-    reply_dict[shill::kTetheringProperty] = std::string(service_tethering);
+  if (service_metered)
+    reply_dict[shill::kMeteredProperty] = *service_metered;
 
   ServiceProxyMock* service_proxy_mock = new ServiceProxyMock();
 
@@ -336,10 +333,8 @@ TEST_F(UmRealShillProviderTest, ReadConnTypeUnknown) {
 TEST_F(UmRealShillProviderTest, ReadConnTypeVpn) {
   InitWithDefaultService("/");
   // Mock logic for returning a default service path and its type.
-  SetServiceReply(kFakeVpnServicePath,
-                  shill::kTypeVPN,
-                  shill::kTypeWifi,
-                  shill::kTetheringNotDetectedState);
+  SetServiceReply(
+      kFakeVpnServicePath, shill::kTypeVPN, shill::kTypeWifi, nullptr);
 
   // Send a signal about a new default service.
   Time conn_change_time;
@@ -390,73 +385,66 @@ TEST_F(UmRealShillProviderTest, ConnTypeCacheInvalidated) {
       kFakeWifiServicePath, shill::kTypeWifi, ConnectionType::kWifi);
 }
 
-// Test that a non-tethering mode is identified correctly.
-TEST_F(UmRealShillProviderTest, ReadConnTetheringNotDetected) {
+// Test that an unmetered connection is identified correctly.
+TEST_F(UmRealShillProviderTest, ReadConnUnmetered) {
   InitWithDefaultService("/");
-  SetupConnectionAndTestTethering(kFakeWifiServicePath,
-                                  shill::kTetheringNotDetectedState,
-                                  ConnectionTethering::kNotDetected);
+  SetupConnectionAndTestMetered(kFakeWifiServicePath,
+                                /*shill_metered=*/&kUnmetered,
+                                /*expected_metered=*/kUnmetered);
 }
 
-// Test that a suspected tethering mode is identified correctly.
-TEST_F(UmRealShillProviderTest, ReadConnTetheringSuspected) {
+// Test that a metered connection is identified correctly.
+TEST_F(UmRealShillProviderTest, ReadConnMetered) {
   InitWithDefaultService("/");
-  SetupConnectionAndTestTethering(kFakeWifiServicePath,
-                                  shill::kTetheringSuspectedState,
-                                  ConnectionTethering::kSuspected);
+  SetupConnectionAndTestMetered(kFakeWifiServicePath,
+                                /*shill_metered=*/&kMetered,
+                                /*expected_metered=*/kMetered);
 }
 
-// Test that a confirmed tethering mode is identified correctly.
-TEST_F(UmRealShillProviderTest, ReadConnTetheringConfirmed) {
+// Test that a metered property unknown connection is correctly identified as
+// unmetered.
+TEST_F(UmRealShillProviderTest, ReadConnMeteredUnknown) {
   InitWithDefaultService("/");
-  SetupConnectionAndTestTethering(kFakeWifiServicePath,
-                                  shill::kTetheringConfirmedState,
-                                  ConnectionTethering::kConfirmed);
+  SetupConnectionAndTestMetered(kFakeWifiServicePath,
+                                /*shill_metered=*/nullptr,
+                                /*expected_metered=*/kUnmetered);
 }
 
-// Test that an unknown tethering mode is identified as such.
-TEST_F(UmRealShillProviderTest, ReadConnTetheringUnknown) {
+// Ensure that the connection metered property is properly cached in the
+// provider.
+TEST_F(UmRealShillProviderTest, ConnMeteredCacheUsed) {
   InitWithDefaultService("/");
-  SetupConnectionAndTestTethering(
-      kFakeWifiServicePath, "FooConnTethering", ConnectionTethering::kUnknown);
+  SetupConnectionAndTestMetered(kFakeEthernetServicePath,
+                                /*shill_metered=*/nullptr,
+                                /*expected_metered=*/kUnmetered);
+
+  UmTestUtils::ExpectVariableHasValue(kUnmetered, provider_->var_is_metered());
 }
 
-// Ensure that the connection tethering mode is properly cached in the provider.
-TEST_F(UmRealShillProviderTest, ConnTetheringCacheUsed) {
-  InitWithDefaultService("/");
-  SetupConnectionAndTestTethering(kFakeEthernetServicePath,
-                                  shill::kTetheringNotDetectedState,
-                                  ConnectionTethering::kNotDetected);
-
-  UmTestUtils::ExpectVariableHasValue(ConnectionTethering::kNotDetected,
-                                      provider_->var_conn_tethering());
-}
-
-// Ensure that the cached connection tethering mode remains valid even when a
+// Ensure that the cached connection metered property remains valid even when a
 // default connection signal occurs but the connection is not changed.
-TEST_F(UmRealShillProviderTest, ConnTetheringCacheRemainsValid) {
+TEST_F(UmRealShillProviderTest, ConnMeteredCacheRemainsValid) {
   InitWithDefaultService("/");
-  SetupConnectionAndTestTethering(kFakeEthernetServicePath,
-                                  shill::kTetheringNotDetectedState,
-                                  ConnectionTethering::kNotDetected);
+  SetupConnectionAndTestMetered(kFakeEthernetServicePath,
+                                /*shill_metered=*/nullptr,
+                                /*expected_metered=*/kUnmetered);
 
   SendDefaultServiceSignal(kFakeEthernetServicePath, nullptr);
 
-  UmTestUtils::ExpectVariableHasValue(ConnectionTethering::kNotDetected,
-                                      provider_->var_conn_tethering());
+  UmTestUtils::ExpectVariableHasValue(kUnmetered, provider_->var_is_metered());
 }
 
-// Ensure that the cached connection tethering mode is invalidated and re-read
+// Ensure that the cached connection metered property is invalidated and re-read
 // when the default connection changes.
-TEST_F(UmRealShillProviderTest, ConnTetheringCacheInvalidated) {
+TEST_F(UmRealShillProviderTest, ConnMeteredCacheInvalidated) {
   InitWithDefaultService("/");
-  SetupConnectionAndTestTethering(kFakeEthernetServicePath,
-                                  shill::kTetheringNotDetectedState,
-                                  ConnectionTethering::kNotDetected);
+  SetupConnectionAndTestMetered(kFakeEthernetServicePath,
+                                /*shill_metered=*/nullptr,
+                                /*expected_metered=*/kUnmetered);
 
-  SetupConnectionAndTestTethering(kFakeWifiServicePath,
-                                  shill::kTetheringConfirmedState,
-                                  ConnectionTethering::kConfirmed);
+  SetupConnectionAndTestMetered(kFakeWifiServicePath,
+                                /*shill_metered=*/&kMetered,
+                                /*expected_metered=*/kMetered);
 }
 
 // Fake two DBus signals prompting a default connection change, but otherwise
@@ -469,7 +457,7 @@ TEST_F(UmRealShillProviderTest, ReadLastChangedTimeTwoSignals) {
   Time conn_change_time;
   SetupConnectionAndAttrs(kFakeEthernetServicePath,
                           shill::kTypeEthernet,
-                          shill::kTetheringNotDetectedState,
+                          nullptr,
                           &conn_change_time);
   // This will set the service path to the same value, so it should not call
   // GetProperties() again.
@@ -503,10 +491,8 @@ TEST_F(UmRealShillProviderTest, NoInitConnStatusReadConnTypeEthernet) {
   EXPECT_TRUE(provider_->Init());
   EXPECT_TRUE(loop_.RunOnce(false));
 
-  SetupConnectionAndAttrs(kFakeEthernetServicePath,
-                          shill::kTypeEthernet,
-                          shill::kTetheringNotDetectedState,
-                          nullptr);
+  SetupConnectionAndAttrs(
+      kFakeEthernetServicePath, shill::kTypeEthernet, nullptr, nullptr);
   UmTestUtils::ExpectVariableHasValue(true, provider_->var_is_connected());
 }
 

@@ -40,17 +40,6 @@ ConnectionType ParseConnectionType(const std::string& type_str) {
   return ConnectionType::kUnknown;
 }
 
-ConnectionTethering ParseConnectionTethering(const std::string& tethering_str) {
-  if (tethering_str == shill::kTetheringNotDetectedState) {
-    return ConnectionTethering::kNotDetected;
-  } else if (tethering_str == shill::kTetheringSuspectedState) {
-    return ConnectionTethering::kSuspected;
-  } else if (tethering_str == shill::kTetheringConfirmedState) {
-    return ConnectionTethering::kConfirmed;
-  }
-  return ConnectionTethering::kUnknown;
-}
-
 const char* StringForConnectionType(ConnectionType type) {
   switch (type) {
     case ConnectionType::kEthernet:

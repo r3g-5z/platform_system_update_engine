@@ -318,8 +318,7 @@ bool UpdateEngineService::GetUpdateOverCellularPermission(ErrorPtr* error,
 
   if (connection_manager->IsAllowedConnectionTypesForUpdateSet()) {
     // We have device policy, so ignore the user preferences.
-    *out_allowed = connection_manager->IsUpdateAllowedOver(
-        ConnectionType::kCellular, ConnectionTethering::kUnknown);
+    *out_allowed = connection_manager->IsUpdateAllowedOverMetered();
   } else {
     const auto* prefs = SystemState::Get()->prefs();
     if (!prefs->Exists(kPrefsUpdateOverCellularPermission)) {

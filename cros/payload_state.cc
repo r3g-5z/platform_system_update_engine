@@ -203,16 +203,15 @@ void PayloadState::AttemptStarted(AttemptType attempt_type) {
 
   metrics::ConnectionType type;
   ConnectionType network_connection_type;
-  ConnectionTethering tethering;
   bool metered = false;
   ConnectionManagerInterface* connection_manager =
       SystemState::Get()->connection_manager();
-  if (!connection_manager->GetConnectionProperties(
-          &network_connection_type, &tethering, &metered)) {
+  if (!connection_manager->GetConnectionProperties(&network_connection_type,
+                                                   &metered)) {
     LOG(ERROR) << "Failed to determine connection type.";
     type = metrics::ConnectionType::kUnknown;
   } else {
-    type = metrics_utils::GetConnectionType(network_connection_type, tethering);
+    type = metrics_utils::GetConnectionType(network_connection_type, metered);
   }
   attempt_connection_type_ = type;
 

@@ -36,10 +36,7 @@ class FakeShillProvider : public ShillProvider {
     return &var_conn_type_;
   }
 
-  FakeVariable<chromeos_update_engine::ConnectionTethering>*
-  var_conn_tethering() override {
-    return &var_conn_tethering_;
-  }
+  FakeVariable<bool>* var_is_metered() override { return &var_is_metered_; }
 
   FakeVariable<base::Time>* var_conn_last_changed() override {
     return &var_conn_last_changed_;
@@ -49,8 +46,7 @@ class FakeShillProvider : public ShillProvider {
   FakeVariable<bool> var_is_connected_{"is_connected", kVariableModePoll};
   FakeVariable<chromeos_update_engine::ConnectionType> var_conn_type_{
       "conn_type", kVariableModePoll};
-  FakeVariable<chromeos_update_engine::ConnectionTethering> var_conn_tethering_{
-      "conn_tethering", kVariableModePoll};
+  FakeVariable<bool> var_is_metered_{"is_metered", kVariableModePoll};
   FakeVariable<base::Time> var_conn_last_changed_{"conn_last_changed",
                                                   kVariableModePoll};
 };

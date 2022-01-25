@@ -864,13 +864,14 @@ TEST_F(OmahaRequestActionTest, ValidUpdateBlockedByConnection) {
   MockConnectionManager mock_cm;
   FakeSystemState::Get()->set_connection_manager(&mock_cm);
 
-  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _, _))
+  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _))
       .WillRepeatedly(DoAll(SetArgPointee<0>(ConnectionType::kEthernet),
-                            SetArgPointee<1>(ConnectionTethering::kUnknown),
-                            SetArgPointee<2>(false),
+                            SetArgPointee<1>(true),
                             Return(true)));
-  EXPECT_CALL(mock_cm, IsUpdateAllowedOver(ConnectionType::kEthernet, _))
+  EXPECT_CALL(mock_cm, IsUpdateAllowedOverMetered())
       .WillRepeatedly(Return(false));
+  EXPECT_CALL(mock_cm, IsAllowedConnectionTypesForUpdateSet())
+      .WillRepeatedly(Return(true));
 
   tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
   tuc_params_.expected_code = ErrorCode::kOmahaUpdateIgnoredPerPolicy;
@@ -887,14 +888,13 @@ TEST_F(OmahaRequestActionTest, ValidUpdateOverCellularAllowedByDevicePolicy) {
   MockConnectionManager mock_cm;
   FakeSystemState::Get()->set_connection_manager(&mock_cm);
 
-  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _, _))
+  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _))
       .WillRepeatedly(DoAll(SetArgPointee<0>(ConnectionType::kCellular),
-                            SetArgPointee<1>(ConnectionTethering::kUnknown),
-                            SetArgPointee<2>(false),
+                            SetArgPointee<1>(true),
                             Return(true)));
   EXPECT_CALL(mock_cm, IsAllowedConnectionTypesForUpdateSet())
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(mock_cm, IsUpdateAllowedOver(ConnectionType::kCellular, _))
+  EXPECT_CALL(mock_cm, IsUpdateAllowedOverMetered())
       .WillRepeatedly(Return(true));
 
   tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
@@ -910,14 +910,13 @@ TEST_F(OmahaRequestActionTest, ValidUpdateOverCellularBlockedByDevicePolicy) {
   MockConnectionManager mock_cm;
   FakeSystemState::Get()->set_connection_manager(&mock_cm);
 
-  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _, _))
+  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _))
       .WillRepeatedly(DoAll(SetArgPointee<0>(ConnectionType::kCellular),
-                            SetArgPointee<1>(ConnectionTethering::kUnknown),
-                            SetArgPointee<2>(false),
+                            SetArgPointee<1>(true),
                             Return(true)));
   EXPECT_CALL(mock_cm, IsAllowedConnectionTypesForUpdateSet())
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(mock_cm, IsUpdateAllowedOver(ConnectionType::kCellular, _))
+  EXPECT_CALL(mock_cm, IsUpdateAllowedOverMetered())
       .WillRepeatedly(Return(false));
 
   tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
@@ -937,14 +936,13 @@ TEST_F(OmahaRequestActionTest,
   fake_prefs_->SetBoolean(kPrefsUpdateOverCellularPermission, true);
   FakeSystemState::Get()->set_connection_manager(&mock_cm);
 
-  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _, _))
+  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _))
       .WillRepeatedly(DoAll(SetArgPointee<0>(ConnectionType::kCellular),
-                            SetArgPointee<1>(ConnectionTethering::kUnknown),
-                            SetArgPointee<2>(false),
+                            SetArgPointee<1>(true),
                             Return(true)));
   EXPECT_CALL(mock_cm, IsAllowedConnectionTypesForUpdateSet())
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(mock_cm, IsUpdateAllowedOver(ConnectionType::kCellular, _))
+  EXPECT_CALL(mock_cm, IsUpdateAllowedOverMetered())
       .WillRepeatedly(Return(true));
 
   tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
@@ -970,14 +968,13 @@ TEST_F(OmahaRequestActionTest,
   // This test tests cellular (3G) being the only connection type being allowed.
   FakeSystemState::Get()->set_connection_manager(&mock_cm);
 
-  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _, _))
+  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _))
       .WillRepeatedly(DoAll(SetArgPointee<0>(ConnectionType::kCellular),
-                            SetArgPointee<1>(ConnectionTethering::kUnknown),
-                            SetArgPointee<2>(false),
+                            SetArgPointee<1>(true),
                             Return(true)));
   EXPECT_CALL(mock_cm, IsAllowedConnectionTypesForUpdateSet())
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(mock_cm, IsUpdateAllowedOver(ConnectionType::kCellular, _))
+  EXPECT_CALL(mock_cm, IsUpdateAllowedOverMetered())
       .WillRepeatedly(Return(true));
 
   tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
@@ -1015,14 +1012,13 @@ TEST_F(OmahaRequestActionTest,
   fake_prefs_->SetInt64(kPrefsUpdateOverCellularTargetSize, new_size);
   FakeSystemState::Get()->set_connection_manager(&mock_cm);
 
-  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _, _))
+  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _))
       .WillRepeatedly(DoAll(SetArgPointee<0>(ConnectionType::kCellular),
-                            SetArgPointee<1>(ConnectionTethering::kUnknown),
-                            SetArgPointee<2>(false),
+                            SetArgPointee<1>(true),
                             Return(true)));
   EXPECT_CALL(mock_cm, IsAllowedConnectionTypesForUpdateSet())
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(mock_cm, IsUpdateAllowedOver(ConnectionType::kCellular, _))
+  EXPECT_CALL(mock_cm, IsUpdateAllowedOverMetered())
       .WillRepeatedly(Return(true));
 
   tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
@@ -1036,14 +1032,14 @@ TEST_F(OmahaRequestActionTest, ValidUpdateOverMeteredBlocked) {
   MockConnectionManager mock_cm;
   FakeSystemState::Get()->set_connection_manager(&mock_cm);
 
-  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _, _))
+  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _))
       .WillRepeatedly(DoAll(SetArgPointee<0>(ConnectionType::kWifi),
-                            SetArgPointee<1>(ConnectionTethering::kUnknown),
-                            SetArgPointee<2>(true),
+                            SetArgPointee<1>(true),
                             Return(true)));
   EXPECT_CALL(mock_cm, IsAllowedConnectionTypesForUpdateSet())
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(mock_cm, IsUpdateAllowedOver(_, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(mock_cm, IsUpdateAllowedOverMetered())
+      .WillRepeatedly(Return(false));
 
   tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
   tuc_params_.expected_code = ErrorCode::kOmahaUpdateIgnoredOverMetered;
@@ -1146,10 +1142,9 @@ TEST_F(OmahaRequestActionTest, SkipNonCriticalUpdatesInOOBEOverCellular) {
   tuc_params_.expected_check_result = metrics::CheckResult::kParsingError;
   tuc_params_.expected_check_reaction = metrics::CheckReaction::kUnset;
 
-  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _, _))
+  EXPECT_CALL(mock_cm, GetConnectionProperties(_, _))
       .WillRepeatedly(DoAll(SetArgPointee<0>(ConnectionType::kCellular),
-                            SetArgPointee<1>(ConnectionTethering::kUnknown),
-                            SetArgPointee<2>(false),
+                            SetArgPointee<1>(true),
                             Return(true)));
   EXPECT_CALL(mock_cm, IsAllowedConnectionTypesForUpdateSet())
       .WillRepeatedly(Return(false));

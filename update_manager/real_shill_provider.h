@@ -54,10 +54,7 @@ class RealShillProvider : public ShillProvider {
     return &var_conn_type_;
   }
 
-  Variable<chromeos_update_engine::ConnectionTethering>* var_conn_tethering()
-      override {
-    return &var_conn_tethering_;
-  }
+  Variable<bool>* var_is_metered() override { return &var_is_metered_; }
 
   Variable<base::Time>* var_conn_last_changed() override {
     return &var_conn_last_changed_;
@@ -73,8 +70,7 @@ class RealShillProvider : public ShillProvider {
                          const std::string& signal_name,
                          bool successful);
 
-  // Get the connection and populate the type and tethering status of the given
-  // default connection.
+  // Get the connection and populate the type of the given default connection.
   bool ProcessDefaultService(const dbus::ObjectPath& default_service_path);
 
   // The current default service path, if connected. "/" means not connected.
@@ -87,8 +83,7 @@ class RealShillProvider : public ShillProvider {
   AsyncCopyVariable<bool> var_is_connected_{"is_connected"};
   AsyncCopyVariable<chromeos_update_engine::ConnectionType> var_conn_type_{
       "conn_type"};
-  AsyncCopyVariable<chromeos_update_engine::ConnectionTethering>
-      var_conn_tethering_{"conn_tethering"};
+  AsyncCopyVariable<bool> var_is_metered_{"is_metered"};
   AsyncCopyVariable<base::Time> var_conn_last_changed_{"conn_last_changed"};
 };
 

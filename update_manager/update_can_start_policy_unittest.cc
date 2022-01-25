@@ -25,7 +25,6 @@
 
 using base::Time;
 using base::TimeDelta;
-using chromeos_update_engine::ConnectionTethering;
 using chromeos_update_engine::ConnectionType;
 using chromeos_update_engine::ErrorCode;
 using chromeos_update_engine::FakeSystemState;
@@ -65,11 +64,9 @@ class UmUpdateCanStartPolicyTest : public UmPolicyTestBase {
     // NOLINTNEXTLINE(readability/casting)
     fake_state_.system_provider()->var_num_slots()->reset(new unsigned int(2));
 
-    // Connection is wifi, untethered.
+    // Connection is wifi
     fake_state_.shill_provider()->var_conn_type()->reset(
         new ConnectionType(ConnectionType::kWifi));
-    fake_state_.shill_provider()->var_conn_tethering()->reset(
-        new ConnectionTethering(ConnectionTethering::kNotDetected));
   }
 
   void SetUpDefaultDevicePolicy() {

@@ -44,9 +44,8 @@ metrics::DownloadErrorCode GetDownloadErrorCode(ErrorCode code);
 // can use utils::GetDownloadError() to get more detail.
 metrics::AttemptResult GetAttemptResult(ErrorCode code);
 
-// Calculates the internet connection type given |type| and |tethering|.
-metrics::ConnectionType GetConnectionType(ConnectionType type,
-                                          ConnectionTethering tethering);
+// Calculates the internet connection type given |type| and |metered|.
+metrics::ConnectionType GetConnectionType(ConnectionType type, bool metered);
 
 // Returns the persisted value from prefs for the given key. It also
 // validates that the value returned is non-negative.

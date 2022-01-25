@@ -34,7 +34,6 @@
 
 using base::Time;
 using base::TimeDelta;
-using chromeos_update_engine::ConnectionTethering;
 using chromeos_update_engine::ConnectionType;
 using std::list;
 using std::map;
@@ -173,22 +172,6 @@ TEST(UmBoxedValueTest, ConnectionTypeToString) {
   EXPECT_EQ(
       "Unknown",
       BoxedValue(new ConnectionType(ConnectionType::kUnknown)).ToString());
-}
-
-TEST(UmBoxedValueTest, ConnectionTetheringToString) {
-  EXPECT_EQ(
-      "Not Detected",
-      BoxedValue(new ConnectionTethering(ConnectionTethering::kNotDetected))
-          .ToString());
-  EXPECT_EQ("Suspected",
-            BoxedValue(new ConnectionTethering(ConnectionTethering::kSuspected))
-                .ToString());
-  EXPECT_EQ("Confirmed",
-            BoxedValue(new ConnectionTethering(ConnectionTethering::kConfirmed))
-                .ToString());
-  EXPECT_EQ("Unknown",
-            BoxedValue(new ConnectionTethering(ConnectionTethering::kUnknown))
-                .ToString());
 }
 
 TEST(UmBoxedValueTest, RollbackToTargetVersionToString) {
