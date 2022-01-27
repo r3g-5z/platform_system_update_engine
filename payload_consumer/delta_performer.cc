@@ -25,6 +25,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -911,8 +912,8 @@ bool DeltaPerformer::PreparePartitionsForUpdate(uint64_t* required_size) {
   // kPrefsUpdateCheckResponseHash to ensure hash of payload that space is
   // preallocated for is the same as the hash of payload being applied.
   string update_check_response_hash;
-  ignore_result(prefs_->GetString(kPrefsUpdateCheckResponseHash,
-                                  &update_check_response_hash));
+  std::ignore = prefs_->GetString(kPrefsUpdateCheckResponseHash,
+                                  &update_check_response_hash);
   return PreparePartitionsForUpdate(prefs_,
                                     boot_control_,
                                     install_plan_->target_slot,
@@ -929,8 +930,8 @@ bool DeltaPerformer::PreparePartitionsForUpdate(
     const std::string& update_check_response_hash,
     uint64_t* required_size) {
   string last_hash;
-  ignore_result(
-      prefs->GetString(kPrefsDynamicPartitionMetadataUpdated, &last_hash));
+  std::ignore =
+      prefs->GetString(kPrefsDynamicPartitionMetadataUpdated, &last_hash);
 
   bool is_resume = !update_check_response_hash.empty() &&
                    last_hash == update_check_response_hash;
