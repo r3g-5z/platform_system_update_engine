@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <tuple>
 
 #include <base/time/time.h>
 #include <gtest/gtest.h>
@@ -55,7 +56,7 @@ Time FixedTime() {
   now_exp.second = 33;
   now_exp.millisecond = 675;
   Time time;
-  ignore_result(Time::FromLocalExploded(now_exp, &time));
+  std::ignore = Time::FromLocalExploded(now_exp, &time);
   return time;
 }
 
@@ -66,7 +67,7 @@ Time RoundedToSecond(Time time) {
   time.LocalExplode(&exp);
   exp.millisecond = 0;
   Time rounded_time;
-  ignore_result(Time::FromLocalExploded(exp, &rounded_time));
+  std::ignore = Time::FromLocalExploded(exp, &rounded_time);
   return rounded_time;
 }
 

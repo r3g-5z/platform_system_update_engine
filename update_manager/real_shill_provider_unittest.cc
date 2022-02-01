@@ -16,6 +16,7 @@
 #include "update_engine/update_manager/real_shill_provider.h"
 
 #include <memory>
+#include <tuple>
 #include <utility>
 
 #include <base/memory/ptr_util.h>
@@ -94,7 +95,7 @@ class UmRealShillProviderTest : public ::testing::Test {
     now_exp.second = 33;
     now_exp.millisecond = 675;
     Time time;
-    ignore_result(Time::FromLocalExploded(now_exp, &time));
+    std::ignore = Time::FromLocalExploded(now_exp, &time);
     return time;
   }
 

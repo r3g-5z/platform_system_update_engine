@@ -17,6 +17,7 @@
 #include "update_engine/update_manager/real_time_provider.h"
 
 #include <memory>
+#include <tuple>
 
 #include <base/logging.h>
 #include <base/time/time.h>
@@ -53,7 +54,7 @@ class UmRealTimeProviderTest : public ::testing::Test {
     now_exp.second = 33;
     now_exp.millisecond = 675;
     Time time;
-    ignore_result(Time::FromLocalExploded(now_exp, &time));
+    std::ignore = Time::FromLocalExploded(now_exp, &time);
     return time;
   }
 
@@ -69,7 +70,7 @@ TEST_F(UmRealTimeProviderTest, CurrDateValid) {
   exploded.second = 0;
   exploded.millisecond = 0;
   Time expected;
-  ignore_result(Time::FromLocalExploded(exploded, &expected));
+  std::ignore = Time::FromLocalExploded(exploded, &expected);
 
   FakeSystemState::Get()->fake_clock()->SetWallclockTime(now);
   UmTestUtils::ExpectVariableHasValue(expected, provider_->var_curr_date());
