@@ -486,8 +486,8 @@ RealUpdaterProvider::RealUpdaterProvider()
       var_test_update_check_interval_timeout_(
           new TestUpdateCheckIntervalTimeoutVariable(
               "test_update_check_interval_timeout")),
-      var_consumer_auto_update_(new BooleanPrefVariable(
-          "consumer_auto_update",
-          chromeos_update_engine::kPrefsConsumerAutoUpdate,
-          true)) {}
+      var_consumer_auto_update_disabled_(new BooleanPrefVariable(
+          "consumer_auto_update_disabled",
+          chromeos_update_engine::kPrefsConsumerAutoUpdateDisabled,
+          false)) {}
 }  // namespace chromeos_update_manager

@@ -76,6 +76,7 @@ class DBusUpdateEngineClient : public UpdateEngineClient {
   bool GetChannel(std::string* out_channel) const override;
 
   bool ToggleFeature(const std::string& feature, bool enable) override;
+  bool IsFeatureEnabled(const std::string& feature, bool* out_enabled) override;
 
   bool RegisterStatusUpdateHandler(StatusUpdateHandler* handler) override;
   bool UnregisterStatusUpdateHandler(StatusUpdateHandler* handler) override;

@@ -113,6 +113,9 @@ class UpdateEngineClient {
 
   virtual bool ToggleFeature(const std::string& feature, bool enable) = 0;
 
+  virtual bool IsFeatureEnabled(const std::string& feature,
+                                bool* out_enabled) = 0;
+
  protected:
   // Use CreateInstance().
   UpdateEngineClient() = default;

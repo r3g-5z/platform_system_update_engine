@@ -38,19 +38,18 @@ EvalStatus ConsumerAutoUpdatePolicyImpl::Evaluate(
       UpdateCheckAllowedPolicyData::GetUpdateCheckParams(data);
 
   // Skip check if device is managed.
-  const bool* device_policy_is_loaded_p =
-      ec->GetValue(dp_provider->var_device_policy_is_loaded());
-  if (device_policy_is_loaded_p && *device_policy_is_loaded_p) {
-    LOG(INFO) << "Device policy is loaded, ignoring consumer auto update.";
+  const bool* has_owner_p = ec->GetValue(dp_provider->var_has_owner());
+  if (has_owner_p && !(*has_owner_p)) {
+    LOG(INFO) << "Managed device, ignoring consumer auto update.";
     return EvalStatus::kContinue;
   }
 
   // Otherwise, check if the consumer device has auto updates disabled.
-  const bool* updater_consumer_auto_update_p =
-      ec->GetValue(state->updater_provider()->var_consumer_auto_update());
-  if (updater_consumer_auto_update_p) {
+  const bool* updater_consumer_auto_update_disabled_p = ec->GetValue(
+      state->updater_provider()->var_consumer_auto_update_disabled());
+  if (updater_consumer_auto_update_disabled_p) {
     // Auto update is enabled.
-    if (*updater_consumer_auto_update_p) {
+    if (!(*updater_consumer_auto_update_disabled_p)) {
       LOG(INFO) << "Consumer auto update is enabled.";
       return EvalStatus::kContinue;
     }

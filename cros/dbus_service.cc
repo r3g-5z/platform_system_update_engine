@@ -163,6 +163,12 @@ bool DBusUpdateEngineService::ToggleFeature(brillo::ErrorPtr* error,
   return common_->ToggleFeature(error, feature, enable);
 }
 
+bool DBusUpdateEngineService::IsFeatureEnabled(brillo::ErrorPtr* error,
+                                               const string& feature,
+                                               bool* out_enabled) {
+  return common_->IsFeatureEnabled(error, feature, out_enabled);
+}
+
 bool DBusUpdateEngineService::GetDurationSinceUpdate(
     ErrorPtr* error, int64_t* out_usec_wallclock) {
   return common_->GetDurationSinceUpdate(error, out_usec_wallclock);

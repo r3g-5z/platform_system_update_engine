@@ -98,8 +98,8 @@ class RealUpdaterProvider : public UpdaterProvider {
     return var_test_update_check_interval_timeout_.get();
   }
 
-  Variable<bool>* var_consumer_auto_update() override {
-    return var_consumer_auto_update_.get();
+  Variable<bool>* var_consumer_auto_update_disabled() override {
+    return var_consumer_auto_update_disabled_.get();
   }
 
  private:
@@ -120,7 +120,7 @@ class RealUpdaterProvider : public UpdaterProvider {
   std::unique_ptr<Variable<unsigned int>> var_server_dictated_poll_interval_;
   std::unique_ptr<Variable<UpdateRequestStatus>> var_forced_update_requested_;
   std::unique_ptr<Variable<int64_t>> var_test_update_check_interval_timeout_;
-  std::unique_ptr<Variable<bool>> var_consumer_auto_update_;
+  std::unique_ptr<Variable<bool>> var_consumer_auto_update_disabled_;
 };
 
 }  // namespace chromeos_update_manager

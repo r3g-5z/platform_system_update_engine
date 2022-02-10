@@ -285,8 +285,8 @@ TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedConsumerEnabled) {
   SetUpdateCheckAllowed(true);
   fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
       new bool(false));
-  fake_state_.updater_provider()->var_consumer_auto_update()->reset(
-      new bool(true));
+  fake_state_.updater_provider()->var_consumer_auto_update_disabled()->reset(
+      new bool(false));
 
   EXPECT_EQ(EvalStatus::kSucceeded, evaluator_->Evaluate());
   EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);
@@ -299,8 +299,8 @@ TEST_F(UmUpdateCheckAllowedPolicyTest, UpdateCheckAllowedConsumerDisabled) {
   SetUpdateCheckAllowed(false);
   fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
       new bool(false));
-  fake_state_.updater_provider()->var_consumer_auto_update()->reset(
-      new bool(false));
+  fake_state_.updater_provider()->var_consumer_auto_update_disabled()->reset(
+      new bool(true));
 
   EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
   EXPECT_TRUE(uca_data_->update_check_params.updates_enabled);

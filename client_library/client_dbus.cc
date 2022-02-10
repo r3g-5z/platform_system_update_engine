@@ -253,5 +253,10 @@ bool DBusUpdateEngineClient::ToggleFeature(const std::string& feature,
   return proxy_->ToggleFeature(feature, enable, nullptr);
 }
 
+bool DBusUpdateEngineClient::IsFeatureEnabled(const std::string& feature,
+                                              bool* out_enabled) {
+  return proxy_->IsFeatureEnabled(feature, out_enabled, nullptr);
+}
+
 }  // namespace internal
 }  // namespace update_engine

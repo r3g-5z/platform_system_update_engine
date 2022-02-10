@@ -297,6 +297,7 @@ int UpdateEngineClient::ProcessFlags() {
   DEFINE_bool(skip_applying,
               false,
               "Skip applying updates, only check if there are updates.");
+  DEFINE_string(is_feature_enabled, "", "Shows the current value of feature.");
 
   // Boilerplate init commands.
   base::CommandLine::Init(argc_, argv_);
@@ -502,6 +503,15 @@ int UpdateEngineClient::ProcessFlags() {
       LOG(ERROR) << "Disabling feature failed.";
       return 1;
     }
+  }
+
+  if (!FLAGS_is_feature_enabled.empty()) {
+    bool enabled = false;
+    if (!client_->IsFeatureEnabled(FLAGS_is_feature_enabled, &enabled)) {
+      LOG(ERROR) << "Could not retrieve feature value.";
+      return 1;
+    }
+    printf("%s", enabled ? "true" : "false");
   }
 
   // Initiate an update check, if necessary.

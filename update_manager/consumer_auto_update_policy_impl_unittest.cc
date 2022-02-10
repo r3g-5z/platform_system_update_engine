@@ -50,36 +50,37 @@ TEST_F(UmConsumerAutoUpdatePolicyImplTest, SkipIfDevicePolicyExists) {
 }
 
 TEST_F(UmConsumerAutoUpdatePolicyImplTest, SkipIfNotDisabled) {
-  fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
-      new bool(false));
+  fake_state_.device_policy_provider()->var_has_owner()->reset(new bool(false));
   EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
 }
 
 TEST_F(UmConsumerAutoUpdatePolicyImplTest, ConsumerDeviceEnabledAutoUpdate) {
-  fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
+  fake_state_.device_policy_provider()->var_has_owner()->reset(new bool(true));
+  fake_state_.updater_provider()->var_consumer_auto_update_disabled()->reset(
       new bool(false));
-  fake_state_.updater_provider()->var_consumer_auto_update()->reset(
-      new bool(true));
   EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
 }
 
 TEST_F(UmConsumerAutoUpdatePolicyImplTest,
        ConsumerDeviceDisabledAutoUpdateBackgroundCheck) {
-  fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
-      new bool(false));
-  fake_state_.updater_provider()->var_consumer_auto_update()->reset(
-      new bool(false));
+  fake_state_.device_policy_provider()->var_has_owner()->reset(new bool(true));
+  fake_state_.updater_provider()->var_consumer_auto_update_disabled()->reset(
+      new bool(true));
   ucp_->interactive = false;
   EXPECT_EQ(EvalStatus::kAskMeAgainLater, evaluator_->Evaluate());
 }
 
 TEST_F(UmConsumerAutoUpdatePolicyImplTest,
        ConsumerDeviceDisabledAutoUpdateInteractiveCheck) {
-  fake_state_.device_policy_provider()->var_device_policy_is_loaded()->reset(
-      new bool(false));
-  fake_state_.updater_provider()->var_consumer_auto_update()->reset(
+  fake_state_.device_policy_provider()->var_has_owner()->reset(new bool(true));
+  fake_state_.updater_provider()->var_consumer_auto_update_disabled()->reset(
       new bool(false));
   ucp_->interactive = true;
+  EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
+}
+
+TEST_F(UmConsumerAutoUpdatePolicyImplTest, ManagedDeviceContinues) {
+  fake_state_.device_policy_provider()->var_has_owner()->reset(new bool(false));
   EXPECT_EQ(EvalStatus::kContinue, evaluator_->Evaluate());
 }
 

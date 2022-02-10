@@ -108,11 +108,25 @@ bool GetTempName(const string& path, base::FilePath* template_path) {
 
 namespace utils {
 
-bool TogglePref(const std::string& pref, bool value) {
+bool ToggleFeature(const std::string& pref, bool value) {
   auto* prefs = SystemState::Get()->prefs();
   LOG(INFO) << "Toggling pref=" << pref << " to " << (value ? "true" : "false");
   if (!prefs->SetBoolean(pref, value)) {
     LOG(ERROR) << "Failed to toggle pref=" << pref;
+    return false;
+  }
+  return true;
+}
+
+bool IsFeatureEnabled(const std::string& pref, bool* value) {
+  auto* prefs = SystemState::Get()->prefs();
+  // Treat missing toggle pref as feature being false.
+  if (!prefs->Exists(pref)) {
+    *value = false;
+    return true;
+  }
+  if (!prefs->GetBoolean(pref, value)) {
+    LOG(ERROR) << "Failed to get pref=" << pref;
     return false;
   }
   return true;

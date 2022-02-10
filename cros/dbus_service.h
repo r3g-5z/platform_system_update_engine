@@ -135,6 +135,12 @@ class DBusUpdateEngineService
                      const std::string& feature,
                      bool enable) override;
 
+  // Given the value of a feature, will return whether or not the feature is
+  // enabled. Otherwise, this method returns with an error.
+  bool IsFeatureEnabled(brillo::ErrorPtr* error,
+                        const std::string& feature,
+                        bool* out_enabled) override;
+
   // Returns the duration since the last successful update, as the
   // duration on the wallclock. Returns an error if the device has not
   // updated.

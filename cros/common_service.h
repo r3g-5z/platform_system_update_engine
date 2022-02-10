@@ -141,6 +141,12 @@ class UpdateEngineService {
                      const std::string& feature,
                      bool enable);
 
+  // Gets feature value on whether it's enabled or not. Otherwise, this method
+  // returns with an error.
+  bool IsFeatureEnabled(brillo::ErrorPtr* error,
+                        const std::string& feature,
+                        bool* out_enabled);
+
   // Returns the duration since the last successful update, as the
   // duration on the wallclock. Returns an error if the device has not
   // updated.
