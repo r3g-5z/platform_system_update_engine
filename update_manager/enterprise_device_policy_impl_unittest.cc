@@ -233,9 +233,7 @@ TEST_F(UmEnterpriseDevicePolicyImplTest,
 
 TEST_F(UmEnterpriseDevicePolicyImplTest,
        UpdateCheckAllowedInstallationsNotBlocked) {
-  EXPECT_CALL(*FakeSystemState::Get()->mock_update_attempter(), IsUpdating())
-      .WillOnce(testing::Return(false));
-
+  fake_state_.system_provider()->var_is_updating()->reset(new bool(false));
   fake_state_.device_policy_provider()->var_update_disabled()->reset(
       new bool(true));
 

@@ -27,6 +27,7 @@
 #include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/cros/omaha_request_params.h"
+#include "update_engine/cros/update_attempter.h"
 #include "update_engine/update_manager/generic_variables.h"
 #include "update_engine/update_manager/variable.h"
 
@@ -122,6 +123,9 @@ bool RealSystemProvider::Init() {
   var_chromeos_version_.reset(new ConstCopyVariable<base::Version>(
       "chromeos_version",
       base::Version(SystemState::Get()->request_params()->app_version())));
+
+  var_is_updating_.reset(new ConstCopyVariable<bool>(
+      "is_updating", SystemState::Get()->update_attempter()->IsUpdating()));
 
   return true;
 }

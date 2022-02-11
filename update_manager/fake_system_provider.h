@@ -56,6 +56,8 @@ class FakeSystemProvider : public SystemProvider {
     return &var_version_;
   }
 
+  FakeVariable<bool>* var_is_updating() override { return &var_is_updating_; }
+
  private:
   FakeVariable<bool> var_is_normal_boot_mode_{"is_normal_boot_mode",
                                               kVariableModeConst};
@@ -68,6 +70,7 @@ class FakeSystemProvider : public SystemProvider {
       "kiosk_required_platform_version", kVariableModePoll};
   FakeVariable<base::Version> var_version_{"chromeos_version",
                                            kVariableModePoll};
+  FakeVariable<bool> var_is_updating_{"is_updating", kVariableModeConst};
 };
 
 }  // namespace chromeos_update_manager

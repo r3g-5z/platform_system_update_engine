@@ -55,6 +55,10 @@ class SystemProvider : public Provider {
   // Chrome OS version number as provided by |ImagePropeties|.
   virtual Variable<base::Version>* var_chromeos_version() = 0;
 
+  // Returns a variable that tells if performing update, otherwise an
+  // indicates an installation.
+  virtual Variable<bool>* var_is_updating() = 0;
+
  protected:
   SystemProvider() {}
 };
