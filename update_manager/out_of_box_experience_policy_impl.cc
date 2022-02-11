@@ -29,6 +29,14 @@ EvalStatus OobePolicyImpl::Evaluate(EvaluationContext* ec,
   SystemProvider* const system_provider = state->system_provider();
 
   // If OOBE is enabled, wait until it is completed.
+  // Unless the request is for non-updates.
+  const bool* is_updating_p =
+      ec->GetValue(state->system_provider()->var_is_updating());
+  if (is_updating_p && !(*is_updating_p)) {
+    LOG(INFO) << "Skipping policy for non-updates.";
+    return EvalStatus::kContinue;
+  }
+
   const bool* is_oobe_enabled_p =
       ec->GetValue(state->config_provider()->var_is_oobe_enabled());
   if (is_oobe_enabled_p && *is_oobe_enabled_p) {
