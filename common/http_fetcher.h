@@ -170,7 +170,7 @@ class HttpFetcher {
   ErrorCode auxiliary_error_code_{ErrorCode::kSuccess};
 
   // The delegate; may be null.
-  HttpFetcherDelegate* delegate_ = nullptr;
+  HttpFetcherDelegate* delegate_;
 
   // Proxy servers
   std::deque<std::string> proxies_;

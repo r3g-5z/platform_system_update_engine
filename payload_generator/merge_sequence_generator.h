@@ -31,9 +31,7 @@
 namespace chromeos_update_engine {
 // Constructs CowMergeOperation from src & dst extents
 CowMergeOperation CreateCowMergeOperation(const Extent& src_extent,
-                                          const Extent& dst_extent,
-                                          CowMergeOperation::Type op_type,
-                                          uint32_t src_offset = 0);
+                                          const Extent& dst_extent);
 
 // Comparator for CowMergeOperation.
 bool operator<(const CowMergeOperation& op1, const CowMergeOperation& op2);
@@ -69,7 +67,7 @@ class MergeSequenceGenerator {
   bool FindDependency(std::map<CowMergeOperation, std::set<CowMergeOperation>>*
                           merge_after) const;
   // The list of CowMergeOperations to sort.
-  const std::vector<CowMergeOperation> operations_;
+  std::vector<CowMergeOperation> operations_;
 };
 
 void SplitSelfOverlapping(const Extent& src_extent,
