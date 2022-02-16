@@ -86,11 +86,13 @@ class FilesystemVerifierAction : public InstallPlanAction {
 
  private:
   friend class FilesystemVerifierActionTestDelegate;
-  void WriteVerityAndHashPartition(const off64_t start_offset,
+  void WriteVerityAndHashPartition(FileDescriptorPtr fd,
+                                   const off64_t start_offset,
                                    const off64_t end_offset,
                                    void* buffer,
                                    const size_t buffer_size);
-  void HashPartition(const off64_t start_offset,
+  void HashPartition(FileDescriptorPtr fd,
+                     const off64_t start_offset,
                      const off64_t end_offset,
                      void* buffer,
                      const size_t buffer_size);
@@ -136,7 +138,7 @@ class FilesystemVerifierAction : public InstallPlanAction {
 
   // If not null, the FileDescriptor used to read from the device.
   // verity writer might attempt to write to this fd, if verity is enabled.
-  std::unique_ptr<FileDescriptor> partition_fd_;
+  FileDescriptorPtr partition_fd_;
 
   // Buffer for storing data we read.
   brillo::Blob buffer_;
