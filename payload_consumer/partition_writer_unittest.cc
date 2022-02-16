@@ -46,19 +46,18 @@ class PartitionWriterTest : public testing::Test {
   // Helper function to pretend that the ECC file descriptor was already opened.
   // Returns a pointer to the created file descriptor.
   FakeFileDescriptor* SetFakeECCFile(size_t size) {
-    EXPECT_FALSE(writer_.verified_source_fd_.source_ecc_fd_)
-        << "source_ecc_fdb already open.";
+    EXPECT_FALSE(writer_.source_ecc_fd_) << "source_ecc_fd_ already open.";
     FakeFileDescriptor* ret = new FakeFileDescriptor();
     fake_ecc_fd_.reset(ret);
     // Call open to simulate it was already opened.
     ret->Open("", 0);
     ret->SetFileSize(size);
-    writer_.verified_source_fd_.source_ecc_fd_ = fake_ecc_fd_;
+    writer_.source_ecc_fd_ = fake_ecc_fd_;
     return ret;
   }
 
   uint64_t GetSourceEccRecoveredFailures() const {
-    return writer_.verified_source_fd_.source_ecc_recovered_failures_;
+    return writer_.source_ecc_recovered_failures_;
   }
 
   AnnotatedOperation GenerateSourceCopyOp(const brillo::Blob& copied_data,
@@ -82,31 +81,22 @@ class PartitionWriterTest : public testing::Test {
 
   brillo::Blob PerformSourceCopyOp(const InstallOperation& op,
                                    const brillo::Blob blob_data) {
-    LOG(INFO) << "Using source part " << source_partition.path();
+    ScopedTempFile source_partition("Blob-XXXXXX");
     FileDescriptorPtr fd(new EintrSafeFileDescriptor());
     DirectExtentWriter extent_writer{fd};
     EXPECT_TRUE(fd->Open(source_partition.path().c_str(), O_RDWR));
-    if (HasFailure()) {
-      return {};
-    }
     EXPECT_TRUE(extent_writer.Init(op.src_extents(), kBlockSize));
-    if (HasFailure()) {
-      return {};
-    }
     EXPECT_TRUE(extent_writer.Write(blob_data.data(), blob_data.size()));
-    if (HasFailure()) {
-      return {};
-    }
-    fd->Flush();
 
+    ScopedTempFile target_partition("Blob-XXXXXX");
+
+    install_part_.source_path = source_partition.path();
+    install_part_.target_path = target_partition.path();
     install_part_.source_size = blob_data.size();
     install_part_.target_size = blob_data.size();
 
     ErrorCode error;
     EXPECT_TRUE(writer_.Init(&install_plan_, true, 0));
-    if (HasFailure()) {
-      return {};
-    }
     EXPECT_TRUE(writer_.PerformSourceCopyOperation(op, &error));
     writer_.CheckpointUpdateProgress(1);
 
@@ -121,11 +111,8 @@ class PartitionWriterTest : public testing::Test {
   DynamicPartitionControlStub dynamic_control_{};
   FileDescriptorPtr fake_ecc_fd_{};
   DeltaArchiveManifest manifest_{};
-  ScopedTempFile source_partition{"source-part-XXXXXX"};
-  ScopedTempFile target_partition{"target-part-XXXXXX"};
-  InstallPlan::Partition install_part_{.source_path = source_partition.path(),
-                                       .target_path = target_partition.path()};
   PartitionUpdate partition_update_{};
+  InstallPlan::Partition install_part_{};
   PartitionWriter writer_{
       partition_update_, install_part_, &dynamic_control_, kBlockSize, false};
 };
@@ -137,7 +124,7 @@ TEST_F(PartitionWriterTest, ErrorCorrectionSourceCopyWhenNoHashFallbackTest) {
   ScopedTempFile source("Source-XXXXXX");
   // Setup the source path with the right expected data.
   brillo::Blob expected_data = FakeFileDescriptorData(kCopyOperationSize);
-  ASSERT_TRUE(test_utils::WriteFileVector(source.path(), expected_data));
+  EXPECT_TRUE(test_utils::WriteFileVector(source.path(), expected_data));
 
   // Setup the fec file descriptor as the fake stream, with smaller data than
   // the expected.
@@ -149,18 +136,17 @@ TEST_F(PartitionWriterTest, ErrorCorrectionSourceCopyWhenNoHashFallbackTest) {
 
   // The payload operation doesn't include an operation hash.
   auto source_copy_op = GenerateSourceCopyOp(expected_data, false, &old_part);
-  ASSERT_NO_FATAL_FAILURE();
+
   auto output_data = PerformSourceCopyOp(source_copy_op.op, expected_data);
-  ASSERT_NO_FATAL_FAILURE();
   ASSERT_EQ(output_data, expected_data);
 
   // Verify that the fake_fec was attempted to be used. Since the file
   // descriptor is shorter it can actually do more than one read to realize it
   // reached the EOF.
-  ASSERT_LE(1U, fake_fec->GetReadOps().size());
+  EXPECT_LE(1U, fake_fec->GetReadOps().size());
   // This fallback doesn't count as an error-corrected operation since the
   // operation hash was not available.
-  ASSERT_EQ(0U, GetSourceEccRecoveredFailures());
+  EXPECT_EQ(0U, GetSourceEccRecoveredFailures());
 }
 
 // Test that the error-corrected file descriptor is used to read the partition
@@ -177,13 +163,11 @@ TEST_F(PartitionWriterTest, ErrorCorrectionSourceCopyFallbackTest) {
   brillo::Blob expected_data = FakeFileDescriptorData(kCopyOperationSize);
 
   auto source_copy_op = GenerateSourceCopyOp(expected_data, true);
-  ASSERT_NO_FATAL_FAILURE();
   auto output_data = PerformSourceCopyOp(source_copy_op.op, invalid_data);
-  ASSERT_NO_FATAL_FAILURE();
   ASSERT_EQ(output_data, expected_data);
 
   // Verify that the fake_fec was actually used.
-  EXPECT_GE(fake_fec->GetReadOps().size(), 1U);
+  EXPECT_EQ(1U, fake_fec->GetReadOps().size());
   EXPECT_EQ(1U, GetSourceEccRecoveredFailures());
 }
 
@@ -193,11 +177,10 @@ TEST_F(PartitionWriterTest, ChooseSourceFDTest) {
   // Write invalid data to the source image, which doesn't match the expected
   // hash.
   brillo::Blob invalid_data(kSourceSize, 0x55);
-  ASSERT_TRUE(test_utils::WriteFileVector(source.path(), invalid_data));
+  EXPECT_TRUE(test_utils::WriteFileVector(source.path(), invalid_data));
 
-  writer_.verified_source_fd_.source_fd_ =
-      std::make_shared<EintrSafeFileDescriptor>();
-  writer_.verified_source_fd_.source_fd_->Open(source.path().c_str(), O_RDONLY);
+  writer_.source_fd_ = std::make_shared<EintrSafeFileDescriptor>();
+  writer_.source_fd_->Open(source.path().c_str(), O_RDONLY);
 
   // Setup the fec file descriptor as the fake stream, which matches
   // |expected_data|.
@@ -207,16 +190,15 @@ TEST_F(PartitionWriterTest, ChooseSourceFDTest) {
   InstallOperation op;
   *(op.add_src_extents()) = ExtentForRange(0, kSourceSize / 4096);
   brillo::Blob src_hash;
-  ASSERT_TRUE(HashCalculator::RawHashOfData(expected_data, &src_hash));
+  EXPECT_TRUE(HashCalculator::RawHashOfData(expected_data, &src_hash));
   op.set_src_sha256_hash(src_hash.data(), src_hash.size());
 
   ErrorCode error = ErrorCode::kSuccess;
-  ASSERT_EQ(writer_.verified_source_fd_.source_ecc_fd_,
-            writer_.ChooseSourceFD(op, &error));
-  ASSERT_EQ(ErrorCode::kSuccess, error);
+  EXPECT_EQ(writer_.source_ecc_fd_, writer_.ChooseSourceFD(op, &error));
+  EXPECT_EQ(ErrorCode::kSuccess, error);
   // Verify that the fake_fec was actually used.
-  ASSERT_EQ(1U, fake_fec->GetReadOps().size());
-  ASSERT_EQ(1U, GetSourceEccRecoveredFailures());
+  EXPECT_EQ(1U, fake_fec->GetReadOps().size());
+  EXPECT_EQ(1U, GetSourceEccRecoveredFailures());
 }
 
 }  // namespace chromeos_update_engine
