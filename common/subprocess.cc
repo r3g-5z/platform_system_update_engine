@@ -124,7 +124,7 @@ void Subprocess::OnStdoutReady(SubprocessRecord* record) {
     bool eof;
     bool ok = utils::ReadAll(
         record->stdout_fd, buf, base::size(buf), &bytes_read, &eof);
-    record->stdout_str.append(buf, bytes_read);
+    record->stdout.append(buf, bytes_read);
     if (!ok || eof) {
       // There was either an error or an EOF condition, so we are done watching
       // the file descriptor.
@@ -152,11 +152,11 @@ void Subprocess::ChildExitedCallback(const siginfo_t& info) {
     LOG(INFO) << "Subprocess exited with si_status: " << info.si_status;
   }
 
-  if (!record->stdout_str.empty()) {
-    LOG(INFO) << "Subprocess output:\n" << record->stdout_str;
+  if (!record->stdout.empty()) {
+    LOG(INFO) << "Subprocess output:\n" << record->stdout;
   }
   if (!record->callback.is_null()) {
-    record->callback.Run(info.si_status, record->stdout_str);
+    record->callback.Run(info.si_status, record->stdout);
   }
   // Release and close all the pipes after calling the callback so our
   // redirected pipes are still alive. Releasing the process first makes
@@ -230,30 +230,29 @@ int Subprocess::GetPipeFd(pid_t pid, int fd) const {
 
 bool Subprocess::SynchronousExec(const vector<string>& cmd,
                                  int* return_code,
-                                 string* stdout_str,
-                                 string* stderr_str) {
+                                 string* stdout,
+                                 string* stderr) {
   // The default for |SynchronousExec| is to use |kSearchPath| since the code
   // relies on that.
-  return SynchronousExecFlags(
-      cmd, kSearchPath, return_code, stdout_str, stderr_str);
+  return SynchronousExecFlags(cmd, kSearchPath, return_code, stdout, stderr);
 }
 
 bool Subprocess::SynchronousExecFlags(const vector<string>& cmd,
                                       uint32_t flags,
                                       int* return_code,
-                                      string* stdout_str,
-                                      string* stderr_str) {
+                                      string* stdout,
+                                      string* stderr) {
   brillo::ProcessImpl proc;
   if (!LaunchProcess(cmd, flags, {STDERR_FILENO}, &proc)) {
     LOG(ERROR) << "Failed to launch subprocess";
     return false;
   }
 
-  if (stdout_str) {
-    stdout_str->clear();
+  if (stdout) {
+    stdout->clear();
   }
-  if (stderr_str) {
-    stderr_str->clear();
+  if (stderr) {
+    stderr->clear();
   }
 
   // Read from both stdout and stderr individually.
@@ -268,8 +267,8 @@ bool Subprocess::SynchronousExecFlags(const vector<string>& cmd,
         stdout_closed = true;
         if (rc < 0)
           PLOG(ERROR) << "Reading from child's stdout";
-      } else if (stdout_str != nullptr) {
-        stdout_str->append(buffer.data(), rc);
+      } else if (stdout != nullptr) {
+        stdout->append(buffer.data(), rc);
       }
     }
 
@@ -279,8 +278,8 @@ bool Subprocess::SynchronousExecFlags(const vector<string>& cmd,
         stderr_closed = true;
         if (rc < 0)
           PLOG(ERROR) << "Reading from child's stderr";
-      } else if (stderr_str != nullptr) {
-        stderr_str->append(buffer.data(), rc);
+      } else if (stderr != nullptr) {
+        stderr->append(buffer.data(), rc);
       }
     }
   }
@@ -300,9 +299,9 @@ void Subprocess::FlushBufferedLogsAtExit() {
       SubprocessRecord* record = pid_record.second.get();
       // Make sure we read any remaining process output.
       OnStdoutReady(record);
-      if (!record->stdout_str.empty()) {
+      if (!record->stdout.empty()) {
         LOG(INFO) << "Subprocess(" << pid_record.first << ") output:\n"
-                  << record->stdout_str;
+                  << record->stdout;
       }
     }
   }

@@ -30,9 +30,8 @@ struct CowOperation {
     CowReplace = android::snapshot::kCowReplaceOp,
   };
   Type op;
-  uint64_t src_block{};
-  uint64_t dst_block{};
-  uint64_t block_count{1};
+  uint64_t src_block;
+  uint64_t dst_block;
 };
 
 // Convert SOURCE_COPY operations in `operations` list to a list of
