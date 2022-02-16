@@ -34,10 +34,6 @@
 namespace chromeos_update_engine {
 
 class XzExtentWriter : public ExtentWriter {
-  struct xz_deleter {
-    constexpr void operator()(xz_dec* p) { xz_dec_end(p); }
-  };
-
  public:
   explicit XzExtentWriter(std::unique_ptr<ExtentWriter> underlying_writer)
       : underlying_writer_(std::move(underlying_writer)) {}
@@ -51,7 +47,7 @@ class XzExtentWriter : public ExtentWriter {
   // The underlying ExtentWriter.
   std::unique_ptr<ExtentWriter> underlying_writer_;
   // The opaque xz decompressor struct.
-  std::unique_ptr<xz_dec, xz_deleter> stream_{nullptr};
+  xz_dec* stream_{nullptr};
   brillo::Blob input_buffer_;
 
   DISALLOW_COPY_AND_ASSIGN(XzExtentWriter);
