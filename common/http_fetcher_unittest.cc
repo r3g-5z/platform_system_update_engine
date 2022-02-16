@@ -97,8 +97,6 @@ static inline string LocalServerUrlForPath(in_port_t port, const string& path) {
 // Class hierarchy for HTTP server implementations.
 //
 
-namespace {
-
 class HttpServer {
  public:
   // This makes it an abstract class (dirty but works).
@@ -195,10 +193,10 @@ const char* PythonHttpServer::kServerListeningMsgPrefix = "listening on port ";
 // Class hierarchy for HTTP fetcher test wrappers.
 //
 
-class AnyHttpFetcherFactory {
+class AnyHttpFetcherTest {
  public:
-  AnyHttpFetcherFactory() {}
-  virtual ~AnyHttpFetcherFactory() {}
+  AnyHttpFetcherTest() {}
+  virtual ~AnyHttpFetcherTest() {}
 
   virtual HttpFetcher* NewLargeFetcher(ProxyResolver* proxy_resolver) = 0;
   HttpFetcher* NewLargeFetcher(size_t num_proxies) {
@@ -233,10 +231,10 @@ class AnyHttpFetcherFactory {
   FakeHardware fake_hardware_;
 };
 
-class MockHttpFetcherFactory : public AnyHttpFetcherFactory {
+class MockHttpFetcherTest : public AnyHttpFetcherTest {
  public:
   // Necessary to unhide the definition in the base class.
-  using AnyHttpFetcherFactory::NewLargeFetcher;
+  using AnyHttpFetcherTest::NewLargeFetcher;
   HttpFetcher* NewLargeFetcher(ProxyResolver* proxy_resolver) override {
     brillo::Blob big_data(1000000);
     return new MockHttpFetcher(
@@ -244,7 +242,7 @@ class MockHttpFetcherFactory : public AnyHttpFetcherFactory {
   }
 
   // Necessary to unhide the definition in the base class.
-  using AnyHttpFetcherFactory::NewSmallFetcher;
+  using AnyHttpFetcherTest::NewSmallFetcher;
   HttpFetcher* NewSmallFetcher(ProxyResolver* proxy_resolver) override {
     return new MockHttpFetcher("x", 1, proxy_resolver);
   }
@@ -257,10 +255,10 @@ class MockHttpFetcherFactory : public AnyHttpFetcherFactory {
   HttpServer* CreateServer() override { return new NullHttpServer; }
 };
 
-class LibcurlHttpFetcherFactory : public AnyHttpFetcherFactory {
+class LibcurlHttpFetcherTest : public AnyHttpFetcherTest {
  public:
   // Necessary to unhide the definition in the base class.
-  using AnyHttpFetcherFactory::NewLargeFetcher;
+  using AnyHttpFetcherTest::NewLargeFetcher;
   HttpFetcher* NewLargeFetcher(ProxyResolver* proxy_resolver) override {
     LibcurlHttpFetcher* ret =
         new LibcurlHttpFetcher(proxy_resolver, &fake_hardware_);
@@ -272,7 +270,7 @@ class LibcurlHttpFetcherFactory : public AnyHttpFetcherFactory {
   }
 
   // Necessary to unhide the definition in the base class.
-  using AnyHttpFetcherFactory::NewSmallFetcher;
+  using AnyHttpFetcherTest::NewSmallFetcher;
   HttpFetcher* NewSmallFetcher(ProxyResolver* proxy_resolver) override {
     return NewLargeFetcher(proxy_resolver);
   }
@@ -300,10 +298,10 @@ class LibcurlHttpFetcherFactory : public AnyHttpFetcherFactory {
   HttpServer* CreateServer() override { return new PythonHttpServer; }
 };
 
-class MultiRangeHttpFetcherFactory : public LibcurlHttpFetcherFactory {
+class MultiRangeHttpFetcherTest : public LibcurlHttpFetcherTest {
  public:
   // Necessary to unhide the definition in the base class.
-  using AnyHttpFetcherFactory::NewLargeFetcher;
+  using AnyHttpFetcherTest::NewLargeFetcher;
   HttpFetcher* NewLargeFetcher(ProxyResolver* proxy_resolver) override {
     MultiRangeHttpFetcher* ret = new MultiRangeHttpFetcher(
         new LibcurlHttpFetcher(proxy_resolver, &fake_hardware_));
@@ -317,7 +315,7 @@ class MultiRangeHttpFetcherFactory : public LibcurlHttpFetcherFactory {
   }
 
   // Necessary to unhide the definition in the base class.
-  using AnyHttpFetcherFactory::NewSmallFetcher;
+  using AnyHttpFetcherTest::NewSmallFetcher;
   HttpFetcher* NewSmallFetcher(ProxyResolver* proxy_resolver) override {
     return NewLargeFetcher(proxy_resolver);
   }
@@ -325,16 +323,16 @@ class MultiRangeHttpFetcherFactory : public LibcurlHttpFetcherFactory {
   bool IsMulti() const override { return true; }
 };
 
-class FileFetcherFactory : public AnyHttpFetcherFactory {
+class FileFetcherTest : public AnyHttpFetcherTest {
  public:
   // Necessary to unhide the definition in the base class.
-  using AnyHttpFetcherFactory::NewLargeFetcher;
+  using AnyHttpFetcherTest::NewLargeFetcher;
   HttpFetcher* NewLargeFetcher(ProxyResolver* /* proxy_resolver */) override {
     return new FileFetcher();
   }
 
   // Necessary to unhide the definition in the base class.
-  using AnyHttpFetcherFactory::NewSmallFetcher;
+  using AnyHttpFetcherTest::NewSmallFetcher;
   HttpFetcher* NewSmallFetcher(ProxyResolver* proxy_resolver) override {
     return NewLargeFetcher(proxy_resolver);
   }
@@ -374,10 +372,10 @@ class FileFetcherFactory : public AnyHttpFetcherFactory {
   ScopedTempFile temp_file_{"ue_file_fetcher.XXXXXX"};
 };
 
-class MultiRangeHttpFetcherOverFileFetcherFactory : public FileFetcherFactory {
+class MultiRangeHttpFetcherOverFileFetcherTest : public FileFetcherTest {
  public:
   // Necessary to unhide the definition in the base class.
-  using AnyHttpFetcherFactory::NewLargeFetcher;
+  using AnyHttpFetcherTest::NewLargeFetcher;
   HttpFetcher* NewLargeFetcher(ProxyResolver* /* proxy_resolver */) override {
     MultiRangeHttpFetcher* ret = new MultiRangeHttpFetcher(new FileFetcher());
     ret->ClearRanges();
@@ -391,7 +389,7 @@ class MultiRangeHttpFetcherOverFileFetcherFactory : public FileFetcherFactory {
   }
 
   // Necessary to unhide the definition in the base class.
-  using AnyHttpFetcherFactory::NewSmallFetcher;
+  using AnyHttpFetcherTest::NewSmallFetcher;
   HttpFetcher* NewSmallFetcher(ProxyResolver* proxy_resolver) override {
     return NewLargeFetcher(proxy_resolver);
   }
@@ -429,21 +427,22 @@ class HttpFetcherTest : public ::testing::Test {
 
  private:
   static void TypeConstraint(T* a) {
-    AnyHttpFetcherFactory* b = a;
+    AnyHttpFetcherTest* b = a;
     if (b == 0)  // Silence compiler warning of unused variable.
       *b = a;
   }
 };
 
 // Test case types list.
-typedef ::testing::Types<LibcurlHttpFetcherFactory,
-                         MockHttpFetcherFactory,
-                         MultiRangeHttpFetcherFactory,
-                         FileFetcherFactory,
-                         MultiRangeHttpFetcherOverFileFetcherFactory>
+typedef ::testing::Types<LibcurlHttpFetcherTest,
+                         MockHttpFetcherTest,
+                         MultiRangeHttpFetcherTest,
+                         FileFetcherTest,
+                         MultiRangeHttpFetcherOverFileFetcherTest>
     HttpFetcherTestTypes;
 TYPED_TEST_CASE(HttpFetcherTest, HttpFetcherTestTypes);
 
+namespace {
 class HttpFetcherTestDelegate : public HttpFetcherDelegate {
  public:
   HttpFetcherTestDelegate() = default;
@@ -488,6 +487,7 @@ class HttpFetcherTestDelegate : public HttpFetcherDelegate {
 void StartTransfer(HttpFetcher* http_fetcher, const string& url) {
   http_fetcher->BeginTransfer(url);
 }
+}  // namespace
 
 TYPED_TEST(HttpFetcherTest, SimpleTest) {
   HttpFetcherTestDelegate delegate;
@@ -592,6 +592,7 @@ TYPED_TEST(HttpFetcherTest, ExtraHeadersInRequestTest) {
   EXPECT_EQ(string::npos, delegate.data.find("X-Bar: I do not"));
 }
 
+namespace {
 class PausingHttpFetcherTestDelegate : public HttpFetcherDelegate {
  public:
   bool ReceivedBytes(HttpFetcher* fetcher,
@@ -625,6 +626,7 @@ void UnpausingTimeoutCallback(PausingHttpFetcherTestDelegate* delegate,
       base::Bind(&UnpausingTimeoutCallback, delegate, my_id),
       base::TimeDelta::FromMilliseconds(200));
 }
+}  // namespace
 
 TYPED_TEST(HttpFetcherTest, PauseTest) {
   PausingHttpFetcherTestDelegate delegate;
@@ -671,6 +673,7 @@ TYPED_TEST(HttpFetcherTest, PauseWhileResolvingProxyTest) {
   proxy_callback.Run({1, kNoProxy});
 }
 
+namespace {
 class AbortingHttpFetcherTestDelegate : public HttpFetcherDelegate {
  public:
   bool ReceivedBytes(HttpFetcher* fetcher,
@@ -713,6 +716,7 @@ void AbortingTimeoutCallback(AbortingHttpFetcherTestDelegate* delegate,
     *my_id = MessageLoop::kTaskIdNull;
   }
 }
+}  // namespace
 
 TYPED_TEST(HttpFetcherTest, AbortTest) {
   AbortingHttpFetcherTestDelegate delegate;
@@ -763,6 +767,7 @@ TYPED_TEST(HttpFetcherTest, TerminateTransferWhileResolvingProxyTest) {
   EXPECT_EQ(1, delegate.times_transfer_terminated_called_);
 }
 
+namespace {
 class FlakyHttpFetcherTestDelegate : public HttpFetcherDelegate {
  public:
   bool ReceivedBytes(HttpFetcher* fetcher,
@@ -779,6 +784,7 @@ class FlakyHttpFetcherTestDelegate : public HttpFetcherDelegate {
   void TransferTerminated(HttpFetcher* fetcher) override { ADD_FAILURE(); }
   string data;
 };
+}  // namespace
 
 TYPED_TEST(HttpFetcherTest, FlakyTest) {
   if (this->test_.IsMock() || !this->test_.IsHttpSupported())
@@ -812,6 +818,7 @@ TYPED_TEST(HttpFetcherTest, FlakyTest) {
   }
 }
 
+namespace {
 // This delegate kills the server attached to it after receiving any bytes.
 // This can be used for testing what happens when you try to fetch data and
 // the server dies.
@@ -852,6 +859,7 @@ class FailureHttpFetcherTestDelegate : public HttpFetcherDelegate {
   int times_transfer_terminated_called_{0};
   int times_transfer_complete_called_{0};
 };
+}  // namespace
 
 TYPED_TEST(HttpFetcherTest, FailureTest) {
   // This test ensures that a fetcher responds correctly when a server isn't
@@ -992,6 +1000,7 @@ TYPED_TEST(HttpFetcherTest, TerminateTransferWhenServerDiedTest) {
   EXPECT_TRUE(timeout);
 }
 
+namespace {
 const HttpResponseCode kRedirectCodes[] = {kHttpResponseMovedPermanently,
                                            kHttpResponseFound,
                                            kHttpResponseSeeOther,
@@ -1046,6 +1055,7 @@ void RedirectTest(const HttpServer* server,
     }
   }
 }
+}  // namespace
 
 TYPED_TEST(HttpFetcherTest, SimpleRedirectTest) {
   if (this->test_.IsMock() || !this->test_.IsHttpSupported())
@@ -1093,6 +1103,7 @@ TYPED_TEST(HttpFetcherTest, BeyondMaxRedirectTest) {
   RedirectTest(server.get(), false, url, this->test_.NewLargeFetcher());
 }
 
+namespace {
 class MultiHttpFetcherTestDelegate : public HttpFetcherDelegate {
  public:
   explicit MultiHttpFetcherTestDelegate(int expected_response_code)
@@ -1162,6 +1173,7 @@ void MultiTest(HttpFetcher* fetcher_in,
   EXPECT_EQ(expected_prefix,
             string(delegate.data.data(), expected_prefix.size()));
 }
+}  // namespace
 
 TYPED_TEST(HttpFetcherTest, MultiHttpFetcherSimpleTest) {
   if (!this->test_.IsMulti())
@@ -1311,6 +1323,7 @@ TYPED_TEST(HttpFetcherTest, MultiHttpFetcherErrorIfOffsetUnrecoverableTest) {
             kHttpResponseUndefined);
 }
 
+namespace {
 // This HttpFetcherDelegate calls TerminateTransfer at a configurable point.
 class MultiHttpFetcherTerminateTestDelegate : public HttpFetcherDelegate {
  public:
@@ -1352,6 +1365,7 @@ class MultiHttpFetcherTerminateTestDelegate : public HttpFetcherDelegate {
   size_t bytes_downloaded_{0};
   size_t terminate_trigger_bytes_;
 };
+}  // namespace
 
 TYPED_TEST(HttpFetcherTest, MultiHttpFetcherTerminateBetweenRangesTest) {
   if (!this->test_.IsMulti())
@@ -1382,6 +1396,7 @@ TYPED_TEST(HttpFetcherTest, MultiHttpFetcherTerminateBetweenRangesTest) {
   EXPECT_EQ(kRangeTrigger, delegate.bytes_downloaded_);
 }
 
+namespace {
 class BlockedTransferTestDelegate : public HttpFetcherDelegate {
  public:
   bool ReceivedBytes(HttpFetcher* fetcher,
@@ -1397,7 +1412,7 @@ class BlockedTransferTestDelegate : public HttpFetcherDelegate {
   void TransferTerminated(HttpFetcher* fetcher) override { ADD_FAILURE(); }
 };
 
-void BlockedTransferTestHelper(AnyHttpFetcherFactory* fetcher_test,
+void BlockedTransferTestHelper(AnyHttpFetcherTest* fetcher_test,
                                bool is_official_build) {
   if (fetcher_test->IsMock() || fetcher_test->IsMulti())
     return;
@@ -1421,6 +1436,7 @@ void BlockedTransferTestHelper(AnyHttpFetcherFactory* fetcher_test,
                                 fetcher_test->SmallUrl(server->GetPort()))));
   MessageLoop::current()->Run();
 }
+}  // namespace
 
 TYPED_TEST(HttpFetcherTest, BlockedTransferTest) {
   BlockedTransferTestHelper(&this->test_, false);
@@ -1429,7 +1445,5 @@ TYPED_TEST(HttpFetcherTest, BlockedTransferTest) {
 TYPED_TEST(HttpFetcherTest, BlockedTransferOfficialBuildTest) {
   BlockedTransferTestHelper(&this->test_, true);
 }
-
-}  // namespace
 
 }  // namespace chromeos_update_engine

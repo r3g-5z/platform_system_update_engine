@@ -17,7 +17,6 @@
 #ifndef UPDATE_ENGINE_COMMON_FAKE_PREFS_H_
 #define UPDATE_ENGINE_COMMON_FAKE_PREFS_H_
 
-#include <functional>
 #include <map>
 #include <string>
 #include <string_view>
@@ -41,23 +40,24 @@ class FakePrefs : public PrefsInterface {
   ~FakePrefs();
 
   // PrefsInterface methods.
-  bool GetString(std::string_view key, std::string* value) const override;
-  bool SetString(std::string_view key, std::string_view value) override;
-  bool GetInt64(std::string_view key, int64_t* value) const override;
-  bool SetInt64(std::string_view key, const int64_t value) override;
-  bool GetBoolean(std::string_view key, bool* value) const override;
-  bool SetBoolean(std::string_view key, const bool value) override;
+  bool GetString(const std::string& key, std::string* value) const override;
+  bool SetString(const std::string& key, std::string_view value) override;
+  bool GetInt64(const std::string& key, int64_t* value) const override;
+  bool SetInt64(const std::string& key, const int64_t value) override;
+  bool GetBoolean(const std::string& key, bool* value) const override;
+  bool SetBoolean(const std::string& key, const bool value) override;
 
-  bool Exists(std::string_view key) const override;
-  bool Delete(std::string_view key) override;
-  bool Delete(std::string_view key,
+  bool Exists(const std::string& key) const override;
+  bool Delete(const std::string& key) override;
+  bool Delete(const std::string& key,
               const std::vector<std::string>& nss) override;
 
-  bool GetSubKeys(std::string_view ns,
+  bool GetSubKeys(const std::string& ns,
                   std::vector<std::string>* keys) const override;
 
-  void AddObserver(std::string_view key, ObserverInterface* observer) override;
-  void RemoveObserver(std::string_view key,
+  void AddObserver(const std::string& key,
+                   ObserverInterface* observer) override;
+  void RemoveObserver(const std::string& key,
                       ObserverInterface* observer) override;
 
  private:
@@ -92,25 +92,24 @@ class FakePrefs : public PrefsInterface {
   static std::string GetTypeName(PrefType type);
 
   // Checks that the |key| is either not present or has the given |type|.
-  void CheckKeyType(std::string_view key, PrefType type) const;
+  void CheckKeyType(const std::string& key, PrefType type) const;
 
   // Helper function to set a value of the passed |key|. It sets the type based
   // on the template parameter T.
   template <typename T>
-  void SetValue(std::string_view key, T value);
+  void SetValue(const std::string& key, T value);
 
   // Helper function to get a value from the map checking for invalid calls.
   // The function fails the test if you attempt to read a value  defined as a
   // different type. Returns whether the get succeeded.
   template <typename T>
-  bool GetValue(std::string_view key, T* value) const;
+  bool GetValue(const std::string& key, T* value) const;
 
   // Container for all the key/value pairs.
-  std::map<std::string, PrefTypeValue, std::less<>> values_;
+  std::map<std::string, PrefTypeValue> values_;
 
   // The registered observers watching for changes.
-  std::map<std::string, std::vector<ObserverInterface*>, std::less<>>
-      observers_;
+  std::map<std::string, std::vector<ObserverInterface*>> observers_;
 
   DISALLOW_COPY_AND_ASSIGN(FakePrefs);
 };

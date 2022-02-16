@@ -22,7 +22,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <android-base/strings.h>
 #include <base/logging.h>
 
 #include "update_engine/common/error_code.h"
@@ -89,7 +88,7 @@ class ScopedFileWriterCloser {
     int err = writer_->Close();
     if (err)
       LOG(ERROR) << "FileWriter::Close failed: "
-                 << android::base::ErrnoNumberAsString(-err);
+                 << utils::ErrnoNumberAsString(-err);
   }
 
  private:
