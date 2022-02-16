@@ -54,7 +54,11 @@ class MockPartitionWriter : public PartitionWriter {
               (const InstallOperation&, ErrorCode*),
               (override));
   MOCK_METHOD(bool,
-              PerformDiffOperation,
+              PerformSourceBsdiffOperation,
+              (const InstallOperation&, ErrorCode*, const void*, size_t),
+              (override));
+  MOCK_METHOD(bool,
+              PerformPuffDiffOperation,
               (const InstallOperation&, ErrorCode*, const void*, size_t),
               (override));
 };
