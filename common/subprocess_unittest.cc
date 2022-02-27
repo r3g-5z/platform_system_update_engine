@@ -95,7 +95,11 @@ void ExpectedResults(int expected_return_code,
 
 void ExpectedEnvVars(int return_code, const string& output) {
   EXPECT_EQ(0, return_code);
-  const std::set<string> allowed_envs = {"LD_LIBRARY_PATH", "PATH"};
+  const std::set<string> allowed_envs = {"LD_LIBRARY_PATH",
+                                         "PATH",
+                                         "ASAN_OPTIONS",
+                                         "MSAN_OPTIONS",
+                                         "UBSAN_OPTIONS"};
   for (const string& key_value : brillo::string_utils::Split(output, "\n")) {
     auto key_value_pair =
         brillo::string_utils::SplitAtFirst(key_value, "=", true);

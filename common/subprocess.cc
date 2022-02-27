@@ -82,7 +82,12 @@ bool LaunchProcess(const vector<string>& cmd,
 
   // Create an environment for the child process with just the required PATHs.
   std::map<string, string> env;
-  for (const char* key : {"LD_LIBRARY_PATH", "PATH"}) {
+  const std::vector<const char*> allowed_envs = {"LD_LIBRARY_PATH",
+                                                 "PATH",
+                                                 "ASAN_OPTIONS",
+                                                 "MSAN_OPTIONS",
+                                                 "UBSAN_OPTIONS"};
+  for (const char* key : allowed_envs) {
     const char* value = getenv(key);
     if (value)
       env.emplace(key, value);
