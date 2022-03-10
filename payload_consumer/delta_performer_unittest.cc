@@ -18,7 +18,6 @@
 
 #include <endian.h>
 #include <inttypes.h>
-#include <time.h>
 
 #include <iterator>
 #include <memory>
@@ -67,6 +66,9 @@ extern const char* kUnittestPrivateKeyPath;
 extern const char* kUnittestPublicKeyPath;
 
 namespace {
+
+constexpr uint64_t kUnittestManifestSize = 256;
+constexpr uint32_t kUnittestMetadataSignatureSize = 48;
 
 const char kBogusMetadataSignature1[] =
     "awSFIUdUZz2VWFiR+ku0Pj00V7bPQPQFYQSXjEXr3vaw3TE4xHV5CraY3/YrZpBv"
@@ -916,7 +918,6 @@ TEST_F(DeltaPerformerTest, ValidatePerPartitionTimestampSuccess) {
 }
 
 TEST_F(DeltaPerformerTest, BrilloMetadataSignatureSizeTest) {
-  unsigned int seed = time(nullptr);
   EXPECT_TRUE(performer_.Write(kDeltaMagic, sizeof(kDeltaMagic)));
 
   install_plan_.hash_checks_mandatory = false;
@@ -924,8 +925,8 @@ TEST_F(DeltaPerformerTest, BrilloMetadataSignatureSizeTest) {
   EXPECT_TRUE(
       performer_.Write(&major_version, PayloadMetadata::kDeltaVersionSize));
 
-  uint64_t manifest_size = rand_r(&seed) % 256;
-  uint32_t metadata_signature_size = rand_r(&seed) % 256;
+  const uint64_t manifest_size = kUnittestManifestSize;
+  const uint32_t metadata_signature_size = kUnittestMetadataSignatureSize;
 
   // The payload size has to be bigger than the |metadata_size| and
   // |metadata_signature_size|
@@ -953,7 +954,6 @@ TEST_F(DeltaPerformerTest, BrilloMetadataSignatureSizeTest) {
 }
 
 TEST_F(DeltaPerformerTest, BrilloMetadataSizeNOKTest) {
-  unsigned int seed = time(nullptr);
   EXPECT_TRUE(performer_.Write(kDeltaMagic, sizeof(kDeltaMagic)));
 
   uint64_t major_version = htobe64(kBrilloMajorPayloadVersion);
@@ -965,16 +965,15 @@ TEST_F(DeltaPerformerTest, BrilloMetadataSizeNOKTest) {
                              PayloadMetadata::kDeltaManifestSizeSize +
                              PayloadMetadata::kDeltaMetadataSignatureSizeSize;
   payload_.metadata_size = manifest_offset + manifest_size;
-  uint32_t metadata_signature_size = rand_r(&seed) % 256;
 
   // The payload size is greater than the payload header but smaller than
   // |metadata_signature_size| + |metadata_size|
-  payload_.size = manifest_offset + metadata_signature_size + 1;
+  payload_.size = manifest_offset + kUnittestMetadataSignatureSize + 1;
 
   uint64_t manifest_size_be = htobe64(manifest_size);
   EXPECT_TRUE(performer_.Write(&manifest_size_be,
                                PayloadMetadata::kDeltaManifestSizeSize));
-  uint32_t metadata_signature_size_be = htobe32(metadata_signature_size);
+  uint32_t metadata_signature_size_be = htobe32(kUnittestMetadataSignatureSize);
 
   ErrorCode error;
   EXPECT_FALSE(
@@ -986,22 +985,20 @@ TEST_F(DeltaPerformerTest, BrilloMetadataSizeNOKTest) {
 }
 
 TEST_F(DeltaPerformerTest, BrilloMetadataSignatureSizeNOKTest) {
-  unsigned int seed = time(nullptr);
   EXPECT_TRUE(performer_.Write(kDeltaMagic, sizeof(kDeltaMagic)));
 
   uint64_t major_version = htobe64(kBrilloMajorPayloadVersion);
   EXPECT_TRUE(
       performer_.Write(&major_version, PayloadMetadata::kDeltaVersionSize));
 
-  uint64_t manifest_size = rand_r(&seed) % 256;
   // Subtract from UINT32_MAX to avoid wrap around.
   uint32_t metadata_signature_size = UINT32_MAX - 600;
 
   // The payload size is greater than |manifest_size| but smaller than
   // |metadata_signature_size|
-  payload_.size = manifest_size + 1;
+  payload_.size = kUnittestManifestSize + 1;
 
-  uint64_t manifest_size_be = htobe64(manifest_size);
+  uint64_t manifest_size_be = htobe64(kUnittestManifestSize);
   EXPECT_TRUE(performer_.Write(&manifest_size_be,
                                PayloadMetadata::kDeltaManifestSizeSize));
 
