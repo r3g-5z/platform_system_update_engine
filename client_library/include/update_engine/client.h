@@ -51,8 +51,10 @@ class UpdateEngineClient {
   virtual bool AttemptInstall(const std::string& omaha_url,
                               const std::vector<std::string>& dlc_ids) = 0;
 
-  // Same as above but return the entire struct instead.
+  // Returns the entire update engine status struct.
   virtual bool GetStatus(UpdateEngineStatus* out_status) const = 0;
+  // Overrides the current update status. Only used for testing.
+  virtual bool SetStatus(UpdateStatus update_status) const = 0;
 
   // Sets the DLC as active or inactive. When set to active, the ping metadata
   // for the DLC is updated accordingly. When set to inactive, the metadata

@@ -144,6 +144,12 @@ bool UpdateEngineService::GetStatus(ErrorPtr* error,
   return true;
 }
 
+bool UpdateEngineService::SetStatus(brillo::ErrorPtr*,
+                                    update_engine::UpdateStatus status) {
+  SystemState::Get()->update_attempter()->SetStatusAndNotify(status);
+  return true;
+}
+
 bool UpdateEngineService::RebootIfNeeded(ErrorPtr* error) {
   if (!SystemState::Get()->update_attempter()->RebootIfNeeded()) {
     // TODO(dgarrett): Give a more specific error code/reason.

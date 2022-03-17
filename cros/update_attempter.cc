@@ -1231,12 +1231,12 @@ void UpdateAttempter::ProcessingDoneUpdate(const ActionProcessor* processor,
   // |install_plan_| is null during rollback operations, and the stats don't
   // make much sense then anyway.
   if (install_plan_) {
-      int64_t num_consecutive_updates = 0;
-      SystemState::Get()->prefs()->GetInt64(kPrefsConsecutiveUpdateCount,
-                                            &num_consecutive_updates);
-      // Increment pref after every update.
-      SystemState::Get()->prefs()->SetInt64(kPrefsConsecutiveUpdateCount,
-                                            ++num_consecutive_updates);
+    int64_t num_consecutive_updates = 0;
+    SystemState::Get()->prefs()->GetInt64(kPrefsConsecutiveUpdateCount,
+                                          &num_consecutive_updates);
+    // Increment pref after every update.
+    SystemState::Get()->prefs()->SetInt64(kPrefsConsecutiveUpdateCount,
+                                          ++num_consecutive_updates);
     // Generate an unique payload identifier.
     string target_version_uid;
     for (const auto& payload : install_plan_->payloads) {
@@ -1633,6 +1633,11 @@ bool UpdateAttempter::GetStatus(UpdateEngineStatus* out_status) {
   return true;
 }
 
+void UpdateAttempter::SetStatusAndNotify(UpdateStatus status) {
+  status_ = status;
+  BroadcastStatus();
+}
+
 ErrorCode UpdateAttempter::GetLastUpdateError() {
   switch (attempt_error_code_) {
     case ErrorCode::kSuccess:
@@ -1698,11 +1703,6 @@ bool UpdateAttempter::ShouldCancel(ErrorCode* cancel_reason) {
   }
 
   return false;
-}
-
-void UpdateAttempter::SetStatusAndNotify(UpdateStatus status) {
-  status_ = status;
-  BroadcastStatus();
 }
 
 void UpdateAttempter::CreatePendingErrorEvent(AbstractAction* action,

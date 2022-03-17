@@ -52,6 +52,8 @@ enum class UpdateStatus {
   NEED_PERMISSION_TO_UPDATE = 10,
   CLEANUP_PREVIOUS_UPDATE = 11,
 
+  MAX = CLEANUP_PREVIOUS_UPDATE,
+
   // This value is exclusively used in Chrome. DO NOT define nor use it.
   // TODO(crbug.com/977320): Remove this value from chrome by refactoring the
   // Chrome code and evantually from here. This is not really an operation or

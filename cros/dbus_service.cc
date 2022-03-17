@@ -108,6 +108,17 @@ bool DBusUpdateEngineService::GetStatusAdvanced(ErrorPtr* error,
   return true;
 }
 
+bool DBusUpdateEngineService::SetStatus(ErrorPtr* error,
+                                        int32_t update_status) {
+  if (update_status < 0 ||
+      update_status > static_cast<int32_t>(update_engine::UpdateStatus::MAX)) {
+    LOG(ERROR) << "Passed value is not a valid update state.";
+    return false;
+  }
+  return common_->SetStatus(
+      error, static_cast<update_engine::UpdateStatus>(update_status));
+}
+
 bool DBusUpdateEngineService::RebootIfNeeded(ErrorPtr* error) {
   return common_->RebootIfNeeded(error);
 }

@@ -48,6 +48,7 @@ class DBusUpdateEngineClient : public UpdateEngineClient {
   bool SetDlcActiveValue(bool is_active, const std::string& dlc_id) override;
 
   bool GetStatus(UpdateEngineStatus* out_status) const override;
+  bool SetStatus(UpdateStatus update_status) const override;
 
   bool SetCohortHint(const std::string& cohort_hint) override;
   bool GetCohortHint(std::string* cohort_hint) const override;

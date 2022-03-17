@@ -102,6 +102,10 @@ bool DBusUpdateEngineClient::GetStatus(UpdateEngineStatus* out_status) const {
   return true;
 }
 
+bool DBusUpdateEngineClient::SetStatus(UpdateStatus update_status) const {
+  return proxy_->SetStatus(static_cast<int32_t>(update_status), nullptr);
+}
+
 bool DBusUpdateEngineClient::SetCohortHint(const string& cohort_hint) {
   return proxy_->SetCohortHint(cohort_hint, nullptr);
 }

@@ -75,6 +75,10 @@ class UpdateEngineService {
   bool GetStatus(brillo::ErrorPtr* error,
                  update_engine::UpdateEngineStatus* out_status);
 
+  // Overrides the current operation/status of the update engine. Only used for
+  // testing.
+  bool SetStatus(brillo::ErrorPtr* error, update_engine::UpdateStatus status);
+
   // Reboots the device if an update is applied and a reboot is required.
   bool RebootIfNeeded(brillo::ErrorPtr* error);
 

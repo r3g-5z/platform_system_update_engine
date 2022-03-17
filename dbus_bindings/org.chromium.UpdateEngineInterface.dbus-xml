@@ -66,6 +66,9 @@
                     value="update_engine::StatusResult"/>
       </arg>
     </method>
+    <method name="SetStatus">
+      <arg type="i" name="update_status" direction="in" />
+    </method>
     <method name="RebootIfNeeded">
     </method>
     <method name="SetChannel">

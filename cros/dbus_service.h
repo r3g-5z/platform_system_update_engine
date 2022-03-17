@@ -66,10 +66,14 @@ class DBusUpdateEngineService
                          bool is_active,
                          const std::string& dlc_id) override;
 
-  // Similar to Above, but returns a protobuffer instead. In the future it will
-  // have more features and is easily extendable.
+  // Returns |StatusResult| as it is defined in update_engine.proto.
   bool GetStatusAdvanced(brillo::ErrorPtr* error,
                          update_engine::StatusResult* out_status) override;
+
+  // Overrides the current update status. |update_status| should represent one
+  // of the values of |Operation| in update_engine.proto. Only used for
+  // testing.
+  bool SetStatus(brillo::ErrorPtr* error, int32_t update_status) override;
 
   // Reboots the device if an update is applied and a reboot is required.
   bool RebootIfNeeded(brillo::ErrorPtr* error) override;

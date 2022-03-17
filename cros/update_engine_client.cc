@@ -298,6 +298,10 @@ int UpdateEngineClient::ProcessFlags() {
               false,
               "Skip applying updates, only check if there are updates.");
   DEFINE_string(is_feature_enabled, "", "Shows the current value of feature.");
+  DEFINE_int32(set_status,
+               -1,
+               "Override status of the update engine with a value in"
+               "Operation of update_engine.proto. Used for testing.");
 
   // Boilerplate init commands.
   base::CommandLine::Init(argc_, argv_);
@@ -311,6 +315,24 @@ int UpdateEngineClient::ProcessFlags() {
                << "'. If you want to pass a value to a flag, pass it as "
                   "--flag=value.";
     return 1;
+  }
+
+  if (FLAGS_set_status != -1) {
+    const int32_t max_value = static_cast<int32_t>(UpdateStatus::MAX);
+    if (FLAGS_set_status < 0 || FLAGS_set_status > max_value) {
+      LOG(ERROR) << "Passed value is not a valid update state."
+                 << "Needs to be between 0 and " << max_value << ".";
+      return 1;
+    }
+
+    if (!client_->SetStatus(static_cast<UpdateStatus>(FLAGS_set_status))) {
+      LOG(ERROR) << "Setting update status failed.";
+      return 1;
+    }
+    LOG(INFO) << "Overriding update status to "
+              << chromeos_update_engine::UpdateStatusToString(
+                     static_cast<UpdateStatus>(FLAGS_set_status));
+    return 0;
   }
 
   // Update the status if requested.

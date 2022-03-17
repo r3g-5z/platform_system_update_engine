@@ -2405,6 +2405,20 @@ TEST_F(UpdateAttempterTest, ConsumerAutoUpdateFeatureDisabled) {
   EXPECT_FALSE(feature_itr->enabled);
 }
 
+TEST_F(UpdateAttempterTest, SetStatusAndNotifyTest) {
+  MockServiceObserver observer;
+  attempter_.AddObserver(&observer);
+  EXPECT_CALL(observer,
+              SendStatusUpdate(Field(&UpdateEngineStatus::status,
+                                     UpdateStatus::UPDATED_NEED_REBOOT)));
+
+  attempter_.SetStatusAndNotify(UpdateStatus::UPDATED_NEED_REBOOT);
+
+  UpdateEngineStatus engine_status;
+  attempter_.GetStatus(&engine_status);
+  EXPECT_EQ(UpdateStatus::UPDATED_NEED_REBOOT, engine_status.status);
+}
+
 TEST_F(UpdateAttempterTest, CalculateDlcParamsInstallTest) {
   string dlc_id = "dlc0";
   attempter_.is_install_ = true;
@@ -2698,5 +2712,4 @@ TEST_F(UpdateAttempterTest, ResetUpdatePrefs) {
   EXPECT_FALSE(fake_prefs->Exists(kPrefsLastFp));
   EXPECT_FALSE(fake_prefs->Exists(kPrefsPreviousVersion));
 }
-
 }  // namespace chromeos_update_engine

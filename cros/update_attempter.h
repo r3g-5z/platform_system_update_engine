@@ -113,6 +113,9 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // Returns the current status in the out param. Returns true on success.
   virtual bool GetStatus(update_engine::UpdateEngineStatus* out_status);
 
+  // Sets the status to the given status and notifies a status update over dbus.
+  void SetStatusAndNotify(UpdateStatus status);
+
   UpdateStatus status() const { return status_; }
 
   int http_response_code() const { return http_response_code_; }
@@ -360,9 +363,6 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // Calculates and reports the age of the currently running OS. This
   // is defined as the age of the /etc/lsb-release file.
   void ReportOSAge();
-
-  // Sets the status to the given status and notifies a status update over dbus.
-  void SetStatusAndNotify(UpdateStatus status);
 
   // Creates an error event object in |error_event_| to be included in an
   // OmahaRequestAction once the current action processor is done.
