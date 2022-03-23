@@ -93,7 +93,7 @@ constexpr char kPostinstallFstabPrefix[] = "ro.postinstall.fstab.prefix";
 constexpr std::chrono::milliseconds kMapTimeout{1000};
 // Map timeout for dynamic partitions with snapshots. Since several devices
 // needs to be mapped, this timeout is longer than |kMapTimeout|.
-constexpr std::chrono::milliseconds kMapSnapshotTimeout{10000};
+constexpr std::chrono::milliseconds kMapSnapshotTimeout{5000};
 
 DynamicPartitionControlAndroid::~DynamicPartitionControlAndroid() {
   Cleanup();
@@ -464,9 +464,6 @@ bool DynamicPartitionControlAndroid::PreparePartitionsForUpdate(
 
   if (!SetTargetBuildVars(manifest)) {
     return false;
-  }
-  for (auto& list : dynamic_partition_list_) {
-    list.clear();
   }
 
   // Although the current build supports dynamic partitions, the given payload
@@ -1283,9 +1280,6 @@ bool DynamicPartitionControlAndroid::ResetUpdate(PrefsInterface* prefs) {
   if (!GetVirtualAbFeatureFlag().IsEnabled()) {
     return true;
   }
-  for (auto& list : dynamic_partition_list_) {
-    list.clear();
-  }
 
   LOG(INFO) << __func__ << " resetting update state and deleting snapshots.";
   TEST_AND_RETURN_FALSE(prefs != nullptr);
@@ -1426,7 +1420,7 @@ DynamicPartitionControlAndroid::OpenCowWriter(
   return snapshot_->OpenSnapshotWriter(params, std::move(source_path));
 }  // namespace chromeos_update_engine
 
-std::unique_ptr<FileDescriptor> DynamicPartitionControlAndroid::OpenCowFd(
+FileDescriptorPtr DynamicPartitionControlAndroid::OpenCowFd(
     const std::string& unsuffixed_partition_name,
     const std::optional<std::string>& source_path,
     bool is_append) {
@@ -1436,16 +1430,9 @@ std::unique_ptr<FileDescriptor> DynamicPartitionControlAndroid::OpenCowFd(
     return nullptr;
   }
   if (!cow_writer->InitializeAppend(kEndOfInstallLabel)) {
-    LOG(ERROR) << "Failed to InitializeAppend(" << kEndOfInstallLabel << ")";
     return nullptr;
   }
-  auto reader = cow_writer->OpenReader();
-  if (reader == nullptr) {
-    LOG(ERROR) << "ICowWriter::OpenReader() failed.";
-    return nullptr;
-  }
-  return std::make_unique<CowWriterFileDescriptor>(std::move(cow_writer),
-                                                   std::move(reader));
+  return std::make_shared<CowWriterFileDescriptor>(std::move(cow_writer));
 }
 
 std::optional<base::FilePath> DynamicPartitionControlAndroid::GetSuperDevice() {

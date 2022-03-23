@@ -31,11 +31,10 @@
 #include <string>
 #include <vector>
 
+#include <base/macros.h>
 #include <brillo/key_value_store.h>
 #include <puffin/utils.h>
 
-#include "update_engine/lz4diff/lz4diff_format.h"
-#include "update_engine/lz4diff/lz4diff.h"
 #include "update_engine/update_metadata.pb.h"
 
 namespace chromeos_update_engine {
@@ -45,13 +44,12 @@ class FilesystemInterface {
   // This represents a file or pseudo-file in the filesystem. It can include
   // all sort of files, like symlinks, hardlinks, directories and even a file
   // entry representing the metadata, free space, journaling data, etc.
-
   struct File {
     File() { memset(&file_stat, 0, sizeof(file_stat)); }
 
     // The stat struct for the file. This is invalid (inode 0) for some
     // pseudo-files.
-    struct stat file_stat = {};
+    struct stat file_stat;
 
     // The absolute path to the file inside the filesystem, for example,
     // "/usr/bin/bash". For pseudo-files, like blocks associated to internal
@@ -74,8 +72,6 @@ class FilesystemInterface {
     // All the deflate locations in the file. These locations are not relative
     // to the extents. They are relative to the file system itself.
     std::vector<puffin::BitExtent> deflates;
-
-    CompressedFile compressed_file_info;
   };
 
   virtual ~FilesystemInterface() = default;
