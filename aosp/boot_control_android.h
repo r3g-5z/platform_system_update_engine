@@ -23,7 +23,6 @@
 
 #include <android/hardware/boot/1.0/IBootControl.h>
 #include <liblp/builder.h>
-#include <gtest/gtest_prod.h>
 
 #include "update_engine/aosp/dynamic_partition_control_android.h"
 #include "update_engine/common/boot_control.h"
@@ -33,7 +32,7 @@ namespace chromeos_update_engine {
 
 // The Android implementation of the BootControlInterface. This implementation
 // uses the libhardware's boot_control HAL to access the bootloader.
-class BootControlAndroid final : public BootControlInterface {
+class BootControlAndroid : public BootControlInterface {
  public:
   BootControlAndroid() = default;
   ~BootControlAndroid() = default;
@@ -63,7 +62,6 @@ class BootControlAndroid final : public BootControlInterface {
   bool SetActiveBootSlot(BootControlInterface::Slot slot) override;
   bool MarkBootSuccessfulAsync(base::Callback<void(bool)> callback) override;
   bool IsSlotMarkedSuccessful(BootControlInterface::Slot slot) const override;
-  Slot GetActiveBootSlot() override;
   DynamicPartitionControlInterface* GetDynamicPartitionControl() override;
 
  private:
@@ -71,7 +69,6 @@ class BootControlAndroid final : public BootControlInterface {
   std::unique_ptr<DynamicPartitionControlAndroid> dynamic_control_;
 
   friend class BootControlAndroidTest;
-  friend class UpdateAttempterAndroidIntegrationTest;
 
   DISALLOW_COPY_AND_ASSIGN(BootControlAndroid);
 };
