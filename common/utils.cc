@@ -181,7 +181,7 @@ bool PWriteAll(int fd, const void* buf, size_t count, off_t offset) {
   return true;
 }
 
-bool WriteAll(const FileDescriptorPtr& fd, const void* buf, size_t count) {
+bool WriteAll(FileDescriptor* fd, const void* buf, size_t count) {
   const char* c_buf = static_cast<const char*>(buf);
   ssize_t bytes_written = 0;
   while (bytes_written < static_cast<ssize_t>(count)) {
@@ -218,7 +218,7 @@ bool PReadAll(
   return true;
 }
 
-bool ReadAll(const FileDescriptorPtr& fd,
+bool ReadAll(FileDescriptor* fd,
              void* buf,
              size_t count,
              off_t offset,
@@ -239,7 +239,7 @@ bool ReadAll(const FileDescriptorPtr& fd,
   return true;
 }
 
-bool PReadAll(const FileDescriptorPtr& fd,
+bool PReadAll(FileDescriptor* fd,
               void* buf,
               size_t count,
               off_t offset,
@@ -1062,16 +1062,16 @@ string GetExclusionName(const string& str_to_convert) {
   return base::NumberToString(base::StringPieceHash()(str_to_convert));
 }
 
-static bool ParseTimestamp(const std::string& str, int64_t* out) {
-  if (!base::StringToInt64(str, out)) {
+static bool ParseTimestamp(std::string_view str, int64_t* out) {
+  if (!base::StringToInt64(base::StringPiece(str.data(), str.size()), out)) {
     LOG(WARNING) << "Invalid timestamp: " << str;
     return false;
   }
   return true;
 }
 
-ErrorCode IsTimestampNewer(const std::string& old_version,
-                           const std::string& new_version) {
+ErrorCode IsTimestampNewer(const std::string_view old_version,
+                           const std::string_view new_version) {
   if (old_version.empty() || new_version.empty()) {
     LOG(WARNING)
         << "One of old/new timestamp is empty, permit update anyway. Old: "
@@ -1115,6 +1115,17 @@ std::string HexEncode(const brillo::Blob& blob) noexcept {
 
 std::string HexEncode(const std::string_view blob) noexcept {
   return base::HexEncode(blob.data(), blob.size());
+}
+
+[[nodiscard]] std::string_view ToStringView(
+    const std::vector<unsigned char>& blob) noexcept {
+  return std::string_view{reinterpret_cast<const char*>(blob.data()),
+                          blob.size()};
+}
+
+[[nodiscard]] std::string_view ToStringView(const void* data,
+                                            size_t size) noexcept {
+  return std::string_view(reinterpret_cast<const char*>(data), size);
 }
 
 }  // namespace chromeos_update_engine

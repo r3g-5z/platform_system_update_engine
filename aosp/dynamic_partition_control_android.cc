@@ -465,6 +465,9 @@ bool DynamicPartitionControlAndroid::PreparePartitionsForUpdate(
   if (!SetTargetBuildVars(manifest)) {
     return false;
   }
+  for (auto& list : dynamic_partition_list_) {
+    list.clear();
+  }
 
   // Although the current build supports dynamic partitions, the given payload
   // doesn't use it for target partitions. This could happen when applying a
@@ -1280,6 +1283,9 @@ bool DynamicPartitionControlAndroid::ResetUpdate(PrefsInterface* prefs) {
   if (!GetVirtualAbFeatureFlag().IsEnabled()) {
     return true;
   }
+  for (auto& list : dynamic_partition_list_) {
+    list.clear();
+  }
 
   LOG(INFO) << __func__ << " resetting update state and deleting snapshots.";
   TEST_AND_RETURN_FALSE(prefs != nullptr);
@@ -1420,7 +1426,7 @@ DynamicPartitionControlAndroid::OpenCowWriter(
   return snapshot_->OpenSnapshotWriter(params, std::move(source_path));
 }  // namespace chromeos_update_engine
 
-FileDescriptorPtr DynamicPartitionControlAndroid::OpenCowFd(
+std::unique_ptr<FileDescriptor> DynamicPartitionControlAndroid::OpenCowFd(
     const std::string& unsuffixed_partition_name,
     const std::optional<std::string>& source_path,
     bool is_append) {
@@ -1438,7 +1444,7 @@ FileDescriptorPtr DynamicPartitionControlAndroid::OpenCowFd(
     LOG(ERROR) << "ICowWriter::OpenReader() failed.";
     return nullptr;
   }
-  return std::make_shared<CowWriterFileDescriptor>(std::move(cow_writer),
+  return std::make_unique<CowWriterFileDescriptor>(std::move(cow_writer),
                                                    std::move(reader));
 }
 

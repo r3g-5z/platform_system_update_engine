@@ -86,8 +86,6 @@ bool DiscardPartitionTail(const FileDescriptorPtr& fd, uint64_t data_size) {
 
 }  // namespace
 
-using google::protobuf::RepeatedPtrField;
-
 // Opens path for read/write. On success returns an open FileDescriptor
 // and sets *err to 0. On failure, sets *err to errno and returns nullptr.
 FileDescriptorPtr OpenFile(const char* path,
@@ -295,6 +293,16 @@ void PartitionWriter::CheckpointUpdateProgress(size_t next_op_index) {
 
 std::unique_ptr<ExtentWriter> PartitionWriter::CreateBaseExtentWriter() {
   return std::make_unique<DirectExtentWriter>(target_fd_);
+}
+
+bool PartitionWriter::ValidateSourceHash(const InstallOperation& operation,
+                                         const FileDescriptorPtr source_fd,
+                                         size_t block_size,
+                                         ErrorCode* error) {
+  brillo::Blob source_hash;
+  TEST_AND_RETURN_FALSE_ERRNO(fd_utils::ReadAndHashExtents(
+      source_fd, operation.src_extents(), block_size, &source_hash));
+  return ValidateSourceHash(source_hash, operation, source_fd, error);
 }
 
 bool PartitionWriter::ValidateSourceHash(const brillo::Blob& calculated_hash,

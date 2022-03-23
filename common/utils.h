@@ -68,12 +68,15 @@ bool WriteFile(const char* path, const void* data, size_t data_len);
 bool WriteAll(int fd, const void* buf, size_t count);
 bool PWriteAll(int fd, const void* buf, size_t count, off_t offset);
 
-bool WriteAll(const FileDescriptorPtr& fd, const void* buf, size_t count);
+bool WriteAll(FileDescriptor* fd, const void* buf, size_t count);
+
+constexpr bool WriteAll(const FileDescriptorPtr& fd,
+                        const void* buf,
+                        size_t count) {
+  return WriteAll(fd.get(), buf, count);
+}
 // WriteAll writes data at specified offset, but it modifies file position.
-bool WriteAll(const FileDescriptorPtr& fd,
-              const void* buf,
-              size_t count,
-              off_t off);
+bool WriteAll(FileDescriptorPtr* fd, const void* buf, size_t count, off_t off);
 
 // https://man7.org/linux/man-pages/man2/pread.2.html
 // PWriteAll writes data at specified offset, but it DOES NOT modify file
@@ -97,20 +100,37 @@ bool PReadAll(
     int fd, void* buf, size_t count, off_t offset, ssize_t* out_bytes_read);
 
 // Reads data at specified offset, this function does change file position.
-bool ReadAll(const FileDescriptorPtr& fd,
+
+bool ReadAll(FileDescriptor* fd,
              void* buf,
              size_t count,
              off_t offset,
              ssize_t* out_bytes_read);
 
+constexpr bool ReadAll(const FileDescriptorPtr& fd,
+                       void* buf,
+                       size_t count,
+                       off_t offset,
+                       ssize_t* out_bytes_read) {
+  return ReadAll(fd.get(), buf, count, offset, out_bytes_read);
+}
+
 // https://man7.org/linux/man-pages/man2/pread.2.html
 // Reads data at specified offset, this function DOES NOT change file position.
 // Behavior is similar to linux's pread syscall.
-bool PReadAll(const FileDescriptorPtr& fd,
+bool PReadAll(FileDescriptor* fd,
               void* buf,
               size_t count,
               off_t offset,
               ssize_t* out_bytes_read);
+
+constexpr bool PReadAll(const FileDescriptorPtr& fd,
+                        void* buf,
+                        size_t count,
+                        off_t offset,
+                        ssize_t* out_bytes_read) {
+  return PReadAll(fd.get(), buf, count, offset, out_bytes_read);
+}
 
 // Opens |path| for reading and appends its entire content to the container
 // pointed to by |out_p|. Returns true upon successfully reading all of the
@@ -391,8 +411,8 @@ std::string GetExclusionName(const std::string& str_to_convert);
 // integer.
 // Return kPayloadTimestampError if both are integers but |new_version| <
 // |old_version|.
-ErrorCode IsTimestampNewer(const std::string& old_version,
-                           const std::string& new_version);
+ErrorCode IsTimestampNewer(const std::string_view old_version,
+                           const std::string_view new_version);
 
 std::unique_ptr<android::base::MappedFile> GetReadonlyZeroBlock(size_t size);
 
@@ -524,6 +544,17 @@ template <size_t kSize>
 std::string HexEncode(const std::array<uint8_t, kSize> blob) noexcept {
   return base::HexEncode(blob.data(), blob.size());
 }
+
+[[nodiscard]] std::string_view ToStringView(
+    const std::vector<unsigned char>& blob) noexcept;
+
+constexpr std::string_view ToStringView(
+    const std::vector<char>& blob) noexcept {
+  return std::string_view{blob.data(), blob.size()};
+}
+
+[[nodiscard]] std::string_view ToStringView(const void* data,
+                                            size_t size) noexcept;
 
 }  // namespace chromeos_update_engine
 
