@@ -21,7 +21,7 @@
 #include <set>
 #include <string>
 #include <string_view>
-#include <array>
+#include <vector>
 
 #include <base/files/file_util.h>
 #include <libsnapshot/auto_device.h>
@@ -104,19 +104,15 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
       const std::string& unsuffixed_partition_name,
       const std::optional<std::string>& source_path,
       bool is_append) override;
-  std::unique_ptr<FileDescriptor> OpenCowFd(
-      const std::string& unsuffixed_partition_name,
-      const std::optional<std::string>&,
-      bool is_append = false) override;
+  FileDescriptorPtr OpenCowFd(const std::string& unsuffixed_partition_name,
+                              const std::optional<std::string>&,
+                              bool is_append = false) override;
 
-  bool MapAllPartitions() override;
   bool UnmapAllPartitions() override;
 
   bool IsDynamicPartition(const std::string& part_name, uint32_t slot) override;
 
   bool UpdateUsesSnapshotCompression() override;
-
-  std::optional<base::FilePath> GetSuperDevice();
 
  protected:
   // These functions are exposed for testing.
@@ -229,12 +225,16 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
       const DeltaArchiveManifest& manifest,
       bool delete_source);
 
+  bool MapAllPartitions() override;
+
   void SetSourceSlot(uint32_t slot) { source_slot_ = slot; }
   void SetTargetSlot(uint32_t slot) { target_slot_ = slot; }
 
  private:
   friend class DynamicPartitionControlAndroidTest;
   friend class SnapshotPartitionTestP;
+
+  std::optional<base::FilePath> GetSuperDevice();
 
   bool MapPartitionInternal(const std::string& super_device,
                             const std::string& target_partition_name,
@@ -348,9 +348,7 @@ class DynamicPartitionControlAndroid : public DynamicPartitionControlInterface {
 
   uint32_t source_slot_ = UINT32_MAX;
   uint32_t target_slot_ = UINT32_MAX;
-  // We assume that there's only 2 slots, A and B. This assumption is unlikely
-  // to change in the future. And certaintly won't change at runtime.
-  std::array<std::vector<std::string>, 2> dynamic_partition_list_{};
+  std::vector<std::vector<std::string>> dynamic_partition_list_{2UL};
 
   DISALLOW_COPY_AND_ASSIGN(DynamicPartitionControlAndroid);
 };

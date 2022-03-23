@@ -35,12 +35,9 @@ namespace {
 // Size of the buffer used to copy blocks.
 const uint64_t kMaxCopyBufferSize = 1024 * 1024;
 
-}  // namespace
-namespace fd_utils {
-
 bool CommonHashExtents(FileDescriptorPtr source,
                        const RepeatedPtrField<Extent>& src_extents,
-                       ExtentWriter* writer,
+                       DirectExtentWriter* writer,
                        uint64_t block_size,
                        brillo::Blob* hash_out) {
   auto total_blocks = utils::BlocksInExtents(src_extents);
@@ -74,6 +71,10 @@ bool CommonHashExtents(FileDescriptorPtr source,
   }
   return true;
 }
+
+}  // namespace
+
+namespace fd_utils {
 
 bool CopyAndHashExtents(FileDescriptorPtr source,
                         const RepeatedPtrField<Extent>& src_extents,
