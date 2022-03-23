@@ -65,10 +65,9 @@ class DynamicPartitionControlStub : public DynamicPartitionControlInterface {
       const std::optional<std::string>&,
       bool is_append) override;
 
-  std::unique_ptr<FileDescriptor> OpenCowFd(
-      const std::string& unsuffixed_partition_name,
-      const std::optional<std::string>&,
-      bool is_append = false) override {
+  FileDescriptorPtr OpenCowFd(const std::string& unsuffixed_partition_name,
+                              const std::optional<std::string>&,
+                              bool is_append = false) override {
     return nullptr;
   }
 

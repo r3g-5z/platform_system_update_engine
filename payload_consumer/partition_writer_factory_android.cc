@@ -23,7 +23,7 @@
 
 namespace chromeos_update_engine::partition_writer {
 
-std::unique_ptr<PartitionWriterInterface> CreatePartitionWriter(
+std::unique_ptr<PartitionWriter> CreatePartitionWriter(
     const PartitionUpdate& partition_update,
     const InstallPlan::Partition& install_part,
     DynamicPartitionControlInterface* dynamic_control,
@@ -35,8 +35,11 @@ std::unique_ptr<PartitionWriterInterface> CreatePartitionWriter(
     LOG(INFO)
         << "Virtual AB Compression Enabled, using VABC Partition Writer for `"
         << install_part.name << '`';
-    return std::make_unique<VABCPartitionWriter>(
-        partition_update, install_part, dynamic_control, block_size);
+    return std::make_unique<VABCPartitionWriter>(partition_update,
+                                                 install_part,
+                                                 dynamic_control,
+                                                 block_size,
+                                                 is_interactive);
   } else {
     LOG(INFO) << "Virtual AB Compression disabled, using Partition Writer for `"
               << install_part.name << '`';
