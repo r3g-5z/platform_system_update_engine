@@ -26,7 +26,7 @@
 
 namespace chromeos_update_engine {
 
-off64_t CachedFileDescriptorBase::Seek(off64_t offset, int whence) {
+off64_t CachedFileDescriptor::Seek(off64_t offset, int whence) {
   // Only support SEEK_SET and SEEK_CUR. I think these two would be enough. If
   // we want to support SEEK_END then we have to figure out the size of the
   // underlying file descriptor each time and it may not be a very good idea.
@@ -40,7 +40,7 @@ off64_t CachedFileDescriptorBase::Seek(off64_t offset, int whence) {
       return -1;
     }
     // Then we have to seek there.
-    if (GetFd()->Seek(next_offset, SEEK_SET) < 0) {
+    if (fd_->Seek(next_offset, SEEK_SET) < 0) {
       return -1;
     }
     offset_ = next_offset;
@@ -48,7 +48,7 @@ off64_t CachedFileDescriptorBase::Seek(off64_t offset, int whence) {
   return offset_;
 }
 
-ssize_t CachedFileDescriptorBase::Write(const void* buf, size_t count) {
+ssize_t CachedFileDescriptor::Write(const void* buf, size_t count) {
   auto bytes = static_cast<const uint8_t*>(buf);
   size_t total_bytes_wrote = 0;
   while (total_bytes_wrote < count) {
@@ -72,20 +72,19 @@ ssize_t CachedFileDescriptorBase::Write(const void* buf, size_t count) {
   return total_bytes_wrote;
 }
 
-bool CachedFileDescriptorBase::Flush() {
-  return FlushCache() && GetFd()->Flush();
+bool CachedFileDescriptor::Flush() {
+  return FlushCache() && fd_->Flush();
 }
 
-bool CachedFileDescriptorBase::Close() {
+bool CachedFileDescriptor::Close() {
   offset_ = 0;
-  return FlushCache() && GetFd()->Close();
+  return FlushCache() && fd_->Close();
 }
 
-bool CachedFileDescriptorBase::FlushCache() {
+bool CachedFileDescriptor::FlushCache() {
   size_t begin = 0;
   while (begin < bytes_cached_) {
-    auto bytes_wrote =
-        GetFd()->Write(cache_.data() + begin, bytes_cached_ - begin);
+    auto bytes_wrote = fd_->Write(cache_.data() + begin, bytes_cached_ - begin);
     if (bytes_wrote < 0) {
       PLOG(ERROR) << "Failed to flush cached data!";
       return false;
