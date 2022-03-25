@@ -30,6 +30,7 @@ import subprocess
 import sys
 import struct
 import tempfile
+import time
 import threading
 import xml.etree.ElementTree
 import zipfile
@@ -437,9 +438,15 @@ def main():
                       help='Verify metadata then exit, instead of applying the OTA.')
   parser.add_argument('--no-care-map', action='store_true',
                       help='Do not push care_map.pb to device.')
+  parser.add_argument('--perform-slot-switch', action='store_true',
+                      help='Perform slot switch for this OTA package')
+  parser.add_argument('--perform-reset-slot-switch', action='store_true',
+                      help='Perform reset slot switch for this OTA package')
   args = parser.parse_args()
   logging.basicConfig(
       level=logging.WARNING if args.no_verbose else logging.INFO)
+
+  start_time = time.perf_counter()
 
   dut = AdbHost(args.s)
 
@@ -470,6 +477,16 @@ def main():
           "--metadata={}".format(metadata_path)])
     # Return 0, as we are executing ADB commands here, no work needed after
     # this point
+    return 0
+  if args.perform_slot_switch:
+    assert PushMetadata(dut, args.otafile, metadata_path)
+    dut.adb(["shell", "update_engine_client",
+            "--switch_slot=true", "--metadata={}".format(metadata_path), "--follow"])
+    return 0
+  if args.perform_reset_slot_switch:
+    assert PushMetadata(dut, args.otafile, metadata_path)
+    dut.adb(["shell", "update_engine_client",
+            "--switch_slot=false", "--metadata={}".format(metadata_path)])
     return 0
 
   if args.no_slot_switch:
@@ -548,6 +565,7 @@ def main():
     for cmd in finalize_cmds:
       dut.adb(cmd, 5)
 
+  logging.info('Update took %.3f seconds', (time.perf_counter() - start_time))
   return 0
 
 
