@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 
+#include <algorithm>
 #include <limits>
 #include <map>
 #include <memory>
@@ -35,6 +36,7 @@
 #include <policy/libpolicy.h>
 #include <policy/mock_device_policy.h>
 #include <policy/mock_libpolicy.h>
+#include <update_engine/dbus-constants.h>
 
 #include "update_engine/common/constants.h"
 #include "update_engine/common/dlcservice_interface.h"
@@ -2339,6 +2341,68 @@ TEST_F(UpdateAttempterTest, SomeOtherLastAttemptError) {
   UpdateEngineStatus status;
   attempter_.GetStatus(&status);
   EXPECT_EQ(static_cast<int32_t>(ErrorCode::kError), status.last_attempt_error);
+}
+
+TEST_F(UpdateAttempterTest, RepeatedUpdateFeatureDisabledByDefault) {
+  UpdateEngineStatus status;
+  attempter_.GetStatus(&status);
+  auto end = std::end(status.features);
+  auto feature_itr =
+      std::find_if(std::begin(status.features),
+                   end,
+                   [](decltype(status.features)::value_type v) {
+                     return v.name == update_engine::kFeatureRepeatedUpdates;
+                   });
+  EXPECT_TRUE(feature_itr != end);
+  EXPECT_FALSE(feature_itr->enabled);
+}
+
+TEST_F(UpdateAttempterTest, RepeatedUpdateFeatureEnabled) {
+  auto* fake_prefs = FakeSystemState::Get()->prefs();
+  fake_prefs->SetBoolean(kPrefsAllowRepeatedUpdates, true);
+
+  UpdateEngineStatus status;
+  attempter_.GetStatus(&status);
+  auto end = std::end(status.features);
+  auto feature_itr =
+      std::find_if(std::begin(status.features),
+                   end,
+                   [](decltype(status.features)::value_type v) {
+                     return v.name == update_engine::kFeatureRepeatedUpdates;
+                   });
+  EXPECT_TRUE(feature_itr != end);
+  EXPECT_TRUE(feature_itr->enabled);
+}
+
+TEST_F(UpdateAttempterTest, ConsumerAutoUpdateFeatureEnabledByDefault) {
+  UpdateEngineStatus status;
+  attempter_.GetStatus(&status);
+  auto end = std::end(status.features);
+  auto feature_itr =
+      std::find_if(std::begin(status.features),
+                   end,
+                   [](decltype(status.features)::value_type v) {
+                     return v.name == update_engine::kFeatureConsumerAutoUpdate;
+                   });
+  EXPECT_TRUE(feature_itr != end);
+  EXPECT_TRUE(feature_itr->enabled);
+}
+
+TEST_F(UpdateAttempterTest, ConsumerAutoUpdateFeatureDisabled) {
+  auto* fake_prefs = FakeSystemState::Get()->prefs();
+  fake_prefs->SetBoolean(kPrefsConsumerAutoUpdateDisabled, true);
+
+  UpdateEngineStatus status;
+  attempter_.GetStatus(&status);
+  auto end = std::end(status.features);
+  auto feature_itr =
+      std::find_if(std::begin(status.features),
+                   end,
+                   [](decltype(status.features)::value_type v) {
+                     return v.name == update_engine::kFeatureConsumerAutoUpdate;
+                   });
+  EXPECT_TRUE(feature_itr != end);
+  EXPECT_FALSE(feature_itr->enabled);
 }
 
 TEST_F(UpdateAttempterTest, CalculateDlcParamsInstallTest) {

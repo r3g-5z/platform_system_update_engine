@@ -243,6 +243,13 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // is unset or unable to be read.
   virtual bool IsRepeatedUpdatesEnabled();
 
+  // Toggles a feature managed by update_engine and broadcasts the update_engine
+  // status out to all observers.
+  bool ToggleFeature(const std::string& feature, bool enable);
+
+  // Returns the value of the feature managed by update_engine.
+  bool IsFeatureEnabled(const std::string& feature, bool* out_enabled) const;
+
   // |DaemonStateInterface| overrides.
   bool StartUpdater() override;
   void AddObserver(ServiceObserverInterface* observer) override {

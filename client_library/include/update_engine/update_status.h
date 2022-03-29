@@ -18,6 +18,7 @@
 #define UPDATE_ENGINE_CLIENT_LIBRARY_INCLUDE_UPDATE_ENGINE_UPDATE_STATUS_H_
 
 #include <string>
+#include <vector>
 
 #include <brillo/enum_flags.h>
 
@@ -73,6 +74,15 @@ enum UpdateAttemptFlags : int32_t {
   kFlagNonInteractive = (1 << 0),
 };
 
+// A struct representing feature that is managed by update_engine.
+typedef struct FeatureInternal {
+  std::string name;
+  bool enabled;
+} FeatureInternal;
+
+// List of `FeatureInternal`s.
+using FeatureInternalList = std::vector<FeatureInternal>;
+
 // Enable bit-wise operators for the above enumeration of flag values.
 DECLARE_FLAGS_ENUM(UpdateAttemptFlags);
 
@@ -102,6 +112,8 @@ struct UpdateEngineStatus {
   int32_t last_attempt_error;
   // How urgent an update is, critical or regular.
   UpdateUrgencyInternal update_urgency_internal;
+  // Features managed by update_engine.
+  FeatureInternalList features;
 };
 
 }  // namespace update_engine

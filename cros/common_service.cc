@@ -343,36 +343,20 @@ bool UpdateEngineService::GetUpdateOverCellularPermission(ErrorPtr* error,
 bool UpdateEngineService::ToggleFeature(ErrorPtr* error,
                                         const std::string& feature,
                                         bool enable) {
-  if (feature == update_engine::kFeatureRepeatedUpdates) {
-    return utils::ToggleFeature(kPrefsAllowRepeatedUpdates, enable);
-  }
-  if (feature == update_engine::kFeatureConsumerAutoUpdate) {
-    // Pref will hold "disable" of consumer auto update.
-    // So `not` the incoming `enable` to express this.
-    return utils::ToggleFeature(kPrefsConsumerAutoUpdateDisabled, !enable);
-  }
+  if (SystemState::Get()->update_attempter()->ToggleFeature(feature, enable))
+    return true;
   LogAndSetError(
-      error, FROM_HERE, string("Feature ") + feature + " is not supported");
+      error, FROM_HERE, string("Failed to toggle feature ") + feature);
   return false;
 }
 
 bool UpdateEngineService::IsFeatureEnabled(ErrorPtr* error,
                                            const std::string& feature,
                                            bool* out_enabled) {
-  if (feature == update_engine::kFeatureRepeatedUpdates) {
-    return utils::IsFeatureEnabled(kPrefsAllowRepeatedUpdates, out_enabled);
-  }
-  if (feature == update_engine::kFeatureConsumerAutoUpdate) {
-    bool consumer_auto_update_disabled = false;
-    if (!utils::IsFeatureEnabled(kPrefsConsumerAutoUpdateDisabled,
-                                 &consumer_auto_update_disabled)) {
-      return false;
-    }
-    *out_enabled = !consumer_auto_update_disabled;
+  if (SystemState::Get()->update_attempter()->IsFeatureEnabled(feature,
+                                                               out_enabled))
     return true;
-  }
-  LogAndSetError(
-      error, FROM_HERE, string("Feature ") + feature + " is not supported");
+  LogAndSetError(error, FROM_HERE, string("Failed to get feature ") + feature);
   return false;
 }
 

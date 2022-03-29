@@ -53,6 +53,11 @@ void ConvertToStatusResult(const UpdateEngineStatus& ue_status,
   out_status->set_last_attempt_error(ue_status.last_attempt_error);
   out_status->set_update_urgency(
       static_cast<UpdateUrgency>(ue_status.update_urgency_internal));
+  for (const auto& feature : ue_status.features) {
+    auto* out_feature = out_status->add_features();
+    out_feature->set_name(feature.name);
+    out_feature->set_enabled(feature.enabled);
+  }
 }
 }  // namespace
 

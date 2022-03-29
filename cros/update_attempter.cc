@@ -88,6 +88,7 @@ using chromeos_update_manager::UpdateCheckParams;
 using std::map;
 using std::string;
 using std::vector;
+using update_engine::FeatureInternalList;
 using update_engine::UpdateAttemptFlags;
 using update_engine::UpdateEngineStatus;
 
@@ -1615,6 +1616,21 @@ bool UpdateAttempter::GetStatus(UpdateEngineStatus* out_status) {
 
   out_status->last_attempt_error = static_cast<int32_t>(GetLastUpdateError());
 
+  FeatureInternalList features;
+  for (const auto& feature : {update_engine::kFeatureRepeatedUpdates,
+                              update_engine::kFeatureConsumerAutoUpdate}) {
+    bool enabled;
+    if (IsFeatureEnabled(feature, &enabled)) {
+      features.push_back({
+          .name = feature,
+          .enabled = enabled,
+      });
+    } else {
+      LOG(ERROR) << "Failed to read feature (" << feature << ").";
+    }
+  }
+  out_status->features = std::move(features);
+
   return true;
 }
 
@@ -2041,6 +2057,41 @@ void UpdateAttempter::ReportTimeToUpdateAppliedMetric() {
       }
     }
   }
+}
+
+bool UpdateAttempter::ToggleFeature(const std::string& feature, bool enable) {
+  bool ret = false;
+  if (feature == update_engine::kFeatureRepeatedUpdates) {
+    ret = utils::ToggleFeature(kPrefsAllowRepeatedUpdates, enable);
+  } else if (feature == update_engine::kFeatureConsumerAutoUpdate) {
+    // Pref will hold "disable" of consumer auto update.
+    // So `not` the incoming `enable` to express this.
+    ret = utils::ToggleFeature(kPrefsConsumerAutoUpdateDisabled, !enable);
+  } else {
+    LOG(WARNING) << "Feature (" << feature << ") is not supported.";
+    ret = false;
+  }
+  // Always broadcast out in case callers cache the values of a feature.
+  BroadcastStatus();
+  return ret;
+}
+
+bool UpdateAttempter::IsFeatureEnabled(const std::string& feature,
+                                       bool* out_enabled) const {
+  if (feature == update_engine::kFeatureRepeatedUpdates) {
+    return utils::IsFeatureEnabled(kPrefsAllowRepeatedUpdates, out_enabled);
+  }
+  if (feature == update_engine::kFeatureConsumerAutoUpdate) {
+    bool consumer_auto_update_disabled = false;
+    if (!utils::IsFeatureEnabled(kPrefsConsumerAutoUpdateDisabled,
+                                 &consumer_auto_update_disabled)) {
+      return false;
+    }
+    *out_enabled = !consumer_auto_update_disabled;
+    return true;
+  }
+  LOG(WARNING) << "Feature (" << feature << ") is not supported.";
+  return false;
 }
 
 }  // namespace chromeos_update_engine
