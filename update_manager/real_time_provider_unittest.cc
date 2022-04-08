@@ -22,11 +22,11 @@
 #include <base/time/time.h>
 #include <gtest/gtest.h>
 
-#include "update_engine/cros/fake_system_state.h"
+#include "update_engine/common/fake_clock.h"
 #include "update_engine/update_manager/umtest_utils.h"
 
 using base::Time;
-using chromeos_update_engine::FakeSystemState;
+using chromeos_update_engine::FakeClock;
 using std::unique_ptr;
 
 namespace chromeos_update_manager {
@@ -34,9 +34,8 @@ namespace chromeos_update_manager {
 class UmRealTimeProviderTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    FakeSystemState::CreateInstance();
     // The provider initializes correctly.
-    provider_.reset(new RealTimeProvider());
+    provider_.reset(new RealTimeProvider(&fake_clock_));
     ASSERT_NE(nullptr, provider_.get());
     ASSERT_TRUE(provider_->Init());
   }
@@ -57,6 +56,7 @@ class UmRealTimeProviderTest : public ::testing::Test {
     return time;
   }
 
+  FakeClock fake_clock_;
   unique_ptr<RealTimeProvider> provider_;
 };
 
@@ -71,7 +71,7 @@ TEST_F(UmRealTimeProviderTest, CurrDateValid) {
   Time expected;
   ignore_result(Time::FromLocalExploded(exploded, &expected));
 
-  FakeSystemState::Get()->fake_clock()->SetWallclockTime(now);
+  fake_clock_.SetWallclockTime(now);
   UmTestUtils::ExpectVariableHasValue(expected, provider_->var_curr_date());
 }
 
@@ -79,7 +79,7 @@ TEST_F(UmRealTimeProviderTest, CurrHourValid) {
   const Time now = CurrTime();
   Time::Exploded expected;
   now.LocalExplode(&expected);
-  FakeSystemState::Get()->fake_clock()->SetWallclockTime(now);
+  fake_clock_.SetWallclockTime(now);
   UmTestUtils::ExpectVariableHasValue(expected.hour,
                                       provider_->var_curr_hour());
 }
@@ -88,7 +88,7 @@ TEST_F(UmRealTimeProviderTest, CurrMinuteValid) {
   const Time now = CurrTime();
   Time::Exploded expected;
   now.LocalExplode(&expected);
-  FakeSystemState::Get()->fake_clock()->SetWallclockTime(now);
+  fake_clock_.SetWallclockTime(now);
   UmTestUtils::ExpectVariableHasValue(expected.minute,
                                       provider_->var_curr_minute());
 }

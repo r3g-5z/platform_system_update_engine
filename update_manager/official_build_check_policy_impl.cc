@@ -27,16 +27,8 @@ EvalStatus OnlyUpdateOfficialBuildsPolicyImpl::UpdateCheckAllowed(
   const bool* is_official_build_p =
       ec->GetValue(state->system_provider()->var_is_official_build());
   if (is_official_build_p != nullptr && !(*is_official_build_p)) {
-    const int64_t* interval_timeout_p = ec->GetValue(
-        state->updater_provider()->var_test_update_check_interval_timeout());
-    // The |interval_timeout | is used for testing only to test periodic
-    // update checks on unofficial images.
-    if (interval_timeout_p == nullptr) {
-      LOG(INFO) << "Unofficial build, blocking periodic update checks.";
-      return EvalStatus::kAskMeAgainLater;
-    }
-    LOG(INFO) << "Unofficial build, but periodic update check interval "
-              << "timeout is defined, so update is not blocked.";
+    LOG(INFO) << "Unofficial build, blocking periodic update checks.";
+    return EvalStatus::kAskMeAgainLater;
   }
   return EvalStatus::kContinue;
 }

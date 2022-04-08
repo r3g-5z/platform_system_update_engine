@@ -22,17 +22,18 @@
 #include <base/bind.h>
 #include <gtest/gtest.h>
 
-#include "update_engine/common/fake_boot_control.h"
+#include "update_engine/fake_system_state.h"
 
 namespace chromeos_update_engine {
 
 class UpdateBootFlagsActionTest : public ::testing::Test {
- protected:
-  FakeBootControl boot_control_;
+ public:
+  FakeSystemState fake_system_state_;
 };
 
 TEST_F(UpdateBootFlagsActionTest, SimpleTest) {
-  auto action = std::make_unique<UpdateBootFlagsAction>(&boot_control_);
+  auto boot_control = fake_system_state_.fake_boot_control();
+  auto action = std::make_unique<UpdateBootFlagsAction>(boot_control);
   ActionProcessor processor;
   processor.EnqueueAction(std::move(action));
 
@@ -48,8 +49,9 @@ TEST_F(UpdateBootFlagsActionTest, DoubleActionTest) {
   UpdateBootFlagsAction::updated_boot_flags_ = false;
   UpdateBootFlagsAction::is_running_ = false;
 
-  auto action1 = std::make_unique<UpdateBootFlagsAction>(&boot_control_);
-  auto action2 = std::make_unique<UpdateBootFlagsAction>(&boot_control_);
+  auto boot_control = fake_system_state_.fake_boot_control();
+  auto action1 = std::make_unique<UpdateBootFlagsAction>(boot_control);
+  auto action2 = std::make_unique<UpdateBootFlagsAction>(boot_control);
   ActionProcessor processor1, processor2;
   processor1.EnqueueAction(std::move(action1));
   processor2.EnqueueAction(std::move(action2));

@@ -49,6 +49,7 @@ EvalStatus UpdateManager::EvaluatePolicy(
   ec->ResetEvaluation();
 
   const std::string policy_name = policy_->PolicyRequestName(policy_method);
+  LOG(INFO) << policy_name << ": START";
 
   // First try calling the actual policy.
   std::string error;
@@ -70,12 +71,14 @@ EvalStatus UpdateManager::EvaluatePolicy(
     }
   }
 
+  LOG(INFO) << policy_name << ": END";
+
   return status;
 }
 
 template <typename R, typename... Args>
 void UpdateManager::OnPolicyReadyToEvaluate(
-    std::shared_ptr<EvaluationContext> ec,
+    scoped_refptr<EvaluationContext> ec,
     base::Callback<void(EvalStatus status, const R& result)> callback,
     EvalStatus (Policy::*policy_method)(
         EvaluationContext*, State*, std::string*, R*, Args...) const,
@@ -116,7 +119,8 @@ EvalStatus UpdateManager::PolicyRequest(
         EvaluationContext*, State*, std::string*, R*, ExpectedArgs...) const,
     R* result,
     ActualArgs... args) {
-  auto ec = std::make_shared<EvaluationContext>(evaluation_timeout_);
+  scoped_refptr<EvaluationContext> ec(
+      new EvaluationContext(clock_, evaluation_timeout_));
   // A PolicyRequest always consists on a single evaluation on a new
   // EvaluationContext.
   // IMPORTANT: To ensure that ActualArgs can be converted to ExpectedArgs, we
@@ -137,14 +141,15 @@ void UpdateManager::AsyncPolicyRequest(
     EvalStatus (Policy::*policy_method)(
         EvaluationContext*, State*, std::string*, R*, ExpectedArgs...) const,
     ActualArgs... args) {
-  auto ec = std::make_shared<EvaluationContext>(
+  scoped_refptr<EvaluationContext> ec = new EvaluationContext(
+      clock_,
       evaluation_timeout_,
       expiration_timeout_,
       std::unique_ptr<base::Callback<void(EvaluationContext*)>>(
           new base::Callback<void(EvaluationContext*)>(
               base::Bind(&UpdateManager::UnregisterEvalContext,
                          weak_ptr_factory_.GetWeakPtr()))));
-  if (!ec_repo_.insert(ec).second) {
+  if (!ec_repo_.insert(ec.get()).second) {
     LOG(ERROR) << "Failed to register evaluation context; this is a bug.";
   }
 

@@ -63,7 +63,7 @@ class BootImgFilesystemTest : public ::testing::Test {
     return boot_img;
   }
 
-  ScopedTempFile boot_file_;
+  test_utils::ScopedTempFile boot_file_;
 };
 
 TEST_F(BootImgFilesystemTest, SimpleTest) {

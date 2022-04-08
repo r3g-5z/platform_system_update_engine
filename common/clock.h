@@ -24,11 +24,13 @@ namespace chromeos_update_engine {
 // Implements a clock.
 class Clock : public ClockInterface {
  public:
-  Clock() = default;
+  Clock() {}
 
-  base::Time GetWallclockTime() const override;
-  base::Time GetMonotonicTime() const override;
-  base::Time GetBootTime() const override;
+  base::Time GetWallclockTime() override;
+
+  base::Time GetMonotonicTime() override;
+
+  base::Time GetBootTime() override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(Clock);

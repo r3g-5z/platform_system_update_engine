@@ -72,7 +72,7 @@ class ExtentReaderTest : public ::testing::Test {
   }
 
   FileDescriptorPtr fd_;
-  ScopedTempFile temp_file_{"ExtentReaderTest-file.XXXXXX"};
+  test_utils::ScopedTempFile temp_file_{"ExtentReaderTest-file.XXXXXX"};
   brillo::Blob sample_;
 };
 

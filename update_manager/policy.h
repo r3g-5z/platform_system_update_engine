@@ -17,7 +17,6 @@
 #ifndef UPDATE_ENGINE_UPDATE_MANAGER_POLICY_H_
 #define UPDATE_ENGINE_UPDATE_MANAGER_POLICY_H_
 
-#include <memory>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -43,35 +42,24 @@ std::string ToString(EvalStatus status);
 // Parameters of an update check. These parameters are determined by the
 // UpdateCheckAllowed policy.
 struct UpdateCheckParams {
-  // Whether the auto-updates are enabled on this build.
-  bool updates_enabled{true};
+  bool updates_enabled;  // Whether the auto-updates are enabled on this build.
 
   // Attributes pertaining to the case where update checks are allowed.
   //
   // A target version prefix, if imposed by policy; otherwise, an empty string.
   std::string target_version_prefix;
   // Specifies whether rollback images are allowed by device policy.
-  bool rollback_allowed{false};
-  // Specifies if rollbacks should attempt to preserve some system state.
-  bool rollback_data_save_requested{false};
+  bool rollback_allowed;
   // Specifies the number of Chrome milestones rollback should be allowed,
   // starting from the stable version at any time. Value is -1 if unspecified
   // (e.g. no device policy is available yet), in this case no version
   // roll-forward should happen.
-  int rollback_allowed_milestones{0};
-  // Whether a rollback with data save should be initiated on channel
-  // downgrade (e.g. beta to stable).
-  bool rollback_on_channel_downgrade{false};
+  int rollback_allowed_milestones;
   // A target channel, if so imposed by policy; otherwise, an empty string.
   std::string target_channel;
-  // Specifies if the channel hint, e.g. LTS (Long Term Support) updates.
-  std::string lts_tag;
-  // Specifies a token which maps to a Chrome OS Quick Fix Build, if imposed by
-  // policy; otherwise, an empty string.
-  std::string quick_fix_build_token;
 
   // Whether the allowed update is interactive (user-initiated) or periodic.
-  bool interactive{false};
+  bool interactive;
 };
 
 // Input arguments to UpdateCanStart.
@@ -230,6 +218,9 @@ class Policy {
     if (reinterpret_cast<typeof(&Policy::UpdateCanStart)>(policy_method) ==
         &Policy::UpdateCanStart)
       return class_name + "UpdateCanStart";
+    if (reinterpret_cast<typeof(&Policy::UpdateDownloadAllowed)>(
+            policy_method) == &Policy::UpdateDownloadAllowed)
+      return class_name + "UpdateDownloadAllowed";
     if (reinterpret_cast<typeof(&Policy::P2PEnabled)>(policy_method) ==
         &Policy::P2PEnabled)
       return class_name + "P2PEnabled";
@@ -278,6 +269,17 @@ class Policy {
                                     UpdateDownloadParams* result,
                                     UpdateState update_state) const = 0;
 
+  // Checks whether downloading of an update is allowed; currently, this checks
+  // whether the network connection type is suitable for updating over.  May
+  // consult the shill provider as well as the device policy (if available).
+  // Returns |EvalStatus::kSucceeded|, setting |result| according to whether or
+  // not the current connection can be used; on error, returns
+  // |EvalStatus::kFailed| and sets |error| accordingly.
+  virtual EvalStatus UpdateDownloadAllowed(EvaluationContext* ec,
+                                           State* state,
+                                           std::string* error,
+                                           bool* result) const = 0;
+
   // Checks whether P2P is enabled. This may consult device policy and other
   // global settings.
   virtual EvalStatus P2PEnabled(EvaluationContext* ec,
@@ -305,9 +307,6 @@ class Policy {
  private:
   DISALLOW_COPY_AND_ASSIGN(Policy);
 };
-
-// Get system dependent policy implementation.
-std::unique_ptr<Policy> GetSystemPolicy();
 
 }  // namespace chromeos_update_manager
 

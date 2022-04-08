@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python2
 #
 # Copyright (C) 2013 The Android Open Source Project
 #
@@ -16,11 +16,6 @@
 #
 
 """Unit tests for format_utils.py."""
-
-# Disable check for function names to avoid errors based on old code
-# pylint: disable-msg=invalid-name
-
-from __future__ import absolute_import
 
 import unittest
 

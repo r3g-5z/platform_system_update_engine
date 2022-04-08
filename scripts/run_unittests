@@ -26,6 +26,5 @@ for unittest_script in update_payload/*_unittest.py; do
 done
 
 ./payload_info_unittest.py
-./paycheck_unittest.py
 
 exit 0

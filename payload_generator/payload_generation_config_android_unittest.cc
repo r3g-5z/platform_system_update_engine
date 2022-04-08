@@ -138,7 +138,8 @@ class PayloadGenerationConfigAndroidTest : public ::testing::Test {
   }
 
   ImageConfig image_config_;
-  ScopedTempFile temp_file_{"PayloadGenerationConfigAndroidTest.XXXXXX"};
+  test_utils::ScopedTempFile temp_file_{
+      "PayloadGenerationConfigAndroidTest.XXXXXX"};
 };
 
 TEST_F(PayloadGenerationConfigAndroidTest, LoadVerityConfigSimpleTest) {

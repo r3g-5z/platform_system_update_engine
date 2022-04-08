@@ -16,10 +16,9 @@
 
 """Utilities for unit testing."""
 
-from __future__ import absolute_import
 from __future__ import print_function
 
-import io
+import cStringIO
 import hashlib
 import os
 import struct
@@ -71,7 +70,7 @@ def _WriteInt(file_obj, size, is_unsigned, val):
   """
   try:
     file_obj.write(struct.pack(common.IntPackingFmtStr(size, is_unsigned), val))
-  except IOError as e:
+  except IOError, e:
     raise payload.PayloadError('error writing to file (%s): %s' %
                                (file_obj.name, e))
 
@@ -174,37 +173,31 @@ class PayloadGenerator(object):
     self.block_size = block_size
     _SetMsgField(self.manifest, 'block_size', block_size)
 
-  def SetPartInfo(self, part_name, is_new, part_size, part_hash):
+  def SetPartInfo(self, is_kernel, is_new, part_size, part_hash):
     """Set the partition info entry.
 
     Args:
-      part_name: The name of the partition.
-      is_new: Whether to set old (False) or new (True) info.
-      part_size: The partition size (in fact, filesystem size).
-      part_hash: The partition hash.
+      is_kernel: whether this is kernel partition info
+      is_new: whether to set old (False) or new (True) info
+      part_size: the partition size (in fact, filesystem size)
+      part_hash: the partition hash
     """
-    partition = next((x for x in self.manifest.partitions
-                      if x.partition_name == part_name), None)
-    if partition is None:
-      partition = self.manifest.partitions.add()
-      partition.partition_name = part_name
-
-    part_info = (partition.new_partition_info if is_new
-                 else partition.old_partition_info)
+    if is_kernel:
+      part_info = (self.manifest.new_kernel_info if is_new
+                   else self.manifest.old_kernel_info)
+    else:
+      part_info = (self.manifest.new_rootfs_info if is_new
+                   else self.manifest.old_rootfs_info)
     _SetMsgField(part_info, 'size', part_size)
     _SetMsgField(part_info, 'hash', part_hash)
 
-  def AddOperation(self, part_name, op_type, data_offset=None,
+  def AddOperation(self, is_kernel, op_type, data_offset=None,
                    data_length=None, src_extents=None, src_length=None,
                    dst_extents=None, dst_length=None, data_sha256_hash=None):
     """Adds an InstallOperation entry."""
-    partition = next((x for x in self.manifest.partitions
-                      if x.partition_name == part_name), None)
-    if partition is None:
-      partition = self.manifest.partitions.add()
-      partition.partition_name = part_name
+    operations = (self.manifest.kernel_install_operations if is_kernel
+                  else self.manifest.install_operations)
 
-    operations = partition.operations
     op = operations.add()
     op.type = op_type
 
@@ -284,7 +277,7 @@ class EnhancedPayloadGenerator(PayloadGenerator):
     self.data_blobs.append(data_blob)
     return data_length, data_offset
 
-  def AddOperationWithData(self, part_name, op_type, src_extents=None,
+  def AddOperationWithData(self, is_kernel, op_type, src_extents=None,
                            src_length=None, dst_extents=None, dst_length=None,
                            data_blob=None, do_hash_data_blob=True):
     """Adds an install operation and associated data blob.
@@ -294,12 +287,12 @@ class EnhancedPayloadGenerator(PayloadGenerator):
     necessary offset/length accounting.
 
     Args:
-      part_name: The name of the partition (e.g. kernel or root).
-      op_type: one of REPLACE, REPLACE_BZ, REPLACE_XZ.
+      is_kernel: whether this is a kernel (True) or rootfs (False) operation
+      op_type: one of REPLACE, REPLACE_BZ, REPLACE_XZ, MOVE or BSDIFF
       src_extents: list of (start, length) pairs indicating src block ranges
-      src_length: size of the src data in bytes (needed for diff operations)
+      src_length: size of the src data in bytes (needed for BSDIFF)
       dst_extents: list of (start, length) pairs indicating dst block ranges
-      dst_length: size of the dst data in bytes (needed for diff operations)
+      dst_length: size of the dst data in bytes (needed for BSDIFF)
       data_blob: a data blob associated with this operation
       do_hash_data_blob: whether or not to compute and add a data blob hash
     """
@@ -309,13 +302,15 @@ class EnhancedPayloadGenerator(PayloadGenerator):
         data_sha256_hash = hashlib.sha256(data_blob).digest()
       data_length, data_offset = self.AddData(data_blob)
 
-    self.AddOperation(part_name, op_type, data_offset=data_offset,
+    self.AddOperation(is_kernel, op_type, data_offset=data_offset,
                       data_length=data_length, src_extents=src_extents,
                       src_length=src_length, dst_extents=dst_extents,
                       dst_length=dst_length, data_sha256_hash=data_sha256_hash)
 
   def WriteToFileWithData(self, file_obj, sigs_data=None,
-                          privkey_file_name=None, padding=None):
+                          privkey_file_name=None,
+                          do_add_pseudo_operation=False,
+                          is_pseudo_in_kernel=False, padding=None):
     """Writes the payload content to a file, optionally signing the content.
 
     Args:
@@ -324,6 +319,10 @@ class EnhancedPayloadGenerator(PayloadGenerator):
                  payload signature fields assumed to be preset by the caller)
       privkey_file_name: key used for signing the payload (optional; used only
                          if explicit signatures blob not provided)
+      do_add_pseudo_operation: whether a pseudo-operation should be added to
+                               account for the signature blob
+      is_pseudo_in_kernel: whether the pseudo-operation should be added to
+                           kernel (True) or rootfs (False) operations
       padding: stuff to dump past the normal data blobs provided (optional)
 
     Raises:
@@ -336,7 +335,7 @@ class EnhancedPayloadGenerator(PayloadGenerator):
 
     if do_generate_sigs_data:
       # First, sign some arbitrary data to obtain the size of a signature blob.
-      fake_sig = SignSha256(b'fake-payload-data', privkey_file_name)
+      fake_sig = SignSha256('fake-payload-data', privkey_file_name)
       fake_sigs_gen = SignaturesGenerator()
       fake_sigs_gen.AddSig(1, fake_sig)
       sigs_len = len(fake_sigs_gen.ToBinary())
@@ -344,9 +343,20 @@ class EnhancedPayloadGenerator(PayloadGenerator):
       # Update the payload with proper signature attributes.
       self.SetSignatures(self.curr_offset, sigs_len)
 
+    # Add a pseudo-operation to account for the signature blob, if requested.
+    if do_add_pseudo_operation:
+      if not self.block_size:
+        raise TestError('cannot add pseudo-operation without knowing the '
+                        'payload block size')
+      self.AddOperation(
+          is_pseudo_in_kernel, common.OpType.REPLACE,
+          data_offset=self.curr_offset, data_length=sigs_len,
+          dst_extents=[(common.PSEUDO_EXTENT_MARKER,
+                        (sigs_len + self.block_size - 1) / self.block_size)])
+
     if do_generate_sigs_data:
       # Once all payload fields are updated, dump and sign it.
-      temp_payload_file = io.BytesIO()
+      temp_payload_file = cStringIO.StringIO()
       self.WriteToFile(temp_payload_file, data_blobs=self.data_blobs)
       sig = SignSha256(temp_payload_file.getvalue(), privkey_file_name)
       sigs_gen = SignaturesGenerator()

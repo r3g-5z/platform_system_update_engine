@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python2
 #
 # Copyright (C) 2017 The Android Open Source Project
 #
@@ -17,24 +17,17 @@
 
 """Send an A/B update to an Android device over adb."""
 
-from __future__ import print_function
-from __future__ import absolute_import
-
 import argparse
-import binascii
+import BaseHTTPServer
 import hashlib
 import logging
 import os
 import socket
 import subprocess
 import sys
-import struct
-import tempfile
 import threading
 import xml.etree.ElementTree
 import zipfile
-
-from six.moves import BaseHTTPServer
 
 import update_payload.payload
 
@@ -47,7 +40,6 @@ PAYLOAD_KEY_PATH = '/etc/update_engine/update-payload-key.pub.pem'
 
 # The port on the device that update_engine should connect to.
 DEVICE_PORT = 1234
-
 
 def CopyFileObjLength(fsrc, fdst, buffer_size=128 * 1024, copy_length=None):
   """Copy from a file object to another.
@@ -93,7 +85,6 @@ class AndroidOTAPackage(object):
   OTA_PAYLOAD_PROPERTIES_TXT = 'payload_properties.txt'
   SECONDARY_OTA_PAYLOAD_BIN = 'secondary/payload.bin'
   SECONDARY_OTA_PAYLOAD_PROPERTIES_TXT = 'secondary/payload_properties.txt'
-  PAYLOAD_MAGIC_HEADER = b'CrAU'
 
   def __init__(self, otafilename, secondary_payload=False):
     self.otafilename = otafilename
@@ -102,34 +93,10 @@ class AndroidOTAPackage(object):
     payload_entry = (self.SECONDARY_OTA_PAYLOAD_BIN if secondary_payload else
                      self.OTA_PAYLOAD_BIN)
     payload_info = otazip.getinfo(payload_entry)
-
-    if payload_info.compress_type != 0:
-      logging.error(
-          "Expected payload to be uncompressed, got compression method %d",
-          payload_info.compress_type)
-    # Don't use len(payload_info.extra). Because that returns size of extra
-    # fields in central directory. We need to look at local file directory,
-    # as these two might have different sizes.
-    with open(otafilename, "rb") as fp:
-      fp.seek(payload_info.header_offset)
-      data = fp.read(zipfile.sizeFileHeader)
-      fheader = struct.unpack(zipfile.structFileHeader, data)
-      # Last two fields of local file header are filename length and
-      # extra length
-      filename_len = fheader[-2]
-      extra_len = fheader[-1]
-      self.offset = payload_info.header_offset
-      self.offset += zipfile.sizeFileHeader
-      self.offset += filename_len + extra_len
-      self.size = payload_info.file_size
-      fp.seek(self.offset)
-      payload_header = fp.read(4)
-      if payload_header != self.PAYLOAD_MAGIC_HEADER:
-        logging.warning(
-            "Invalid header, expected %s, got %s."
-            "Either the offset is not correct, or payload is corrupted",
-            binascii.hexlify(self.PAYLOAD_MAGIC_HEADER),
-            binascii.hexlify(payload_header))
+    self.offset = payload_info.header_offset
+    self.offset += zipfile.sizeFileHeader
+    self.offset += len(payload_info.extra) + len(payload_info.filename)
+    self.size = payload_info.file_size
 
     property_entry = (self.SECONDARY_OTA_PAYLOAD_PROPERTIES_TXT if
                       secondary_payload else self.OTA_PAYLOAD_PROPERTIES_TXT)
@@ -169,6 +136,7 @@ class UpdateHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         if int(e) < file_size:
           start_range = file_size - int(e)
     return start_range, end_range
+
 
   def do_GET(self):  # pylint: disable=invalid-name
     """Reply with the requested payload file."""
@@ -211,6 +179,7 @@ class UpdateHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     f.seek(serving_start + start_range)
     CopyFileObjLength(f, self.wfile, copy_length=end_range - start_range)
+
 
   def do_POST(self):  # pylint: disable=invalid-name
     """Reply with the omaha response xml."""
@@ -307,7 +276,6 @@ class ServerThread(threading.Thread):
     logging.info('Server Terminated')
 
   def StopServer(self):
-    self._httpd.shutdown()
     self._httpd.socket.close()
 
 
@@ -321,13 +289,13 @@ def AndroidUpdateCommand(ota_filename, secondary, payload_url, extra_headers):
   """Return the command to run to start the update in the Android device."""
   ota = AndroidOTAPackage(ota_filename, secondary)
   headers = ota.properties
-  headers += b'USER_AGENT=Dalvik (something, something)\n'
-  headers += b'NETWORK_ID=0\n'
-  headers += extra_headers.encode()
+  headers += 'USER_AGENT=Dalvik (something, something)\n'
+  headers += 'NETWORK_ID=0\n'
+  headers += extra_headers
 
   return ['update_engine_client', '--update', '--follow',
           '--payload=%s' % payload_url, '--offset=%d' % ota.offset,
-          '--size=%d' % ota.size, '--headers="%s"' % headers.decode()]
+          '--size=%d' % ota.size, '--headers="%s"' % headers]
 
 
 def OmahaUpdateCommand(omaha_url):
@@ -350,7 +318,7 @@ class AdbHost(object):
     if self._device_serial:
       self._command_prefix += ['-s', self._device_serial]
 
-  def adb(self, command, timeout_seconds: float = None):
+  def adb(self, command):
     """Run an ADB command like "adb push".
 
     Args:
@@ -365,7 +333,7 @@ class AdbHost(object):
     command = self._command_prefix + command
     logging.info('Running: %s', ' '.join(str(x) for x in command))
     p = subprocess.Popen(command, universal_newlines=True)
-    p.wait(timeout_seconds)
+    p.wait()
     return p.returncode
 
   def adb_output(self, command):
@@ -383,28 +351,6 @@ class AdbHost(object):
     command = self._command_prefix + command
     logging.info('Running: %s', ' '.join(str(x) for x in command))
     return subprocess.check_output(command, universal_newlines=True)
-
-
-def PushMetadata(dut, otafile, metadata_path):
-  payload = update_payload.Payload(otafile)
-  payload.Init()
-  with tempfile.TemporaryDirectory() as tmpdir:
-    with zipfile.ZipFile(otafile, "r") as zfp:
-      extracted_path = os.path.join(tmpdir, "payload.bin")
-      with zfp.open("payload.bin") as payload_fp, \
-              open(extracted_path, "wb") as output_fp:
-          # Only extract the first |data_offset| bytes from the payload.
-          # This is because allocateSpaceForPayload only needs to see
-          # the manifest, not the entire payload.
-          # Extracting the entire payload works, but is slow for full
-          # OTA.
-        output_fp.write(payload_fp.read(payload.data_offset))
-
-      return dut.adb([
-          "push",
-          extracted_path,
-          metadata_path
-      ]) == 0
 
 
 def main():
@@ -426,17 +372,6 @@ def main():
                       help='Extra headers to pass to the device.')
   parser.add_argument('--secondary', action='store_true',
                       help='Update with the secondary payload in the package.')
-  parser.add_argument('--no-slot-switch', action='store_true',
-                      help='Do not perform slot switch after the update.')
-  parser.add_argument('--no-postinstall', action='store_true',
-                      help='Do not execute postinstall scripts after the update.')
-  parser.add_argument('--allocate-only', action='store_true',
-                      help='Allocate space for this OTA, instead of actually \
-                        applying the OTA.')
-  parser.add_argument('--verify-only', action='store_true',
-                      help='Verify metadata then exit, instead of applying the OTA.')
-  parser.add_argument('--no-care-map', action='store_true',
-                      help='Do not push care_map.pb to device.')
   args = parser.parse_args()
   logging.basicConfig(
       level=logging.WARNING if args.no_verbose else logging.INFO)
@@ -453,40 +388,6 @@ def main():
 
   help_cmd = ['shell', 'su', '0', 'update_engine_client', '--help']
   use_omaha = 'omaha' in dut.adb_output(help_cmd)
-
-  metadata_path = "/data/ota_package/metadata"
-  if args.allocate_only:
-    if PushMetadata(dut, args.otafile, metadata_path):
-      dut.adb([
-          "shell", "update_engine_client", "--allocate",
-          "--metadata={}".format(metadata_path)])
-    # Return 0, as we are executing ADB commands here, no work needed after
-    # this point
-    return 0
-  if args.verify_only:
-    if PushMetadata(dut, args.otafile, metadata_path):
-      dut.adb([
-          "shell", "update_engine_client", "--verify",
-          "--metadata={}".format(metadata_path)])
-    # Return 0, as we are executing ADB commands here, no work needed after
-    # this point
-    return 0
-
-  if args.no_slot_switch:
-    args.extra_headers += "\nSWITCH_SLOT_ON_REBOOT=0"
-  if args.no_postinstall:
-    args.extra_headers += "\nRUN_POST_INSTALL=0"
-
-  with zipfile.ZipFile(args.otafile) as zfp:
-    CARE_MAP_ENTRY_NAME = "care_map.pb"
-    if CARE_MAP_ENTRY_NAME in zfp.namelist() and not args.no_care_map:
-      # Need root permission to push to /data
-      dut.adb(["root"])
-      with tempfile.NamedTemporaryFile() as care_map_fp:
-        care_map_fp.write(zfp.read(CARE_MAP_ENTRY_NAME))
-        care_map_fp.flush()
-        dut.adb(["push", care_map_fp.name,
-                "/data/ota_package/" + CARE_MAP_ENTRY_NAME])
 
   if args.file:
     # Update via pushing a file to /data.
@@ -546,10 +447,9 @@ def main():
     if server_thread:
       server_thread.StopServer()
     for cmd in finalize_cmds:
-      dut.adb(cmd, 5)
+      dut.adb(cmd)
 
   return 0
-
 
 if __name__ == '__main__':
   sys.exit(main())

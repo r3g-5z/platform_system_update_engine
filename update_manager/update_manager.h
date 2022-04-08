@@ -22,9 +22,10 @@
 #include <string>
 
 #include <base/callback.h>
+#include <base/memory/ref_counted.h>
 #include <base/time/time.h>
 
-#include "update_engine/common/system_state.h"
+#include "update_engine/common/clock_interface.h"
 #include "update_engine/update_manager/default_policy.h"
 #include "update_engine/update_manager/evaluation_context.h"
 #include "update_engine/update_manager/policy.h"
@@ -32,31 +33,22 @@
 
 namespace chromeos_update_manager {
 
-// Please do not move this class into a new file for simplicity.
-// This pure virtual class is purely created for purpose of testing. The reason
-// was that |UpdateManager|'s member functions are templatized, which does not
-// play nicely when testing (mocking + faking). Whenever a specialized member of
-// |UpdateManager| must be tested, please add a specialized template member
-// function within this class for testing.
-class SpecializedPolicyRequestInterface {
- public:
-  virtual ~SpecializedPolicyRequestInterface() = default;
-
-  virtual void AsyncPolicyRequestUpdateCheckAllowed(
-      base::Callback<void(EvalStatus, const UpdateCheckParams& result)>
-          callback,
-      EvalStatus (Policy::*policy_method)(EvaluationContext*,
-                                          State*,
-                                          std::string*,
-                                          UpdateCheckParams*) const) = 0;
+// Comparator for scoped_refptr objects.
+template <typename T>
+struct ScopedRefPtrLess {
+  bool operator()(const scoped_refptr<T>& first,
+                  const scoped_refptr<T>& second) const {
+    return first.get() < second.get();
+  }
 };
 
 // The main Update Manager singleton class.
-class UpdateManager : public SpecializedPolicyRequestInterface {
+class UpdateManager {
  public:
   // Creates the UpdateManager instance, assuming ownership on the provided
   // |state|.
-  UpdateManager(base::TimeDelta evaluation_timeout,
+  UpdateManager(chromeos_update_engine::ClockInterface* clock,
+                base::TimeDelta evaluation_timeout,
                 base::TimeDelta expiration_timeout,
                 State* state);
 
@@ -99,14 +91,6 @@ class UpdateManager : public SpecializedPolicyRequestInterface {
           EvaluationContext*, State*, std::string*, R*, ExpectedArgs...) const,
       ActualArgs... args);
 
-  void AsyncPolicyRequestUpdateCheckAllowed(
-      base::Callback<void(EvalStatus, const UpdateCheckParams& result)>
-          callback,
-      EvalStatus (Policy::*policy_method)(EvaluationContext*,
-                                          State*,
-                                          std::string*,
-                                          UpdateCheckParams*) const) override;
-
  protected:
   // The UpdateManager receives ownership of the passed Policy instance.
   void set_policy(const Policy* policy) { policy_.reset(policy); }
@@ -141,7 +125,7 @@ class UpdateManager : public SpecializedPolicyRequestInterface {
   // the evaluation will be re-scheduled to be called later.
   template <typename R, typename... Args>
   void OnPolicyReadyToEvaluate(
-      std::shared_ptr<EvaluationContext> ec,
+      scoped_refptr<EvaluationContext> ec,
       base::Callback<void(EvalStatus status, const R& result)> callback,
       EvalStatus (Policy::*policy_method)(
           EvaluationContext*, State*, std::string*, R*, Args...) const,
@@ -161,6 +145,9 @@ class UpdateManager : public SpecializedPolicyRequestInterface {
   // State Providers.
   std::unique_ptr<State> state_;
 
+  // Pointer to the mockable clock interface;
+  chromeos_update_engine::ClockInterface* clock_;
+
   // Timeout for a policy evaluation.
   const base::TimeDelta evaluation_timeout_;
 
@@ -172,7 +159,9 @@ class UpdateManager : public SpecializedPolicyRequestInterface {
   // destructed; alternatively, when the UpdateManager instance is destroyed, it
   // will remove all pending events associated with all outstanding contexts
   // (which should, in turn, trigger their destruction).
-  std::set<std::shared_ptr<EvaluationContext>> ec_repo_;
+  std::set<scoped_refptr<EvaluationContext>,
+           ScopedRefPtrLess<EvaluationContext>>
+      ec_repo_;
 
   base::WeakPtrFactory<UpdateManager> weak_ptr_factory_;
 

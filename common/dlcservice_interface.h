@@ -17,7 +17,6 @@
 #ifndef UPDATE_ENGINE_COMMON_DLCSERVICE_INTERFACE_H_
 #define UPDATE_ENGINE_COMMON_DLCSERVICE_INTERFACE_H_
 
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -31,17 +30,9 @@ class DlcServiceInterface {
  public:
   virtual ~DlcServiceInterface() = default;
 
-  // Returns true and a list of installed DLC ids in |dlc_ids|.
+  // Returns true and a list of installed DLC module ids in |dlc_module_ids|.
   // On failure it returns false.
-  virtual bool GetDlcsToUpdate(std::vector<std::string>* dlc_ids) = 0;
-
-  // Returns true if dlcservice successfully handled the install completion
-  // method call, otherwise false.
-  virtual bool InstallCompleted(const std::vector<std::string>& dlc_ids) = 0;
-
-  // Returns true if dlcservice successfully handled the update completion
-  // method call, otherwise false.
-  virtual bool UpdateCompleted(const std::vector<std::string>& dlc_ids) = 0;
+  virtual bool GetInstalled(std::vector<std::string>* dlc_module_ids) = 0;
 
  protected:
   DlcServiceInterface() = default;
@@ -49,10 +40,6 @@ class DlcServiceInterface {
  private:
   DISALLOW_COPY_AND_ASSIGN(DlcServiceInterface);
 };
-
-// This factory function creates a new DlcServiceInterface instance for the
-// current platform.
-std::unique_ptr<DlcServiceInterface> CreateDlcService();
 
 }  // namespace chromeos_update_engine
 

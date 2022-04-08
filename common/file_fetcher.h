@@ -59,12 +59,6 @@ class FileFetcher : public HttpFetcher {
   void SetHeader(const std::string& header_name,
                  const std::string& header_value) override {}
 
-  bool GetHeader(const std::string& header_name,
-                 std::string* header_value) const override {
-    header_value->clear();
-    return false;
-  }
-
   // Suspend the asynchronous file read.
   void Pause() override;
 

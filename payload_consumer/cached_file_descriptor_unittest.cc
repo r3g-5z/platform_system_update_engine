@@ -73,7 +73,7 @@ class CachedFileDescriptorTest : public ::testing::Test {
 
  protected:
   FileDescriptorPtr fd_{new EintrSafeFileDescriptor};
-  ScopedTempFile temp_file_{"CachedFileDescriptor-file.XXXXXX"};
+  test_utils::ScopedTempFile temp_file_{"CachedFileDescriptor-file.XXXXXX"};
   int value_{1};
   FileDescriptorPtr cfd_;
 };

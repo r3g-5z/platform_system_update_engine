@@ -37,7 +37,3 @@ DerivePointerAlignment: false
 IncludeBlocks: Preserve
 PointerAlignment: Left
 TabWidth: 2
-
-# cpplint.py does smarter #include sorting than clang-format (the former ignores
-# case and changes '-' to '_').
-SortIncludes: false

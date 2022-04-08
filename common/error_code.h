@@ -85,8 +85,6 @@ enum class ErrorCode : int {
   kUnresolvedHostRecovered = 59,
   kNotEnoughSpace = 60,
   kDeviceCorrupted = 61,
-  kPackageExcludedFromUpdate = 62,
-  kPostInstallMountError = 63,
 
   // VERY IMPORTANT! When adding new error codes:
   //

@@ -36,7 +36,7 @@ class PayloadFileTest : public ::testing::Test {
 };
 
 TEST_F(PayloadFileTest, ReorderBlobsTest) {
-  ScopedTempFile orig_blobs("ReorderBlobsTest.orig.XXXXXX");
+  test_utils::ScopedTempFile orig_blobs("ReorderBlobsTest.orig.XXXXXX");
 
   // The operations have three blob and one gap (the whitespace):
   // Rootfs operation 1: [8, 3] bcd
@@ -45,7 +45,7 @@ TEST_F(PayloadFileTest, ReorderBlobsTest) {
   string orig_data = "kernel abcd";
   EXPECT_TRUE(test_utils::WriteFileString(orig_blobs.path(), orig_data));
 
-  ScopedTempFile new_blobs("ReorderBlobsTest.new.XXXXXX");
+  test_utils::ScopedTempFile new_blobs("ReorderBlobsTest.new.XXXXXX");
 
   payload_.part_vec_.resize(2);
 

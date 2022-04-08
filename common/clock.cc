@@ -20,11 +20,11 @@
 
 namespace chromeos_update_engine {
 
-base::Time Clock::GetWallclockTime() const {
+base::Time Clock::GetWallclockTime() {
   return base::Time::Now();
 }
 
-base::Time Clock::GetMonotonicTime() const {
+base::Time Clock::GetMonotonicTime() {
   struct timespec now_ts;
   if (clock_gettime(CLOCK_MONOTONIC_RAW, &now_ts) != 0) {
     // Avoid logging this as an error as call-sites may call this very
@@ -40,7 +40,7 @@ base::Time Clock::GetMonotonicTime() const {
   return base::Time::FromTimeVal(now_tv);
 }
 
-base::Time Clock::GetBootTime() const {
+base::Time Clock::GetBootTime() {
   struct timespec now_ts;
   if (clock_gettime(CLOCK_BOOTTIME, &now_ts) != 0) {
     // Avoid logging this as an error as call-sites may call this very

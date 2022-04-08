@@ -16,10 +16,7 @@
 
 """Utilities for update payload processing."""
 
-from __future__ import absolute_import
 from __future__ import print_function
-
-import base64
 
 from update_payload import update_metadata_pb2
 from update_payload.error import PayloadError
@@ -28,14 +25,18 @@ from update_payload.error import PayloadError
 #
 # Constants.
 #
+PSEUDO_EXTENT_MARKER = (1L << 64) - 1  # UINT64_MAX
+
 SIG_ASN1_HEADER = (
-    b'\x30\x31\x30\x0d\x06\x09\x60\x86'
-    b'\x48\x01\x65\x03\x04\x02\x01\x05'
-    b'\x00\x04\x20'
+    '\x30\x31\x30\x0d\x06\x09\x60\x86'
+    '\x48\x01\x65\x03\x04\x02\x01\x05'
+    '\x00\x04\x20'
 )
 
+CHROMEOS_MAJOR_PAYLOAD_VERSION = 1
 BRILLO_MAJOR_PAYLOAD_VERSION = 2
 
+INPLACE_MINOR_PAYLOAD_VERSION = 1
 SOURCE_MINOR_PAYLOAD_VERSION = 2
 OPSRCHASH_MINOR_PAYLOAD_VERSION = 3
 BROTLI_BSDIFF_MINOR_PAYLOAD_VERSION = 4
@@ -46,7 +47,6 @@ ROOTFS = 'root'
 # Tuple of (name in system, name in protobuf).
 CROS_PARTITIONS = ((KERNEL, KERNEL), (ROOTFS, 'rootfs'))
 
-
 #
 # Payload operation types.
 #
@@ -55,6 +55,8 @@ class OpType(object):
   _CLASS = update_metadata_pb2.InstallOperation
   REPLACE = _CLASS.REPLACE
   REPLACE_BZ = _CLASS.REPLACE_BZ
+  MOVE = _CLASS.MOVE
+  BSDIFF = _CLASS.BSDIFF
   SOURCE_COPY = _CLASS.SOURCE_COPY
   SOURCE_BSDIFF = _CLASS.SOURCE_BSDIFF
   ZERO = _CLASS.ZERO
@@ -62,11 +64,13 @@ class OpType(object):
   REPLACE_XZ = _CLASS.REPLACE_XZ
   PUFFDIFF = _CLASS.PUFFDIFF
   BROTLI_BSDIFF = _CLASS.BROTLI_BSDIFF
-  ALL = (REPLACE, REPLACE_BZ, SOURCE_COPY, SOURCE_BSDIFF, ZERO,
+  ALL = (REPLACE, REPLACE_BZ, MOVE, BSDIFF, SOURCE_COPY, SOURCE_BSDIFF, ZERO,
          DISCARD, REPLACE_XZ, PUFFDIFF, BROTLI_BSDIFF)
   NAMES = {
       REPLACE: 'REPLACE',
       REPLACE_BZ: 'REPLACE_BZ',
+      MOVE: 'MOVE',
+      BSDIFF: 'BSDIFF',
       SOURCE_COPY: 'SOURCE_COPY',
       SOURCE_BSDIFF: 'SOURCE_BSDIFF',
       ZERO: 'ZERO',
@@ -142,7 +146,7 @@ def Read(file_obj, length, offset=None, hasher=None):
 
   try:
     data = file_obj.read(length)
-  except IOError as e:
+  except IOError, e:
     raise PayloadError('error reading from file (%s): %s' % (file_obj.name, e))
 
   if len(data) != length:
@@ -163,12 +167,13 @@ def FormatExtent(ex, block_size=0):
   end_block = ex.start_block + ex.num_blocks
   if block_size:
     return '%d->%d * %d' % (ex.start_block, end_block, block_size)
-  return '%d->%d' % (ex.start_block, end_block)
+  else:
+    return '%d->%d' % (ex.start_block, end_block)
 
 
 def FormatSha256(digest):
   """Returns a canonical string representation of a SHA256 digest."""
-  return base64.b64encode(digest).decode('utf-8')
+  return digest.encode('base64').strip()
 
 
 #

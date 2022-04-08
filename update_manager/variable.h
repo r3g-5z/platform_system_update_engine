@@ -83,10 +83,6 @@ class BaseVariable {
   // variable. In other case, it returns 0.
   base::TimeDelta GetPollInterval() const { return poll_interval_; }
 
-  // Returns true, if the value for this variable is expected to be missing
-  // sometimes so we can avoid printing confusing error logs.
-  bool IsMissingOk() const { return missing_ok_; }
-
   // Adds and removes observers for value changes on the variable. This only
   // works for kVariableAsync variables since the other modes don't track value
   // changes. Adding the same observer twice has no effect.
@@ -119,8 +115,6 @@ class BaseVariable {
     poll_interval_ = poll_interval;
   }
 
-  void SetMissingOk() { missing_ok_ = true; }
-
   // Calls ValueChanged on all the observers.
   void NotifyValueChanged() {
     // Fire all the observer methods from the main loop as single call. In order
@@ -146,8 +140,7 @@ class BaseVariable {
       : name_(name),
         mode_(mode),
         poll_interval_(mode == kVariableModePoll ? poll_interval
-                                                 : base::TimeDelta()),
-        missing_ok_(false) {}
+                                                 : base::TimeDelta()) {}
 
   void OnValueChangedNotification() {
     // A ValueChanged() method can change the list of observers, for example
@@ -180,9 +173,6 @@ class BaseVariable {
 
   // The list of value changes observers.
   std::list<BaseVariable::ObserverInterface*> observer_list_;
-
-  // Defines whether this variable is expected to have no value.
-  bool missing_ok_;
 
   DISALLOW_COPY_AND_ASSIGN(BaseVariable);
 };

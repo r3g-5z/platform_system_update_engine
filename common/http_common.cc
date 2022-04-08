@@ -21,7 +21,6 @@
 #include <cstdlib>
 
 #include <base/macros.h>
-#include <base/stl_util.h>
 
 namespace chromeos_update_engine {
 
@@ -57,7 +56,7 @@ const char* GetHttpResponseDescription(HttpResponseCode code) {
 
   bool is_found = false;
   size_t i;
-  for (i = 0; i < base::size(http_response_table); i++)
+  for (i = 0; i < arraysize(http_response_table); i++)
     if ((is_found = (http_response_table[i].code == code)))
       break;
 
@@ -78,7 +77,7 @@ const char* GetHttpContentTypeString(HttpContentType type) {
 
   bool is_found = false;
   size_t i;
-  for (i = 0; i < base::size(http_content_type_table); i++)
+  for (i = 0; i < arraysize(http_content_type_table); i++)
     if ((is_found = (http_content_type_table[i].type == type)))
       break;
 

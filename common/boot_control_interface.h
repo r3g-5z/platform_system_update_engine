@@ -59,27 +59,12 @@ class BootControlInterface {
   // every slot. In order to access the dynamic partitions in the target slot,
   // GetDynamicPartitionControl()->PreparePartitionsForUpdate() must be called
   // (with |update| == true for the first time for a payload, and |false| for
-  // for the rest of the times) prior to calling this function.
-  // The handling may be different based on whether the partition is included
-  // in the update payload. On success, returns true; and stores the block
-  // device in |device|, if the partition is dynamic in |is_dynamic|.
-  virtual bool GetPartitionDevice(const std::string& partition_name,
-                                  Slot slot,
-                                  bool not_in_payload,
-                                  std::string* device,
-                                  bool* is_dynamic) const = 0;
-
-  // Overload of the above function. We assume the partition is always included
-  // in the payload.
+  // for the rest of the times) prior to calling this function. On success,
+  // returns true and stores the block device in |device|.
   virtual bool GetPartitionDevice(const std::string& partition_name,
                                   Slot slot,
                                   std::string* device) const = 0;
 
-  virtual std::optional<PartitionDevice> GetPartitionDevice(
-      const std::string& partition_name,
-      uint32_t slot,
-      uint32_t current_slot,
-      bool not_in_payload = false) const = 0;
   // Returns whether the passed |slot| is marked as bootable. Returns false if
   // the slot is invalid.
   virtual bool IsSlotBootable(Slot slot) const = 0;
@@ -103,7 +88,7 @@ class BootControlInterface {
   // Check if |slot| is marked boot successfully.
   virtual bool IsSlotMarkedSuccessful(Slot slot) const = 0;
 
-  // Return the dynamic partition control interface. Never null.
+  // Return the dynamic partition control interface.
   virtual DynamicPartitionControlInterface* GetDynamicPartitionControl() = 0;
 
   // Return a human-readable slot name used for logging.

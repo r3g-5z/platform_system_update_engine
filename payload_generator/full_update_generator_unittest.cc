@@ -41,9 +41,11 @@ class FullUpdateGeneratorTest : public ::testing::Test {
     config_.block_size = 4096;
 
     new_part_conf.path = part_file_.path();
+    EXPECT_TRUE(utils::MakeTempFile(
+        "FullUpdateTest_blobs.XXXXXX", &out_blobs_path_, &out_blobs_fd_));
 
-    blob_file_writer_.reset(
-        new BlobFileWriter(blob_file_.fd(), &out_blobs_length_));
+    blob_file_.reset(new BlobFileWriter(out_blobs_fd_, &out_blobs_length_));
+    out_blobs_unlinker_.reset(new ScopedPathUnlinker(out_blobs_path_));
   }
 
   PayloadGenerationConfig config_;
@@ -52,11 +54,14 @@ class FullUpdateGeneratorTest : public ::testing::Test {
   vector<AnnotatedOperation> aops;
 
   // Output file holding the payload blobs.
+  string out_blobs_path_;
+  int out_blobs_fd_{-1};
   off_t out_blobs_length_{0};
-  ScopedTempFile part_file_{"FullUpdateTest_partition.XXXXXX"};
+  ScopedFdCloser out_blobs_fd_closer_{&out_blobs_fd_};
+  test_utils::ScopedTempFile part_file_{"FullUpdateTest_partition.XXXXXX"};
 
-  ScopedTempFile blob_file_{"FullUpdateTest_blobs.XXXXXX", true};
-  std::unique_ptr<BlobFileWriter> blob_file_writer_;
+  std::unique_ptr<BlobFileWriter> blob_file_;
+  std::unique_ptr<ScopedPathUnlinker> out_blobs_unlinker_;
 
   // FullUpdateGenerator under test.
   FullUpdateGenerator generator_;
@@ -72,7 +77,7 @@ TEST_F(FullUpdateGeneratorTest, RunTest) {
   EXPECT_TRUE(generator_.GenerateOperations(config_,
                                             new_part_conf,  // this is ignored
                                             new_part_conf,
-                                            blob_file_writer_.get(),
+                                            blob_file_.get(),
                                             &aops));
   int64_t new_part_chunks = new_part_conf.size / config_.hard_chunk_size;
   EXPECT_EQ(new_part_chunks, static_cast<int64_t>(aops.size()));
@@ -85,7 +90,7 @@ TEST_F(FullUpdateGeneratorTest, RunTest) {
     EXPECT_EQ(config_.hard_chunk_size / config_.block_size,
               aops[i].op.dst_extents(0).num_blocks());
     if (aops[i].op.type() != InstallOperation::REPLACE) {
-      EXPECT_EQ(InstallOperation::REPLACE_XZ, aops[i].op.type());
+      EXPECT_EQ(InstallOperation::REPLACE_BZ, aops[i].op.type());
     }
   }
 }
@@ -103,7 +108,7 @@ TEST_F(FullUpdateGeneratorTest, ChunkSizeTooBig) {
   EXPECT_TRUE(generator_.GenerateOperations(config_,
                                             new_part_conf,  // this is ignored
                                             new_part_conf,
-                                            blob_file_writer_.get(),
+                                            blob_file_.get(),
                                             &aops));
   // new_part has one chunk and a half.
   EXPECT_EQ(2U, aops.size());
@@ -124,7 +129,7 @@ TEST_F(FullUpdateGeneratorTest, ImageSizeTooSmall) {
   EXPECT_TRUE(generator_.GenerateOperations(config_,
                                             new_part_conf,  // this is ignored
                                             new_part_conf,
-                                            blob_file_writer_.get(),
+                                            blob_file_.get(),
                                             &aops));
 
   // new_part has less than one chunk.
