@@ -737,7 +737,6 @@ TEST_F(P2PDownloadActionTest, MultiplePayload) {
   EXPECT_FALSE(loop_.PendingTasks());
 
   EXPECT_EQ(2, p2p_manager_->CountSharedFiles());
-  size_t offset = 0;
   for (auto& payload : install_plan.payloads) {
     string file_id = utils::CalculateP2PFileId(payload.hash, payload.size);
     EXPECT_EQ(payload.size, p2p_manager_->FileGetSize(file_id));
@@ -745,7 +744,6 @@ TEST_F(P2PDownloadActionTest, MultiplePayload) {
     EXPECT_TRUE(
         ReadFileToString(p2p_manager_->FileGetPath(file_id), &file_content));
     EXPECT_EQ(data_.substr(0, payload.size), file_content);
-    offset += payload.size;
   }
 
   // We don't use the |delegate_| in this test. So just sets it's processing

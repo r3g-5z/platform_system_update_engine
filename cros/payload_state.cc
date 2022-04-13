@@ -736,8 +736,6 @@ void PayloadState::CollectAndReportSuccessfulUpdateMetrics() {
   int64_t total_bytes_by_source[kNumDownloadSources];
   int64_t successful_bytes = 0;
   int64_t total_bytes = 0;
-  int64_t successful_mbs = 0;
-  int64_t total_mbs = 0;
 
   for (int i = 0; i < kNumDownloadSources; i++) {
     DownloadSource source = static_cast<DownloadSource>(i);
@@ -751,13 +749,11 @@ void PayloadState::CollectAndReportSuccessfulUpdateMetrics() {
 
     bytes = GetCurrentBytesDownloaded(source);
     successful_bytes += bytes;
-    successful_mbs += bytes / kNumBytesInOneMiB;
     SetCurrentBytesDownloaded(source, 0, true);
 
     bytes = GetTotalBytesDownloaded(source);
     total_bytes_by_source[i] = bytes;
     total_bytes += bytes;
-    total_mbs += bytes / kNumBytesInOneMiB;
     SetTotalBytesDownloaded(source, 0, true);
   }
 
