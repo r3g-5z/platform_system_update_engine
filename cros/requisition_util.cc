@@ -66,7 +66,7 @@ string ReadDeviceRequisition(const base::FilePath& local_state) {
     if (!path || !path->is_string()) {
       return "";
     }
-    path->GetAsString(&requisition);
+    requisition = path->GetString();
   }
   return requisition;
 }
