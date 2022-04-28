@@ -36,11 +36,11 @@
 
 #include "update_engine/cros/dbus_connection.h"
 
-using chromeos::cros_healthd::mojom::ProbeCategoryEnum;
-
 namespace chromeos_update_engine {
 
 namespace {
+
+using ::ash::cros_healthd::mojom::ProbeCategoryEnum;
 
 #define SET_MOJO_VALUE(x) \
   { TelemetryCategoryEnum::x, ProbeCategoryEnum::x }
@@ -62,7 +62,7 @@ static const std::unordered_map<TelemetryCategoryEnum, ProbeCategoryEnum>
         SET_MOJO_VALUE(kBus),
     };
 
-void PrintError(const chromeos::cros_healthd::mojom::ProbeErrorPtr& error,
+void PrintError(const ash::cros_healthd::mojom::ProbeErrorPtr& error,
                 std::string info) {
   LOG(ERROR) << "Failed to get " << info << ","
              << " error_type=" << error->type << " error_msg=" << error->msg;
@@ -163,9 +163,9 @@ void CrosHealthd::FinalizeBootstrap(BootstrapMojoCallback callback,
 
   mojo::IncomingInvitation invitation =
       mojo::IncomingInvitation::Accept(channel.TakeLocalEndpoint());
-  auto opt_pending_service_factory = mojo::PendingRemote<
-      chromeos::cros_healthd::mojom::CrosHealthdServiceFactory>(
-      invitation.ExtractMessagePipe(token), 0u /* version */);
+  auto opt_pending_service_factory =
+      mojo::PendingRemote<ash::cros_healthd::mojom::CrosHealthdServiceFactory>(
+          invitation.ExtractMessagePipe(token), 0u /* version */);
   if (!opt_pending_service_factory) {
     LOG(ERROR) << "Failed to create pending service factory for cros_healthd.";
     std::move(callback).Run(false);
@@ -177,7 +177,7 @@ void CrosHealthd::FinalizeBootstrap(BootstrapMojoCallback callback,
 
 void CrosHealthd::OnProbeTelemetryInfo(
     ProbeTelemetryInfoCallback once_callback,
-    chromeos::cros_healthd::mojom::TelemetryInfoPtr result) {
+    ash::cros_healthd::mojom::TelemetryInfoPtr result) {
   if (!result) {
     LOG(WARNING) << "Failed to parse telemetry information.";
     std::move(once_callback).Run({});
@@ -197,7 +197,7 @@ void CrosHealthd::OnProbeTelemetryInfo(
 }
 
 bool CrosHealthd::ParseSystemResult(
-    chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
+    ash::cros_healthd::mojom::TelemetryInfoPtr* result,
     TelemetryInfo* telemetry_info) {
   const auto& system_result = (*result)->system_result;
   if (system_result) {
@@ -234,7 +234,7 @@ bool CrosHealthd::ParseSystemResult(
 }
 
 bool CrosHealthd::ParseMemoryResult(
-    chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
+    ash::cros_healthd::mojom::TelemetryInfoPtr* result,
     TelemetryInfo* telemetry_info) {
   const auto& memory_result = (*result)->memory_result;
   if (memory_result) {
@@ -252,7 +252,7 @@ bool CrosHealthd::ParseMemoryResult(
 }
 
 bool CrosHealthd::ParseNonRemovableBlockDeviceResult(
-    chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
+    ash::cros_healthd::mojom::TelemetryInfoPtr* result,
     TelemetryInfo* telemetry_info) {
   const auto& non_removable_block_device_result =
       (*result)->block_device_result;
@@ -275,7 +275,7 @@ bool CrosHealthd::ParseNonRemovableBlockDeviceResult(
 }
 
 bool CrosHealthd::ParseCpuResult(
-    chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
+    ash::cros_healthd::mojom::TelemetryInfoPtr* result,
     TelemetryInfo* telemetry_info) {
   const auto& cpu_result = (*result)->cpu_result;
   if (cpu_result) {
@@ -296,7 +296,7 @@ bool CrosHealthd::ParseCpuResult(
 }
 
 bool CrosHealthd::ParseBusResult(
-    chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
+    ash::cros_healthd::mojom::TelemetryInfoPtr* result,
     TelemetryInfo* telemetry_info) {
   const auto& bus_result = (*result)->bus_result;
   if (bus_result) {
@@ -309,7 +309,7 @@ bool CrosHealthd::ParseBusResult(
       if (!bus_device->bus_info)
         continue;
       switch (bus_device->bus_info->which()) {
-        case chromeos::cros_healthd::mojom::BusInfo::Tag::kPciBusInfo: {
+        case ash::cros_healthd::mojom::BusInfo::Tag::kPciBusInfo: {
           const auto& pci_bus_info = bus_device->bus_info->get_pci_bus_info();
           telemetry_info->bus_devices.push_back({
               .device_class =
@@ -326,7 +326,7 @@ bool CrosHealthd::ParseBusResult(
           });
           break;
         }
-        case chromeos::cros_healthd::mojom::BusInfo::Tag::kUsbBusInfo: {
+        case ash::cros_healthd::mojom::BusInfo::Tag::kUsbBusInfo: {
           const auto& usb_bus_info = bus_device->bus_info->get_usb_bus_info();
           telemetry_info->bus_devices.push_back({
               .device_class =
@@ -340,10 +340,10 @@ bool CrosHealthd::ParseBusResult(
           });
           break;
         }
-        case chromeos::cros_healthd::mojom::BusInfo::Tag::kThunderboltBusInfo: {
+        case ash::cros_healthd::mojom::BusInfo::Tag::kThunderboltBusInfo: {
           break;
         }
-        case chromeos::cros_healthd::mojom::BusInfo::Tag::kUnmappedField: {
+        case ash::cros_healthd::mojom::BusInfo::Tag::kUnmappedField: {
           LOG(ERROR) << "Get unmapped Mojo fields by retrieving bus info from "
                         "cros_healthd";
           break;

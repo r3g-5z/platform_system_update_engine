@@ -74,33 +74,30 @@ class CrosHealthd : public CrosHealthdInterface {
   void FinalizeBootstrap(BootstrapMojoCallback callback,
                          bool service_available);
 
-  void OnProbeTelemetryInfo(
-      ProbeTelemetryInfoCallback once_callback,
-      chromeos::cros_healthd::mojom::TelemetryInfoPtr result);
+  void OnProbeTelemetryInfo(ProbeTelemetryInfoCallback once_callback,
+                            ash::cros_healthd::mojom::TelemetryInfoPtr result);
 
   // Parsing helpers for `OnProbTelemetryInfo()` .
-  bool ParseSystemResult(
-      chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
-      TelemetryInfo* telemetry_info);
-  bool ParseMemoryResult(
-      chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
-      TelemetryInfo* telemetry_info);
+  bool ParseSystemResult(ash::cros_healthd::mojom::TelemetryInfoPtr* result,
+                         TelemetryInfo* telemetry_info);
+  bool ParseMemoryResult(ash::cros_healthd::mojom::TelemetryInfoPtr* result,
+                         TelemetryInfo* telemetry_info);
   bool ParseNonRemovableBlockDeviceResult(
-      chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
+      ash::cros_healthd::mojom::TelemetryInfoPtr* result,
       TelemetryInfo* telemetry_info);
-  bool ParseCpuResult(chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
+  bool ParseCpuResult(ash::cros_healthd::mojom::TelemetryInfoPtr* result,
                       TelemetryInfo* telemetry_info);
-  bool ParseBusResult(chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
+  bool ParseBusResult(ash::cros_healthd::mojom::TelemetryInfoPtr* result,
                       TelemetryInfo* telemetry_info);
 
   std::unique_ptr<TelemetryInfo> telemetry_info_;
 
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
 
-  mojo::Remote<chromeos::cros_healthd::mojom::CrosHealthdServiceFactory>
+  mojo::Remote<ash::cros_healthd::mojom::CrosHealthdServiceFactory>
       cros_healthd_service_factory_;
 
-  mojo::Remote<chromeos::cros_healthd::mojom::CrosHealthdProbeService>
+  mojo::Remote<ash::cros_healthd::mojom::CrosHealthdProbeService>
       cros_healthd_probe_service_;
 
   base::WeakPtrFactory<CrosHealthd> weak_ptr_factory_;
