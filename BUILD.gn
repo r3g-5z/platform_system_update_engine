@@ -181,6 +181,7 @@ static_library("libpayload_consumer") {
 static_library("libupdate_engine") {
   sources = [
     "certificate_checker.cc",
+    "common/call_wrapper.cc",
     "common/connection_utils.cc",
     "common/system_state.cc",
     "cros/boot_control_chromeos.cc",

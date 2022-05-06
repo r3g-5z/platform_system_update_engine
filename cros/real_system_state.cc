@@ -84,6 +84,12 @@ bool RealSystemState::Initialize() {
     return false;
   }
 
+  call_wrapper_ = CreateCallWrapper();
+  if (!call_wrapper_) {
+    LOG(ERROR) << "Error initializing the CallWrapperInterface.";
+    return false;
+  }
+
   // Initialize standard and powerwash-safe prefs.
   base::FilePath non_volatile_path;
   // TODO(deymo): Fall back to in-memory prefs if there's no physical directory

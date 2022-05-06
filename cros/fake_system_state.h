@@ -28,6 +28,7 @@
 #include "update_engine/common/fake_clock.h"
 #include "update_engine/common/fake_hardware.h"
 #include "update_engine/common/fake_prefs.h"
+#include "update_engine/common/mock_call_wrapper.h"
 #include "update_engine/common/mock_metrics_reporter.h"
 #include "update_engine/common/mock_prefs.h"
 #include "update_engine/common/system_state.h"
@@ -115,6 +116,8 @@ class FakeSystemState : public SystemState {
 
   inline CrosHealthdInterface* cros_healthd() override { return cros_healthd_; }
 
+  inline CallWrapperInterface* call_wrapper() override { return call_wrapper_; }
+
   inline bool system_rebooted() override { return fake_system_rebooted_; }
 
   // Setters for the various members, can be used for overriding the default
@@ -186,6 +189,15 @@ class FakeSystemState : public SystemState {
 
   inline void set_cros_healthd(CrosHealthdInterface* cros_healthd) {
     cros_healthd_ = cros_healthd;
+  }
+
+  inline void set_call_wrapper(CallWrapperInterface* call_wrapper) {
+    call_wrapper_ = call_wrapper;
+  }
+
+  inline testing::StrictMock<MockCallWrapper>* mock_call_wrapper() {
+    CHECK(call_wrapper_ == &mock_call_wrapper_);
+    return &mock_call_wrapper_;
   }
 
   // Getters for the built-in default implementations. These return the actual
@@ -284,6 +296,7 @@ class FakeSystemState : public SystemState {
   testing::NiceMock<MockOmahaRequestParams> mock_request_params_;
   testing::NiceMock<MockP2PManager> mock_p2p_manager_;
   testing::NiceMock<MockPowerManager> mock_power_manager_;
+  testing::StrictMock<MockCallWrapper> mock_call_wrapper_;
 
   // Pointers to objects that client code can override. They are initialized to
   // the default implementations above.
@@ -302,6 +315,7 @@ class FakeSystemState : public SystemState {
   PowerManagerInterface* power_manager_{&mock_power_manager_};
   DlcServiceInterface* dlcservice_;
   CrosHealthdInterface* cros_healthd_;
+  CallWrapperInterface* call_wrapper_;
 
   // Other object pointers (not preinitialized).
   const policy::DevicePolicy* device_policy_;

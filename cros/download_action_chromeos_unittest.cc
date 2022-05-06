@@ -546,6 +546,9 @@ class P2PDownloadActionTest : public testing::Test {
     EXPECT_CALL(*FakeSystemState::Get()->mock_payload_state(),
                 GetUsingP2PForSharing())
         .WillRepeatedly(Return(use_p2p_to_share));
+    EXPECT_CALL(*FakeSystemState::Get()->mock_call_wrapper(),
+                AmountOfFreeDiskSpace(_))
+        .WillRepeatedly(Return(data_.length() * 2));
 
     ScopedTempFile output_temp_file;
     TestDirectFileWriter writer;
@@ -635,6 +638,9 @@ TEST_F(P2PDownloadActionTest, DeleteIfHoleExists) {
 
 TEST_F(P2PDownloadActionTest, CanAppend) {
   SetupDownload(1000);  // starting_offset
+  EXPECT_CALL(*FakeSystemState::Get()->mock_call_wrapper(),
+              AmountOfFreeDiskSpace(_))
+      .WillOnce(Return(data_.length() * 2));
 
   // Prepare the file with existing data before starting to write to
   // it via DownloadAction.
@@ -669,6 +675,9 @@ TEST_F(P2PDownloadActionTest, CanAppend) {
 
 TEST_F(P2PDownloadActionTest, DeletePartialP2PFileIfResumingWithoutP2P) {
   SetupDownload(1000);  // starting_offset
+  EXPECT_CALL(*FakeSystemState::Get()->mock_call_wrapper(),
+              AmountOfFreeDiskSpace(_))
+      .WillOnce(Return(data_.length() * 2));
 
   // Prepare the file with all existing data before starting to write
   // to it via DownloadAction.
@@ -699,6 +708,9 @@ TEST_F(P2PDownloadActionTest, MultiplePayload) {
   EXPECT_CALL(*FakeSystemState::Get()->mock_payload_state(),
               GetUsingP2PForSharing())
       .WillRepeatedly(Return(true));
+  EXPECT_CALL(*FakeSystemState::Get()->mock_call_wrapper(),
+              AmountOfFreeDiskSpace(_))
+      .WillRepeatedly(Return(data_.length() * 2));
 
   EXPECT_CALL(*FakeSystemState::Get()->mock_payload_state(), NextPayload())
       .WillOnce(Return(true));

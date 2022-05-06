@@ -49,6 +49,7 @@
 #include <policy/libpolicy.h>
 #include <policy/mock_device_policy.h>
 
+#include "update_engine/common/mock_call_wrapper.h"
 #include "update_engine/common/prefs.h"
 #include "update_engine/common/subprocess.h"
 #include "update_engine/common/test_utils.h"
@@ -79,6 +80,7 @@ class P2PManagerSimpleTest : public testing::Test {
     FakeSystemState::CreateInstance();
     test_conf_ = new FakeP2PManagerConfiguration();
     fake_um_ = FakeSystemState::Get()->fake_update_manager();
+    mock_call_wrapper_ = FakeSystemState::Get()->mock_call_wrapper();
 
     // Construct the P2P manager under test.
     manager_.reset(P2PManager::Construct(
@@ -94,6 +96,8 @@ class P2PManagerSimpleTest : public testing::Test {
   chromeos_update_manager::FakeUpdateManager* fake_um_;
 
   unique_ptr<P2PManager> manager_;
+
+  MockCallWrapper* mock_call_wrapper_;
 };
 
 // Check that |IsP2PEnabled()| polls the policy correctly, with the value not
@@ -357,6 +361,8 @@ static bool CreateP2PFile(string p2p_dir,
 // Check that sharing a *new* file works.
 TEST_F(P2PManagerTest, ShareFile) {
   const int kP2PTestFileSize = 1000 * 8;  // 8 KB
+  EXPECT_CALL(*mock_call_wrapper_, AmountOfFreeDiskSpace(_))
+      .WillOnce(Return(kP2PTestFileSize * 2));
 
   EXPECT_TRUE(manager_->FileShare("foo", kP2PTestFileSize));
   EXPECT_EQ(manager_->FileGetPath("foo"),
@@ -376,6 +382,8 @@ TEST_F(P2PManagerTest, ShareFile) {
 // Check that making a shared file visible, does what is expected.
 TEST_F(P2PManagerTest, MakeFileVisible) {
   const int kP2PTestFileSize = 1000 * 8;  // 8 KB
+  EXPECT_CALL(*mock_call_wrapper_, AmountOfFreeDiskSpace(_))
+      .WillOnce(Return(kP2PTestFileSize * 2));
 
   // First, check that it's not visible.
   manager_->FileShare("foo", kP2PTestFileSize);
@@ -396,6 +404,20 @@ TEST_F(P2PManagerTest, MakeFileVisible) {
                              0,
                              kP2PTestFileSize));
   }
+}
+
+TEST_F(P2PManagerTest, SharingFileBytesMoreThanNecessaryStorageSpace) {
+  const int kP2PTestFileSize = 16 * (1 << 10);  // 16 KB
+  EXPECT_CALL(*mock_call_wrapper_, AmountOfFreeDiskSpace(_))
+      .WillOnce(Return(kP2PTestFileSize + 1));
+  EXPECT_FALSE(manager_->FileShare("foo", kP2PTestFileSize));
+}
+
+TEST_F(P2PManagerTest, SharingFileBytesLessThanNecessaryStorageSpace) {
+  const int kP2PTestFileSize = 16 * (1 << 10);  // 16 KB
+  EXPECT_CALL(*mock_call_wrapper_, AmountOfFreeDiskSpace(_))
+      .WillOnce(Return(kP2PTestFileSize * 2));
+  EXPECT_TRUE(manager_->FileShare("foo", kP2PTestFileSize));
 }
 
 // Check that we return the right values for existing files in P2P_DIR.

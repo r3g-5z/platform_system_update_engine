@@ -50,6 +50,7 @@
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 
+#include "update_engine/common/call_wrapper.h"
 #include "update_engine/common/subprocess.h"
 #include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
@@ -514,15 +515,16 @@ bool P2PManagerImpl::FileShare(const string& file_id, size_t expected_size) {
 
   // Before creating the file, bail if statvfs(3) indicates that at
   // least twice the size is not available in P2P_DIR.
-  struct statvfs statvfsbuf;
   FilePath p2p_dir = configuration_->GetP2PDir();
-  if (statvfs(p2p_dir.value().c_str(), &statvfsbuf) != 0) {
-    PLOG(ERROR) << "Error calling statvfs() for dir " << p2p_dir.value();
+  int64_t free_bytes =
+      SystemState::Get()->call_wrapper()->AmountOfFreeDiskSpace(p2p_dir);
+  if (free_bytes < 0) {
+    PLOG(ERROR) << "Error getting amount of free disk space from "
+                << p2p_dir.value();
     return false;
   }
-  size_t free_bytes =
-      static_cast<size_t>(statvfsbuf.f_bsize) * statvfsbuf.f_bavail;
-  if (free_bytes < 2 * expected_size) {
+  // Compare sizes this way to handle overflows.
+  if (free_bytes / 2 < expected_size) {
     // This can easily happen and is worth reporting.
     LOG(INFO) << "Refusing to allocate p2p file of " << expected_size
               << " bytes since the directory " << p2p_dir.value()

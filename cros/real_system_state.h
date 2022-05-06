@@ -27,6 +27,7 @@
 
 #include "update_engine/certificate_checker.h"
 #include "update_engine/common/boot_control_interface.h"
+#include "update_engine/common/call_wrapper_interface.h"
 #include "update_engine/common/clock.h"
 #include "update_engine/common/cros_healthd_interface.h"
 #include "update_engine/common/daemon_state_interface.h"
@@ -115,6 +116,8 @@ class RealSystemState : public SystemState {
 
   CrosHealthdInterface* cros_healthd() override { return cros_healthd_.get(); }
 
+  CallWrapperInterface* call_wrapper() override { return call_wrapper_.get(); }
+
  private:
   // Initializes and sets systems objects that require an initialization
   // separately from construction. Returns |true| on success.
@@ -177,6 +180,9 @@ class RealSystemState : public SystemState {
   std::unique_ptr<chromeos_update_manager::UpdateManager> update_manager_;
 
   policy::PolicyProvider policy_provider_;
+
+  // Interface for cros_healthd.
+  std::unique_ptr<CallWrapperInterface> call_wrapper_;
 
   // If true, this is the first instance of the update engine since the system
   // rebooted. Important for tracking whether you are running instance of the

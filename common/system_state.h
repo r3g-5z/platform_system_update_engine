@@ -52,6 +52,7 @@ class P2PManager;
 class PayloadStateInterface;
 class PowerManagerInterface;
 class UpdateAttempter;
+class CallWrapperInterface;
 
 // An interface to global system context, including platform resources,
 // the current state of the system, high-level objects whose lifetime is same
@@ -123,6 +124,9 @@ class SystemState {
 
   // Returns a pointer to the CrosHealthdInteraface singleton.
   virtual CrosHealthdInterface* cros_healthd() = 0;
+
+  // Returns a pointer to the CallWrapperInterface singleton.
+  virtual CallWrapperInterface* call_wrapper() = 0;
 
  protected:
   static SystemState* g_pointer_;
