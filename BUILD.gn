@@ -380,6 +380,7 @@ static_library("libpayload_generator") {
   ]
   deps = [
     ":libpayload_consumer",
+    ":update_engine-dbus-kiosk-app-client",
     ":update_metadata-protos",
   ]
 }
