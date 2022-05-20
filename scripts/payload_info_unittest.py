@@ -23,17 +23,14 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+from contextlib import contextmanager
 import sys
 import unittest
 from unittest import mock
 
-from contextlib import contextmanager
-
-from six.moves import StringIO
-
 import payload_info
+from six.moves import StringIO
 import update_payload
-
 from update_payload import update_metadata_pb2
 
 
@@ -52,6 +49,8 @@ class FakeOption:
       setattr(self, key, val)
     if not hasattr(self, 'payload_file'):
       self.payload_file = None
+    if not hasattr(self, 'zipfile'):
+      self.zipfile = None
 
 
 class FakeOp:

@@ -33,7 +33,7 @@ MAJOR_PAYLOAD_VERSION_BRILLO = 2
 
 def DisplayValue(key, value):
   """Print out a key, value pair with values left-aligned."""
-  if value != None:
+  if value is not None:
     print('%-*s %s' % (28, key + ':', value))
   else:
     raise ValueError('Cannot display an empty value.')
@@ -50,7 +50,7 @@ def DisplayHexData(data, indent=0):
           ''.join(chr(c) if 32 <= c < 127 else '.' for c in chunk))
 
 
-class PayloadCommand(object):
+class PayloadCommand:
   """Show basic information about an update payload.
 
   This command parses an update payload and displays information from
@@ -198,7 +198,8 @@ class PayloadCommand(object):
 
   def Run(self):
     """Parse the update payload and display information from it."""
-    self.payload = update_payload.Payload(self.options.payload_file)
+    self.payload = update_payload.Payload(self.options.payload_file,
+                                          is_zip=self.options.zipfile)
     self.payload.Init()
     self._DisplayHeader()
     self._DisplayManifest()
@@ -224,6 +225,8 @@ def main():
                       help='Show information about overall input/output.')
   parser.add_argument('--signatures', default=False, action='store_true',
                       help='Show signatures stored in the payload.')
+  parser.add_argument('--zipfile', default=False, action='store_true',
+                      help='Extract the payload from a zipfile.')
   args = parser.parse_args()
 
   PayloadCommand(args).Run()

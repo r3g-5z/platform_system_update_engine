@@ -60,10 +60,10 @@ def _ReadInt(file_obj, size, is_unsigned, hasher=None):
 #
 # Update payload.
 #
-class Payload(object):
+class Payload:
   """Chrome OS update payload processor."""
 
-  class _PayloadHeader(object):
+  class _PayloadHeader:
     """Update payload header struct."""
 
     # Header constants; sizes are in bytes.
@@ -114,17 +114,24 @@ class Payload(object):
             payload_file, self._METADATA_SIGNATURE_LEN_SIZE, True,
             hasher=hasher)
 
-  def __init__(self, payload_file, payload_file_offset=0):
+  def __init__(self, payload_file, payload_file_offset=0, is_zip=False):
     """Initialize the payload object.
 
     Args:
       payload_file: update payload file object open for reading
       payload_file_offset: the offset of the actual payload
+      is_zip: whether the payload_file is a zip file
     """
-    if zipfile.is_zipfile(payload_file):
-      with zipfile.ZipFile(payload_file) as zfp:
-        with zfp.open("payload.bin") as payload_fp:
-          payload_file = io.BytesIO(payload_fp.read())
+    # TODO: https://github.com/python/cpython/issues/72680
+    try:
+      if zipfile.is_zipfile(payload_file):
+        with zipfile.ZipFile(payload_file) as zfp:
+          with zfp.open("payload.bin") as payload_fp:
+            payload_file = io.BytesIO(payload_fp.read())
+    # pylint: disable=W0703
+    except Exception as e:
+      if is_zip:
+        raise e
     self.payload_file = payload_file
     self.payload_file_offset = payload_file_offset
     self.manifest_hasher = None
