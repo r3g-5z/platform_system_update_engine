@@ -29,6 +29,7 @@ enum class CheckResult {
   kDownloadError,      // Error downloading response from Omaha.
   kParsingError,       // Error parsing response.
   kRebootPending,      // No update check was performed a reboot is pending.
+  kDeferredUpdate,     // Update is applied, but deferred.
 
   kNumConstants,
   kUnset = -1

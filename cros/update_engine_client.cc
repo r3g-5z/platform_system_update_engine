@@ -226,6 +226,9 @@ int UpdateEngineClient::ProcessFlags() {
                 "target channel is more stable than the current channel unless "
                 "--nopowerwash is specified.");
   DEFINE_bool(check_for_update, false, "Initiate check for updates.");
+  DEFINE_bool(apply_deferred_update,
+              false,
+              "Apply the deferred update if there is one.");
   DEFINE_string(
       cohort_hint, "", "Set the current cohort hint to the passed value.");
   DEFINE_bool(follow,
@@ -482,6 +485,14 @@ int UpdateEngineClient::ProcessFlags() {
 
     if (!target_channel.empty())
       LOG(INFO) << "Target Channel (pending update): " << target_channel;
+  }
+
+  if (FLAGS_apply_deferred_update) {
+    if (!client_->ApplyDeferredUpdate()) {
+      LOG(ERROR) << "Apply deferred update failed.";
+      return 1;
+    }
+    return 0;
   }
 
   bool do_update_request = FLAGS_check_for_update || FLAGS_update ||

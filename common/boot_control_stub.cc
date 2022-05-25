@@ -35,6 +35,11 @@ BootControlInterface::Slot BootControlStub::GetCurrentSlot() const {
   return 0;
 }
 
+BootControlInterface::Slot BootControlStub::GetFirstInactiveSlot() const {
+  LOG(ERROR) << __FUNCTION__ << " should never be called.";
+  return 0;
+}
+
 bool BootControlStub::GetPartitionDevice(const std::string& partition_name,
                                          BootControlInterface::Slot slot,
                                          bool not_in_payload,

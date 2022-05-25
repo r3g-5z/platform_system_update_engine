@@ -22,6 +22,7 @@
 #include <base/logging.h>
 
 #include "update_engine/common/error_code.h"
+#include "update_engine/update_manager/deferred_update_policy_impl.h"
 #include "update_engine/update_manager/enterprise_rollback_policy_impl.h"
 #include "update_engine/update_manager/interactive_update_policy_impl.h"
 #include "update_engine/update_manager/minimum_version_policy_impl.h"
@@ -43,6 +44,7 @@ EvalStatus UpdateCanBeAppliedPolicy::Evaluate(EvaluationContext* ec,
   EnterpriseRollbackPolicyImpl enterprise_rollback_policy;
   MinimumVersionPolicyImpl minimum_version_policy;
   UpdateTimeRestrictionsPolicyImpl update_time_restrictions_policy;
+  DeferredUpdatePolicyImpl deferred_update_policy;
 
   vector<PolicyInterface const*> policies_to_consult = {
       // Check to see if an interactive update has been requested.
@@ -58,6 +60,10 @@ EvalStatus UpdateCanBeAppliedPolicy::Evaluate(EvaluationContext* ec,
       // Do not apply or download an update if we are inside one of the
       // restricted times.
       &update_time_restrictions_policy,
+
+      // Check to see if deferred updates is required.
+      // Note: Always run later than interactive policy check.
+      &deferred_update_policy,
   };
 
   for (auto policy : policies_to_consult) {

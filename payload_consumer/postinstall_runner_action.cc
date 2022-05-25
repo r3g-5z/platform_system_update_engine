@@ -95,9 +95,16 @@ void PostinstallRunnerAction::PerformAction() {
 }
 
 void PostinstallRunnerAction::PerformPartitionPostinstall() {
-  if (install_plan_.download_url.empty()) {
-    LOG(INFO) << "Skipping post-install during rollback";
-    return CompletePostinstall(ErrorCode::kSuccess);
+  switch (install_plan_.defer_update_action) {
+    case DeferUpdateAction::kOff:
+      if (install_plan_.download_url.empty()) {
+        LOG(INFO) << "Skipping post-install during rollback";
+        return CompletePostinstall(ErrorCode::kSuccess);
+      }
+      break;
+    case DeferUpdateAction::kHold:
+    case DeferUpdateAction::kApply:
+      break;
   }
 
   // Skip all the partitions that don't have a post-install step.
@@ -174,6 +181,20 @@ void PostinstallRunnerAction::PerformPartitionPostinstall() {
   vector<string> command = {abs_path};
   // Chrome OS postinstall expects the target rootfs as the first parameter.
   command.push_back(partition.target_path);
+
+  // Defer update action to apply.
+  switch (install_plan_.defer_update_action) {
+    case DeferUpdateAction::kOff:
+      break;
+    case DeferUpdateAction::kHold:
+      LOG(INFO) << "Defer update action: hold";
+      command.push_back("--defer_update_action=hold");
+      break;
+    case DeferUpdateAction::kApply:
+      LOG(INFO) << "Defer update action: apply";
+      command.push_back("--defer_update_action=apply");
+      break;
+  }
 
   current_command_ = Subprocess::Get().ExecFlags(
       command,
@@ -332,7 +353,15 @@ void PostinstallRunnerAction::CompletePostinstall(ErrorCode error_code) {
         hardware_->SetWarmReset(true);
       }
     } else if (install_plan_.run_post_install) {
-      error_code = ErrorCode::kUpdatedButNotActive;
+      switch (install_plan_.defer_update_action) {
+        case DeferUpdateAction::kOff:
+          error_code = ErrorCode::kUpdatedButNotActive;
+          break;
+        case DeferUpdateAction::kHold:
+        case DeferUpdateAction::kApply:
+          error_code = ErrorCode::kSuccess;
+          break;
+      }
     }
   }
 

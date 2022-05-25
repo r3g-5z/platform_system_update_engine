@@ -40,6 +40,9 @@ class UpdateEngineClient {
   //     Refer to proto defined in system_api.
   virtual bool Update(const update_engine::UpdateParams& update_params) = 0;
 
+  // Applies the deferred update if there is one.
+  virtual bool ApplyDeferredUpdate() = 0;
+
   // Request the update_engine to install a list of DLC modules.
   // |omaha_url|
   //     Force update_engine to look for updates from the given server. Passing

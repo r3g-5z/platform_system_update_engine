@@ -107,6 +107,7 @@ const UpdateStatus kNonIdleOrRebootUpdateStatuses[] = {
     UpdateStatus::ATTEMPTING_ROLLBACK,
     UpdateStatus::DISABLED,
     UpdateStatus::NEED_PERMISSION_TO_UPDATE,
+    UpdateStatus::UPDATED_BUT_DEFERRED,
 };
 
 struct CheckForUpdateTestParams {
@@ -2704,9 +2705,11 @@ TEST_F(UpdateAttempterTest, ResetUpdatePrefs) {
   auto* fake_prefs = FakeSystemState::Get()->prefs();
   fake_prefs->SetString(kPrefsLastFp, "3.14");
   fake_prefs->SetString(kPrefsPreviousVersion, "prev-version");
+  fake_prefs->SetString(kPrefsDeferredUpdateCompleted, "");
 
   // Make sure prefs are deleted.
   EXPECT_TRUE(attempter_.ResetUpdatePrefs());
+  EXPECT_FALSE(fake_prefs->Exists(kPrefsDeferredUpdateCompleted));
   EXPECT_FALSE(fake_prefs->Exists(kPrefsUpdateCompletedOnBootId));
   EXPECT_FALSE(fake_prefs->Exists(kPrefsUpdateCompletedBootTime));
   EXPECT_FALSE(fake_prefs->Exists(kPrefsLastFp));

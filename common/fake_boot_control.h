@@ -47,6 +47,9 @@ class FakeBootControl : public BootControlInterface {
   BootControlInterface::Slot GetCurrentSlot() const override {
     return current_slot_;
   }
+  BootControlInterface::Slot GetFirstInactiveSlot() const override {
+    return first_inactive_slot_;
+  }
 
   bool GetPartitionDevice(const std::string& partition_name,
                           BootControlInterface::Slot slot,
@@ -110,6 +113,9 @@ class FakeBootControl : public BootControlInterface {
   }
 
   void SetCurrentSlot(BootControlInterface::Slot slot) { current_slot_ = slot; }
+  void SetFirstInactiveSlot(BootControlInterface::Slot slot) {
+    first_inactive_slot_ = slot;
+  }
 
   void SetPartitionDevice(const std::string& partition_name,
                           BootControlInterface::Slot slot,
@@ -144,6 +150,7 @@ class FakeBootControl : public BootControlInterface {
  private:
   BootControlInterface::Slot num_slots_{2};
   BootControlInterface::Slot current_slot_{0};
+  BootControlInterface::Slot first_inactive_slot_{0};
 
   std::vector<bool> is_bootable_;
   std::vector<bool> is_marked_successful_;

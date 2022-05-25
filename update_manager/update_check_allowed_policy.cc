@@ -21,7 +21,6 @@
 #include <base/strings/string_util.h>
 
 #include "update_engine/common/system_state.h"
-#include "update_engine/update_manager/consumer_auto_update_policy_impl.h"
 #include "update_engine/update_manager/enough_slots_ab_updates_policy_impl.h"
 #include "update_engine/update_manager/enterprise_device_policy_impl.h"
 #include "update_engine/update_manager/interactive_update_policy_impl.h"
@@ -69,7 +68,6 @@ EvalStatus UpdateCheckAllowedPolicy::Evaluate(EvaluationContext* ec,
   OnlyUpdateOfficialBuildsPolicyImpl only_update_official_builds_policy;
   InteractiveUpdateCheckAllowedPolicyImpl interactive_update_policy;
   OobePolicyImpl oobe_policy;
-  ConsumerAutoUpdatePolicyImpl consumer_auto_update_policy;
   NextUpdateCheckTimePolicyImpl next_update_check_time_policy;
 
   vector<PolicyInterface* const> policies_to_consult = {
@@ -86,11 +84,6 @@ EvalStatus UpdateCheckAllowedPolicy::Evaluate(EvaluationContext* ec,
 
       // Check to see if an interactive update was requested.
       &interactive_update_policy,
-
-      // Check to see if consumer auto updates are allowed.
-      // Note: Depends on interactive update policy to coninue, so must run
-      // after that policy evaluation.
-      &consumer_auto_update_policy,
 
       // Unofficial builds should not perform periodic update checks.
       &only_update_official_builds_policy,

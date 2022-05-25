@@ -158,7 +158,10 @@ void UpdateAttempter::Init() {
   // In case of update_engine restart without a reboot we need to restore the
   // reboot needed state.
   if (GetBootTimeAtUpdate(nullptr)) {
-    status_ = UpdateStatus::UPDATED_NEED_REBOOT;
+    if (prefs_->Exists(kPrefsDeferredUpdateCompleted))
+      status_ = UpdateStatus::UPDATED_BUT_DEFERRED;
+    else
+      status_ = UpdateStatus::UPDATED_NEED_REBOOT;
   } else {
     // Send metric before deleting prefs. Metric tells us how many times the
     // inactive partition was updated before the reboot.
@@ -316,6 +319,21 @@ void UpdateAttempter::Update(const UpdateCheckParams& params) {
     }
     LOG(INFO) << "Already updated but checking to see if there are more recent "
                  "updates available.";
+  } else if (status_ == UpdateStatus::UPDATED_BUT_DEFERRED) {
+    // Update is already deferred, don't proceed with repeated updates.
+    // Although we have applied an update, we still want to ping Omaha
+    // to ensure the number of active statistics is accurate.
+    //
+    // Also convey to the UpdateEngine.Check.Result metric that we're
+    // not performing an update check because of this.
+    LOG(INFO) << "Not updating b/c we deferred update, ping Omaha instead";
+    // TODO(kimjae): Add label for metric.
+    SystemState::Get()->metrics_reporter()->ReportUpdateCheckMetrics(
+        metrics::CheckResult::kDeferredUpdate,
+        metrics::CheckReaction::kUnset,
+        metrics::DownloadErrorCode::kUnset);
+    PingOmaha();
+    return;
   } else if (status_ != UpdateStatus::IDLE) {
     // Update in progress. Do nothing.
     return;
@@ -1005,6 +1023,53 @@ bool UpdateAttempter::CheckForUpdate(
   return true;
 }
 
+bool UpdateAttempter::ApplyDeferredUpdate() {
+  if (status_ != UpdateStatus::UPDATED_BUT_DEFERRED) {
+    LOG(ERROR) << "Cannot apply deferred update when there isn't one "
+                  "deferred.";
+    return false;
+  }
+
+  LOG(INFO) << "Applying deferred update.";
+  install_plan_.reset(new InstallPlan());
+  auto* boot_control = SystemState::Get()->boot_control();
+
+  install_plan_->run_post_install = true;
+  install_plan_->defer_update_action = DeferUpdateAction::kApply;
+
+  // Since CrOS is A/B, it's okay to get the first inactive slot.
+  install_plan_->source_slot = boot_control->GetCurrentSlot();
+  install_plan_->target_slot = boot_control->GetFirstInactiveSlot();
+
+  install_plan_->partitions.push_back({
+      .name = "root",
+      .source_size = 1,
+      .target_size = 1,
+      .run_postinstall = true,
+      // TODO(kimjae): Store + override to handle non default script usage.
+      .postinstall_path = kPostinstallDefaultScript,
+  });
+  if (!install_plan_->LoadPartitionsFromSlots(boot_control)) {
+    LOG(ERROR) << "Failed to setup partitions for applying deferred update.";
+    return false;
+  }
+
+  install_plan_->Dump();
+
+  auto install_plan_action =
+      std::make_unique<InstallPlanAction>(*install_plan_);
+  auto postinstall_runner_action = std::make_unique<PostinstallRunnerAction>(
+      boot_control, SystemState::Get()->hardware());
+  postinstall_runner_action->set_delegate(this);
+  BondActions(install_plan_action.get(), postinstall_runner_action.get());
+  processor_->EnqueueAction(std::move(install_plan_action));
+  processor_->EnqueueAction(std::move(postinstall_runner_action));
+  processor_->set_delegate(this);
+
+  ScheduleProcessingStart();
+  return true;
+}
+
 bool UpdateAttempter::CheckForInstall(const vector<string>& dlc_ids,
                                       const string& omaha_url) {
   if (status_ != UpdateStatus::IDLE) {
@@ -1224,9 +1289,35 @@ void UpdateAttempter::ProcessingDoneUpdate(const ActionProcessor* processor,
 
   if (!SystemState::Get()->dlcservice()->UpdateCompleted(GetSuccessfulDlcIds()))
     LOG(WARNING) << "dlcservice didn't successfully handle update completion.";
-  SetStatusAndNotify(UpdateStatus::UPDATED_NEED_REBOOT);
-  ScheduleUpdates();
-  LOG(INFO) << "Update successfully applied, waiting to reboot.";
+
+  if (install_plan_) {
+    switch (install_plan_->defer_update_action) {
+      case DeferUpdateAction::kOff:
+        SetStatusAndNotify(UpdateStatus::UPDATED_NEED_REBOOT);
+        ScheduleUpdates();
+        LOG(INFO) << "Update successfully applied, waiting to reboot.";
+        break;
+      case DeferUpdateAction::kHold:
+        prefs_->SetString(kPrefsDeferredUpdateCompleted, "");
+        SetStatusAndNotify(UpdateStatus::UPDATED_BUT_DEFERRED);
+        ScheduleUpdates();
+        LOG(INFO) << "Deferred update hold action was successful.";
+        return;
+      case DeferUpdateAction::kApply:
+        SetStatusAndNotify(UpdateStatus::UPDATED_BUT_DEFERRED);
+        LOG(INFO) << "Deferred update apply action was successful, "
+                     "proceeding with reboot.";
+        if (!ResetStatus()) {
+          LOG(WARNING) << "Failed to reset status.";
+        }
+        RebootIfNeeded();
+        return;
+    }
+  } else {
+    SetStatusAndNotify(UpdateStatus::UPDATED_NEED_REBOOT);
+    ScheduleUpdates();
+    LOG(INFO) << "Update successfully applied, waiting to reboot.";
+  }
 
   // |install_plan_| is null during rollback operations, and the stats don't
   // make much sense then anyway.
@@ -1237,6 +1328,7 @@ void UpdateAttempter::ProcessingDoneUpdate(const ActionProcessor* processor,
     // Increment pref after every update.
     SystemState::Get()->prefs()->SetInt64(kPrefsConsecutiveUpdateCount,
                                           ++num_consecutive_updates);
+    // TODO(kimjae): Seperate out apps into categories (OS, DLC, etc).
     // Generate an unique payload identifier.
     string target_version_uid;
     for (const auto& payload : install_plan_->payloads) {
@@ -1400,6 +1492,7 @@ void UpdateAttempter::ActionCompleted(ActionProcessor* processor,
         case UpdateStatus::ATTEMPTING_ROLLBACK:
         case UpdateStatus::DISABLED:
         case UpdateStatus::CLEANUP_PREVIOUS_UPDATE:
+        case UpdateStatus::UPDATED_BUT_DEFERRED:
           MarkDeltaUpdateFailure();
           // Errored out after partition was marked unbootable.
           int64_t num_consecutive_updates = 0;
@@ -1461,7 +1554,11 @@ void UpdateAttempter::ResetUpdateStatus() {
     LOG(INFO)
         << "Cancelling current update but going back to need reboot as there "
            "is an update in the inactive partition that can be applied.";
-    SetStatusAndNotify(UpdateStatus::UPDATED_NEED_REBOOT);
+    if (prefs_->Exists(kPrefsDeferredUpdateCompleted)) {
+      SetStatusAndNotify(UpdateStatus::UPDATED_BUT_DEFERRED);
+    } else {
+      SetStatusAndNotify(UpdateStatus::UPDATED_NEED_REBOOT);
+    }
     return;
   }
   // One full update never completed or there no longer an inactive partition
@@ -1476,6 +1573,7 @@ bool UpdateAttempter::ResetUpdatePrefs() {
   ret_value = prefs->Delete(kPrefsUpdateCompletedBootTime) && ret_value;
   ret_value = prefs->Delete(kPrefsLastFp, {kDlcPrefsSubDir}) && ret_value;
   ret_value = prefs->Delete(kPrefsPreviousVersion) && ret_value;
+  ret_value = prefs->Delete(kPrefsDeferredUpdateCompleted) && ret_value;
   return ret_value;
 }
 
@@ -1579,7 +1677,23 @@ bool UpdateAttempter::ResetStatus() {
       LOG(INFO) << "Reset status " << (ret_value ? "successful" : "failed");
       return ret_value;
     }
+    case UpdateStatus::UPDATED_BUT_DEFERRED: {
+      bool ret_value = true;
+      status_ = UpdateStatus::IDLE;
+      ret_value = ResetUpdatePrefs() && ret_value;
 
+      // Notify the PayloadState that the successful payload was canceled.
+      SystemState::Get()->payload_state()->ResetUpdateStatus();
+
+      // The previous version is used to report back to omaha after reboot that
+      // we actually rebooted into the new version from this "prev-version". We
+      // need to clear out this value now to prevent it being sent on the next
+      // updatecheck request.
+      ret_value = prefs_->SetString(kPrefsPreviousVersion, "") && ret_value;
+
+      LOG(INFO) << "Reset status " << (ret_value ? "successful" : "failed");
+      return ret_value;
+    }
     default:
       LOG(ERROR) << "Reset not allowed in this state.";
       return false;
@@ -1753,6 +1867,11 @@ bool UpdateAttempter::ScheduleErrorEventAction() {
         /*success=*/false, install_plan_->version);
   }
 
+  if (install_plan_ &&
+      install_plan_->defer_update_action == DeferUpdateAction::kApply) {
+    // TODO(kimjae): Report deferred update apply action failure metric.
+  }
+
   // Send it to Omaha.
   LOG(INFO) << "Reporting the error event";
   auto error_event_action = std::make_unique<OmahaRequestAction>(
@@ -1829,7 +1948,11 @@ void UpdateAttempter::PingOmaha() {
   UpdateLastCheckedTime();
 
   // Update the status which will schedule the next update check
-  SetStatusAndNotify(UpdateStatus::UPDATED_NEED_REBOOT);
+  if (prefs_->Exists(kPrefsDeferredUpdateCompleted)) {
+    SetStatusAndNotify(UpdateStatus::UPDATED_BUT_DEFERRED);
+  } else {
+    SetStatusAndNotify(UpdateStatus::UPDATED_NEED_REBOOT);
+  }
   ScheduleUpdates();
 }
 
@@ -1965,11 +2088,14 @@ bool UpdateAttempter::GetBootTimeAtUpdate(Time* out_boot_time) {
   string boot_id;
   TEST_AND_RETURN_FALSE(utils::GetBootId(&boot_id));
 
+  // Reboots are allowed when updates get deferred, since they are actually
+  // applied just not active. Hence the check on `kPrefsDeferredUpdate`.
   string update_completed_on_boot_id;
-  if (!prefs_->Exists(kPrefsUpdateCompletedOnBootId) ||
-      !prefs_->GetString(kPrefsUpdateCompletedOnBootId,
-                         &update_completed_on_boot_id) ||
-      update_completed_on_boot_id != boot_id)
+  if (!prefs_->Exists(kPrefsDeferredUpdateCompleted) &&
+      (!prefs_->Exists(kPrefsUpdateCompletedOnBootId) ||
+       !prefs_->GetString(kPrefsUpdateCompletedOnBootId,
+                          &update_completed_on_boot_id) ||
+       update_completed_on_boot_id != boot_id))
     return false;
 
   // Short-circuit avoiding the read in case out_boot_time is nullptr.

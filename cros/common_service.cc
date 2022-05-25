@@ -84,6 +84,14 @@ bool UpdateEngineService::Update(
   return true;
 }
 
+bool UpdateEngineService::ApplyDeferredUpdate(ErrorPtr* error) {
+  if (!SystemState::Get()->update_attempter()->ApplyDeferredUpdate()) {
+    LogAndSetError(error, FROM_HERE, "Failed to apply deferred update.");
+    return false;
+  }
+  return true;
+}
+
 bool UpdateEngineService::AttemptInstall(brillo::ErrorPtr* error,
                                          const string& omaha_url,
                                          const vector<string>& dlc_ids) {

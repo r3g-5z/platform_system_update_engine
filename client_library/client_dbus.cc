@@ -82,6 +82,10 @@ bool DBusUpdateEngineClient::Update(
   return proxy_->Update(update_params, nullptr);
 }
 
+bool DBusUpdateEngineClient::ApplyDeferredUpdate() {
+  return proxy_->ApplyDeferredUpdate(nullptr);
+}
+
 bool DBusUpdateEngineClient::AttemptInstall(const string& omaha_url,
                                             const vector<string>& dlc_ids) {
   return proxy_->AttemptInstall(omaha_url, dlc_ids, nullptr);

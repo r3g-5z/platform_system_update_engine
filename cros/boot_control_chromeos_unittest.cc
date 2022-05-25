@@ -35,6 +35,13 @@ class BootControlChromeOSTest : public ::testing::Test {
   BootControlChromeOS bootctl_;  // BootControlChromeOS under test.
 };
 
+TEST_F(BootControlChromeOSTest, GetFirstInactiveSlot) {
+  bootctl_.current_slot_ = 0;
+  EXPECT_EQ(1, bootctl_.GetFirstInactiveSlot());
+  bootctl_.current_slot_ = 1;
+  EXPECT_EQ(0, bootctl_.GetFirstInactiveSlot());
+}
+
 TEST_F(BootControlChromeOSTest, SysfsBlockDeviceTest) {
   EXPECT_EQ("/sys/block/sda", bootctl_.SysfsBlockDevice("/dev/sda"));
   EXPECT_EQ("", bootctl_.SysfsBlockDevice("/foo/sda"));

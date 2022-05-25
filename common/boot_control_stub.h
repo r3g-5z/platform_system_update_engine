@@ -43,6 +43,7 @@ class BootControlStub : public BootControlInterface {
   // BootControlInterface overrides.
   unsigned int GetNumSlots() const override;
   BootControlInterface::Slot GetCurrentSlot() const override;
+  BootControlInterface::Slot GetFirstInactiveSlot() const override;
   bool GetPartitionDevice(const std::string& partition_name,
                           Slot slot,
                           bool not_in_payload,

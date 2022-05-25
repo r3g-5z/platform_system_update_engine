@@ -142,6 +142,10 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // update was already in progress.
   virtual bool CheckForUpdate(const update_engine::UpdateParams& update_params);
 
+  // This is the internal entry point to apply a deferred update, will return
+  // false if there wasn't a deferred update to apply or on failure.
+  virtual bool ApplyDeferredUpdate();
+
   // This is the version of CheckForUpdate called by AttemptInstall API.
   virtual bool CheckForInstall(const std::vector<std::string>& dlc_ids,
                                const std::string& omaha_url);

@@ -45,6 +45,8 @@ class UpdateEngineService {
               const update_engine::UpdateParams& update_params,
               bool* out_result);
 
+  bool ApplyDeferredUpdate(brillo::ErrorPtr* error);
+
   // Attempts a DLC module install operation.
   // |omaha_url|: the URL to query for update.
   // |dlc_ids|: a list of DLC module IDs.

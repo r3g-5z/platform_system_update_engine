@@ -50,6 +50,7 @@ class BootControlChromeOS : public BootControlInterface {
   // BootControlInterface overrides.
   unsigned int GetNumSlots() const override;
   BootControlInterface::Slot GetCurrentSlot() const override;
+  BootControlInterface::Slot GetFirstInactiveSlot() const override;
   bool GetPartitionDevice(const std::string& partition_name,
                           BootControlInterface::Slot slot,
                           bool not_in_payload,
@@ -73,6 +74,7 @@ class BootControlChromeOS : public BootControlInterface {
 
  private:
   friend class BootControlChromeOSTest;
+  FRIEND_TEST(BootControlChromeOSTest, GetFirstInactiveSlot);
   FRIEND_TEST(BootControlChromeOSTest, SysfsBlockDeviceTest);
   FRIEND_TEST(BootControlChromeOSTest, GetPartitionNumberTest);
   FRIEND_TEST(BootControlChromeOSTest, ParseDlcPartitionNameTest);

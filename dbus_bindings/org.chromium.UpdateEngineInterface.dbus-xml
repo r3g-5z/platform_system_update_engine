@@ -29,6 +29,8 @@
                     value="update_engine::UpdateParams"/>
       </arg>
     </method>
+    <method name="ApplyDeferredUpdate">
+    </method>
     <method name="AttemptInstall">
       <arg type="s" name="omaha_url" direction="in" />
       <arg type="as" name="dlc_ids" direction="in">

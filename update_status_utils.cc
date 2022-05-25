@@ -75,6 +75,8 @@ const char* UpdateStatusToString(const UpdateStatus& status) {
       return update_engine::kUpdateStatusDisabled;
     case UpdateStatus::CLEANUP_PREVIOUS_UPDATE:
       return update_engine::kUpdateStatusCleanupPreviousUpdate;
+    case UpdateStatus::UPDATED_BUT_DEFERRED:
+      return update_engine::kUpdateStatusUpdatedButDeferred;
   }
 
   NOTREACHED();

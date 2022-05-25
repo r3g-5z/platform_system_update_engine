@@ -118,6 +118,7 @@ extern const char kPrefsWallClockScatteringWaitPeriod[];
 extern const char kPrefsWallClockStagingWaitPeriod[];
 extern const char kPrefsManifestBytes[];
 extern const char kPrefsConsumerAutoUpdateDisabled[];
+extern const char kPrefsDeferredUpdateCompleted[];
 
 // Keys used when storing and loading payload properties.
 extern const char kPayloadPropertyFileSize[];

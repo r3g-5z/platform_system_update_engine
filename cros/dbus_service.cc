@@ -71,6 +71,10 @@ bool DBusUpdateEngineService::Update(
   return common_->Update(error, in_update_params, &result);
 }
 
+bool DBusUpdateEngineService::ApplyDeferredUpdate(ErrorPtr* error) {
+  return common_->ApplyDeferredUpdate(error);
+}
+
 bool DBusUpdateEngineService::AttemptInstall(ErrorPtr* error,
                                              const string& in_omaha_url,
                                              const vector<string>& dlc_ids) {

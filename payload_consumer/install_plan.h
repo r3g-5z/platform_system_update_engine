@@ -38,6 +38,12 @@ enum class InstallPayloadType {
 
 std::string InstallPayloadTypeToString(InstallPayloadType type);
 
+enum class DeferUpdateAction {
+  kOff,
+  kHold,
+  kApply,
+};
+
 struct InstallPlan {
   InstallPlan() = default;
 
@@ -182,6 +188,9 @@ struct InstallPlan {
   // Indicates the type of update.
   update_engine::UpdateUrgencyInternal update_urgency{
       update_engine::UpdateUrgencyInternal::REGULAR};
+
+  // The defer update action to perform during post installation.
+  DeferUpdateAction defer_update_action{DeferUpdateAction::kOff};
 };
 
 class InstallPlanAction;

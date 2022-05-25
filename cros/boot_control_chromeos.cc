@@ -191,6 +191,18 @@ BootControlInterface::Slot BootControlChromeOS::GetCurrentSlot() const {
   return current_slot_;
 }
 
+BootControlInterface::Slot BootControlChromeOS::GetFirstInactiveSlot() const {
+  if (GetCurrentSlot() == BootControlInterface::kInvalidSlot ||
+      GetNumSlots() < 2)
+    return BootControlInterface::kInvalidSlot;
+
+  for (Slot slot = 0; slot < GetNumSlots(); slot++) {
+    if (slot != GetCurrentSlot())
+      return slot;
+  }
+  return BootControlInterface::kInvalidSlot;
+}
+
 bool BootControlChromeOS::ParseDlcPartitionName(
     const std::string partition_name,
     std::string* dlc_id,

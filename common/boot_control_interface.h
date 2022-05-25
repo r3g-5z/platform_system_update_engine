@@ -55,6 +55,11 @@ class BootControlInterface {
   // and return kInvalidSlot.
   virtual Slot GetCurrentSlot() const = 0;
 
+  // Return the first slot where we are not running the system from. On success,
+  // the result is a number between 0 and GetNumSlots() - 1, will also not be
+  // equivalent to `GetCurrentSlot()`. Otherwise will return `kInvalidSlot`.
+  virtual Slot GetFirstInactiveSlot() const = 0;
+
   // Determines the block device for the given partition name and slot number.
   // The |slot| number must be between 0 and GetNumSlots() - 1 and the
   // |partition_name| is a platform-specific name that identifies a partition on

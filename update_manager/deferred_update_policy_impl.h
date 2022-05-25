@@ -1,5 +1,5 @@
 //
-// Copyright (C) 2021 The Android Open Source Project
+// Copyright (C) 2022 The Android Open Source Project
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-#ifndef UPDATE_ENGINE_UPDATE_MANAGER_CONSUMER_AUTO_UPDATE_POLICY_IMPL_H_
-#define UPDATE_ENGINE_UPDATE_MANAGER_CONSUMER_AUTO_UPDATE_POLICY_IMPL_H_
+#ifndef UPDATE_ENGINE_UPDATE_MANAGER_DEFERRED_UPDATE_POLICY_IMPL_H_
+#define UPDATE_ENGINE_UPDATE_MANAGER_DEFERRED_UPDATE_POLICY_IMPL_H_
 
 #include <string>
 
@@ -23,18 +23,15 @@
 
 namespace chromeos_update_manager {
 
-class ConsumerAutoUpdatePolicyImpl : public PolicyInterface {
+class DeferredUpdatePolicyImpl : public PolicyInterface {
  public:
-  ConsumerAutoUpdatePolicyImpl() = default;
-  ConsumerAutoUpdatePolicyImpl(const ConsumerAutoUpdatePolicyImpl&) = delete;
-  ConsumerAutoUpdatePolicyImpl& operator=(const ConsumerAutoUpdatePolicyImpl&) =
-      delete;
+  DeferredUpdatePolicyImpl() = default;
+  DeferredUpdatePolicyImpl(const DeferredUpdatePolicyImpl&) = delete;
+  DeferredUpdatePolicyImpl& operator=(const DeferredUpdatePolicyImpl&) = delete;
 
-  ~ConsumerAutoUpdatePolicyImpl() override = default;
+  ~DeferredUpdatePolicyImpl() override = default;
 
-  std::string PolicyName() const override {
-    return "ConsumerAutoUpdatePolicyImpl";
-  }
+  std::string PolicyName() const override { return "DeferredUpdatePolicyImpl"; }
 
   // Policy overrides.
   EvalStatus Evaluate(EvaluationContext* ec,
@@ -45,4 +42,4 @@ class ConsumerAutoUpdatePolicyImpl : public PolicyInterface {
 
 }  // namespace chromeos_update_manager
 
-#endif  // UPDATE_ENGINE_UPDATE_MANAGER_CONSUMER_AUTO_UPDATE_POLICY_IMPL_H_
+#endif  // UPDATE_ENGINE_UPDATE_MANAGER_DEFERRED_UPDATE_POLICY_IMPL_H_

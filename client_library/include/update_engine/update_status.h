@@ -51,8 +51,9 @@ enum class UpdateStatus {
   // allow updates, e.g. over cellular network.
   NEED_PERMISSION_TO_UPDATE = 10,
   CLEANUP_PREVIOUS_UPDATE = 11,
+  UPDATED_BUT_DEFERRED = 12,
 
-  MAX = CLEANUP_PREVIOUS_UPDATE,
+  MAX = UPDATED_BUT_DEFERRED,
 
   // This value is exclusively used in Chrome. DO NOT define nor use it.
   // TODO(crbug.com/977320): Remove this value from chrome by refactoring the
