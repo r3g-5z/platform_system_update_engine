@@ -27,12 +27,11 @@
 
 namespace chromeos_update_engine {
 
-class DynamicPartitionControlStub final : public DynamicPartitionControlInterface {
+class DynamicPartitionControlStub : public DynamicPartitionControlInterface {
  public:
   FeatureFlag GetDynamicPartitionsFeatureFlag() override;
   FeatureFlag GetVirtualAbFeatureFlag() override;
   FeatureFlag GetVirtualAbCompressionFeatureFlag() override;
-  FeatureFlag GetVirtualAbCompressionXorFeatureFlag() override;
   bool OptimizeOperation(const std::string& partition_name,
                          const InstallOperation& operation,
                          InstallOperation* optimized) override;
@@ -66,10 +65,9 @@ class DynamicPartitionControlStub final : public DynamicPartitionControlInterfac
       const std::optional<std::string>&,
       bool is_append) override;
 
-  std::unique_ptr<FileDescriptor> OpenCowFd(
-      const std::string& unsuffixed_partition_name,
-      const std::optional<std::string>&,
-      bool is_append = false) override {
+  FileDescriptorPtr OpenCowFd(const std::string& unsuffixed_partition_name,
+                              const std::optional<std::string>&,
+                              bool is_append = false) override {
     return nullptr;
   }
 

@@ -47,7 +47,6 @@
 #include "update_engine/common/hash_calculator.h"
 #include "update_engine/common/mock_download_action.h"
 #include "update_engine/common/test_utils.h"
-#include "update_engine/common/testing_constants.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/payload_consumer/fake_file_descriptor.h"
 #include "update_engine/payload_consumer/mock_partition_writer.h"
@@ -68,6 +67,9 @@ using test_utils::kRandomString;
 using testing::_;
 using testing::Return;
 using ::testing::Sequence;
+
+extern const char* kUnittestPrivateKeyPath;
+extern const char* kUnittestPublicKeyPath;
 
 namespace {
 
@@ -167,6 +169,7 @@ class DeltaPerformerTest : public ::testing::Test {
     install_plan_.target_slot = 1;
     EXPECT_CALL(mock_delegate_, ShouldCancel(_))
         .WillRepeatedly(testing::Return(false));
+    performer_.set_update_certificates_path("");
     // Set the public key corresponding to the unittest private key.
     string public_key_path = GetBuildArtifactsPath(kUnittestPublicKeyPath);
     EXPECT_TRUE(utils::FileExists(public_key_path.c_str()));
@@ -442,8 +445,7 @@ class DeltaPerformerTest : public ::testing::Test {
                             &mock_delegate_,
                             &install_plan_,
                             &payload_,
-                            false /* interactive */,
-                            "" /* Update certs path */};
+                            false /* interactive*/};
 };
 
 TEST_F(DeltaPerformerTest, FullPayloadWriteTest) {
@@ -652,9 +654,7 @@ TEST_F(DeltaPerformerTest, SourceHashMismatchTest) {
   brillo::Blob payload_data =
       GeneratePayload(brillo::Blob(), {aop}, false, &old_part);
 
-  // When source hash mismatches, PartitionWriter will refuse to write anything.
-  // Therefore we should expect an empty blob.
-  EXPECT_EQ(brillo::Blob{}, ApplyPayload(payload_data, source.path(), false));
+  EXPECT_EQ(actual_data, ApplyPayload(payload_data, source.path(), false));
 }
 
 TEST_F(DeltaPerformerTest, ExtentsToByteStringTest) {
@@ -1068,8 +1068,7 @@ TEST_F(DeltaPerformerTest, UsePublicKeyFromResponse) {
   EXPECT_FALSE(performer_.GetPublicKey(&public_key));
 }
 
-// TODO(197361113) re-enable the test after we bump the version in config.
-TEST(DISABLED_ConfVersionTest, ConfVersionsMatch) {
+TEST_F(DeltaPerformerTest, ConfVersionsMatch) {
   // Test that the versions in update_engine.conf that is installed to the
   // image match the maximum supported delta versions in the update engine.
   uint32_t minor_version;
@@ -1115,7 +1114,7 @@ class TestDeltaPerformer : public DeltaPerformer {
  public:
   using DeltaPerformer::DeltaPerformer;
 
-  std::unique_ptr<PartitionWriterInterface> CreatePartitionWriter(
+  std::unique_ptr<PartitionWriter> CreatePartitionWriter(
       const PartitionUpdate& partition_update,
       const InstallPlan::Partition& install_part,
       DynamicPartitionControlInterface* dynamic_control,

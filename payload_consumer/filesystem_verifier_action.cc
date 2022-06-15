@@ -36,6 +36,7 @@
 #include <brillo/streams/file_stream.h>
 
 #include "common/error_code.h"
+#include "payload_generator/delta_diff_generator.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/payload_consumer/file_descriptor.h"
 
@@ -182,7 +183,7 @@ bool FilesystemVerifierAction::InitializeFdVABC(bool should_write_verity) {
 }
 
 bool FilesystemVerifierAction::InitializeFd(const std::string& part_path) {
-  partition_fd_ = std::make_unique<EintrSafeFileDescriptor>();
+  partition_fd_ = FileDescriptorPtr(new EintrSafeFileDescriptor());
   const bool write_verity = ShouldWriteVerity();
   int flags = write_verity ? O_RDWR : O_RDONLY;
   if (!utils::SetBlockDeviceReadOnly(part_path, !write_verity)) {
@@ -197,12 +198,11 @@ bool FilesystemVerifierAction::InitializeFd(const std::string& part_path) {
 }
 
 void FilesystemVerifierAction::WriteVerityAndHashPartition(
+    FileDescriptorPtr fd,
     const off64_t start_offset,
     const off64_t end_offset,
     void* buffer,
     const size_t buffer_size) {
-  auto fd = partition_fd_.get();
-  TEST_AND_RETURN(fd != nullptr);
   if (start_offset >= end_offset) {
     LOG_IF(WARNING, start_offset > end_offset)
         << "start_offset is greater than end_offset : " << start_offset << " > "
@@ -220,7 +220,7 @@ void FilesystemVerifierAction::WriteVerityAndHashPartition(
         return;
       }
     }
-    HashPartition(0, partition_size_, buffer, buffer_size);
+    HashPartition(partition_fd_, 0, partition_size_, buffer, buffer_size);
     return;
   }
   const auto cur_offset = fd->Seek(start_offset, SEEK_SET);
@@ -250,18 +250,18 @@ void FilesystemVerifierAction::WriteVerityAndHashPartition(
       FROM_HERE,
       base::BindOnce(&FilesystemVerifierAction::WriteVerityAndHashPartition,
                      base::Unretained(this),
+                     fd,
                      start_offset + bytes_read,
                      end_offset,
                      buffer,
                      buffer_size)));
 }
 
-void FilesystemVerifierAction::HashPartition(const off64_t start_offset,
+void FilesystemVerifierAction::HashPartition(FileDescriptorPtr fd,
+                                             const off64_t start_offset,
                                              const off64_t end_offset,
                                              void* buffer,
                                              const size_t buffer_size) {
-  auto fd = partition_fd_.get();
-  TEST_AND_RETURN(fd != nullptr);
   if (start_offset >= end_offset) {
     LOG_IF(WARNING, start_offset > end_offset)
         << "start_offset is greater than end_offset : " << start_offset << " > "
@@ -296,6 +296,7 @@ void FilesystemVerifierAction::HashPartition(const off64_t start_offset,
       FROM_HERE,
       base::BindOnce(&FilesystemVerifierAction::HashPartition,
                      base::Unretained(this),
+                     fd,
                      start_offset + bytes_read,
                      end_offset,
                      buffer,
@@ -361,7 +362,6 @@ void FilesystemVerifierAction::StartPartitionHashing() {
     CHECK_LE(partition.hash_tree_offset, partition.fec_offset)
         << " Hash tree is expected to come before FEC data";
   }
-  CHECK_NE(partition_fd_, nullptr);
   if (partition.hash_tree_offset != 0) {
     filesystem_data_end_ = partition.hash_tree_offset;
   } else if (partition.fec_offset != 0) {
@@ -375,10 +375,11 @@ void FilesystemVerifierAction::StartPartitionHashing() {
       return;
     }
     WriteVerityAndHashPartition(
-        0, filesystem_data_end_, buffer_.data(), buffer_.size());
+        partition_fd_, 0, filesystem_data_end_, buffer_.data(), buffer_.size());
   } else {
     LOG(INFO) << "Verity writes disabled on partition " << partition.name;
-    HashPartition(0, partition_size_, buffer_.data(), buffer_.size());
+    HashPartition(
+        partition_fd_, 0, partition_size_, buffer_.data(), buffer_.size());
   }
 }
 
@@ -430,10 +431,10 @@ void FilesystemVerifierAction::FinishPartitionHashing() {
     Cleanup(ErrorCode::kError);
     return;
   }
-  const InstallPlan::Partition& partition =
+  InstallPlan::Partition& partition =
       install_plan_.partitions[partition_index_];
   LOG(INFO) << "Hash of " << partition.name << ": "
-            << HexEncode(hasher_->raw_hash());
+            << Base64Encode(hasher_->raw_hash());
 
   switch (verifier_step_) {
     case VerifierStep::kVerifyTargetHash:
@@ -492,6 +493,7 @@ void FilesystemVerifierAction::FinishPartitionHashing() {
       return;
   }
   // Start hashing the next partition, if any.
+  hasher_.reset();
   buffer_.clear();
   if (partition_fd_) {
     partition_fd_->Close();
