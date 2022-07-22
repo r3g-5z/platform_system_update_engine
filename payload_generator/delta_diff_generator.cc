@@ -135,8 +135,8 @@ bool GenerateUpdatePayloadFile(const PayloadGenerationConfig& config,
     std::vector<std::vector<CowMergeOperation>> all_merge_sequences;
     all_merge_sequences.resize(config.target.partitions.size());
     std::vector<PartitionProcessor> partition_tasks{};
-    auto thread_count = std::min<int>(diff_utils::GetMaxThreads(),
-                                      config.target.partitions.size());
+    auto thread_count =
+        std::min(diff_utils::GetMaxThreads(), config.target.partitions.size());
     base::DelegateSimpleThreadPool thread_pool{"partition-thread-pool",
                                                thread_count};
     for (size_t i = 0; i < config.target.partitions.size(); i++) {
