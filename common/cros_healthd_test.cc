@@ -50,11 +50,10 @@ TEST_F(CrosHealthdTest, ParseSystemResultV2Check) {
     auto&& telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
     telemetry_info_ptr->system_result_v2 =
-        chromeos::cros_healthd::mojom::SystemResultV2::New();
-    auto& system_result_v2_ptr = telemetry_info_ptr->system_result_v2;
-    system_result_v2_ptr->set_system_info_v2(
-        chromeos::cros_healthd::mojom::SystemInfoV2::New());
-    auto& system_info_v2_ptr = system_result_v2_ptr->get_system_info_v2();
+        chromeos::cros_healthd::mojom::SystemResultV2::NewSystemInfoV2(
+            chromeos::cros_healthd::mojom::SystemInfoV2::New());
+    auto& system_info_v2_ptr =
+        telemetry_info_ptr->system_result_v2->get_system_info_v2();
 
     system_info_v2_ptr->dmi_info =
         chromeos::cros_healthd::mojom::DmiInfo::New();
@@ -80,11 +79,10 @@ TEST_F(CrosHealthdTest, ParseSystemResultV2Check) {
     auto&& telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
     telemetry_info_ptr->system_result_v2 =
-        chromeos::cros_healthd::mojom::SystemResultV2::New();
-    auto& system_result_v2_ptr = telemetry_info_ptr->system_result_v2;
-    system_result_v2_ptr->set_system_info_v2(
-        chromeos::cros_healthd::mojom::SystemInfoV2::New());
-    auto& system_info_v2_ptr = system_result_v2_ptr->get_system_info_v2();
+        chromeos::cros_healthd::mojom::SystemResultV2::NewSystemInfoV2(
+            chromeos::cros_healthd::mojom::SystemInfoV2::New());
+    auto& system_info_v2_ptr =
+        telemetry_info_ptr->system_result_v2->get_system_info_v2();
 
     system_info_v2_ptr->dmi_info =
         chromeos::cros_healthd::mojom::DmiInfo::New();
@@ -125,12 +123,11 @@ TEST_F(CrosHealthdTest, ParseMemoryResultCheck) {
     auto&& telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
     telemetry_info_ptr->memory_result =
-        chromeos::cros_healthd::mojom::MemoryResult::New();
-    auto& memory_result_ptr = telemetry_info_ptr->memory_result;
-    memory_result_ptr->set_memory_info(
-        chromeos::cros_healthd::mojom::MemoryInfo::New());
+        chromeos::cros_healthd::mojom::MemoryResult::NewMemoryInfo(
+            chromeos::cros_healthd::mojom::MemoryInfo::New());
 
-    auto& memory_info_ptr = memory_result_ptr->get_memory_info();
+    auto& memory_info_ptr =
+        telemetry_info_ptr->memory_result->get_memory_info();
     memory_info_ptr->total_memory_kib = uint32_t(123);
 
     cros_healthd_.ParseMemoryResult(&telemetry_info_ptr, &telemetry_info);
@@ -151,18 +148,16 @@ TEST_F(CrosHealthdTest, ParseNonRemovableBlockDeviceResultCheck) {
     TelemetryInfo telemetry_info{};
     auto&& telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
-    telemetry_info_ptr->block_device_result =
-        chromeos::cros_healthd::mojom::NonRemovableBlockDeviceResult::New();
-    auto& block_device_result_ptr = telemetry_info_ptr->block_device_result;
     std::vector<chromeos::cros_healthd::mojom::NonRemovableBlockDeviceInfoPtr>
         block_device_info;
     block_device_info.emplace_back(
         chromeos::cros_healthd::mojom::NonRemovableBlockDeviceInfo::New());
-    block_device_result_ptr->set_block_device_info(
-        std::move(block_device_info));
+    telemetry_info_ptr->block_device_result =
+        chromeos::cros_healthd::mojom::NonRemovableBlockDeviceResult::
+            NewBlockDeviceInfo(std::move(block_device_info));
 
     auto& block_device_info_ptr =
-        block_device_result_ptr->get_block_device_info();
+        telemetry_info_ptr->block_device_result->get_block_device_info();
     block_device_info_ptr.front()->size = uint64_t(123);
 
     cros_healthd_.ParseNonRemovableBlockDeviceResult(&telemetry_info_ptr,
@@ -184,10 +179,9 @@ TEST_F(CrosHealthdTest, ParseCpuResultCheck) {
     auto&& telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
     telemetry_info_ptr->cpu_result =
-        chromeos::cros_healthd::mojom::CpuResult::New();
-    auto& cpu_result_ptr = telemetry_info_ptr->cpu_result;
-    cpu_result_ptr->set_cpu_info(chromeos::cros_healthd::mojom::CpuInfo::New());
-    auto& cpu_info_ptr = cpu_result_ptr->get_cpu_info();
+        chromeos::cros_healthd::mojom::CpuResult::NewCpuInfo(
+            chromeos::cros_healthd::mojom::CpuInfo::New());
+    auto& cpu_info_ptr = telemetry_info_ptr->cpu_result->get_cpu_info();
 
     std::vector<chromeos::cros_healthd::mojom::PhysicalCpuInfoPtr>
         physical_cpus;
@@ -205,10 +199,9 @@ TEST_F(CrosHealthdTest, ParseCpuResultCheck) {
     auto&& telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
     telemetry_info_ptr->cpu_result =
-        chromeos::cros_healthd::mojom::CpuResult::New();
-    auto& cpu_result_ptr = telemetry_info_ptr->cpu_result;
-    cpu_result_ptr->set_cpu_info(chromeos::cros_healthd::mojom::CpuInfo::New());
-    auto& cpu_info_ptr = cpu_result_ptr->get_cpu_info();
+        chromeos::cros_healthd::mojom::CpuResult::NewCpuInfo(
+            chromeos::cros_healthd::mojom::CpuInfo::New());
+    auto& cpu_info_ptr = telemetry_info_ptr->cpu_result->get_cpu_info();
 
     std::vector<chromeos::cros_healthd::mojom::PhysicalCpuInfoPtr>
         physical_cpus;
@@ -238,10 +231,8 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckMissingBusInfo) {
   auto&& telemetry_info_ptr =
       chromeos::cros_healthd::mojom::TelemetryInfo::New();
   telemetry_info_ptr->bus_result =
-      chromeos::cros_healthd::mojom::BusResult::New();
-  auto& bus_result_ptr = telemetry_info_ptr->bus_result;
-  bus_result_ptr->set_bus_devices({});
-  auto& bus_devices_ptr = bus_result_ptr->get_bus_devices();
+      chromeos::cros_healthd::mojom::BusResult::NewBusDevices({});
+  auto& bus_devices_ptr = telemetry_info_ptr->bus_result->get_bus_devices();
 
   bus_devices_ptr.emplace_back(chromeos::cros_healthd::mojom::BusDevice::New());
 
@@ -254,19 +245,15 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckPciBusDefault) {
   auto&& telemetry_info_ptr =
       chromeos::cros_healthd::mojom::TelemetryInfo::New();
   telemetry_info_ptr->bus_result =
-      chromeos::cros_healthd::mojom::BusResult::New();
-  auto& bus_result_ptr = telemetry_info_ptr->bus_result;
-  bus_result_ptr->set_bus_devices({});
-  auto& bus_devices_ptr = bus_result_ptr->get_bus_devices();
+      chromeos::cros_healthd::mojom::BusResult::NewBusDevices({});
+  auto& bus_devices_ptr = telemetry_info_ptr->bus_result->get_bus_devices();
 
   bus_devices_ptr.emplace_back(chromeos::cros_healthd::mojom::BusDevice::New());
   auto& bus_device_ptr = bus_devices_ptr.back();
-  auto& bus_info_ptr = bus_device_ptr->bus_info;
-  bus_info_ptr = chromeos::cros_healthd::mojom::BusInfo::New();
-
   // Create PCI bus info.
-  bus_info_ptr->set_pci_bus_info(
-      chromeos::cros_healthd::mojom::PciBusInfo::New());
+  bus_device_ptr->bus_info =
+      chromeos::cros_healthd::mojom::BusInfo::NewPciBusInfo(
+          chromeos::cros_healthd::mojom::PciBusInfo::New());
 
   cros_healthd_.ParseBusResult(&telemetry_info_ptr, &telemetry_info);
   EXPECT_FALSE(telemetry_info.bus_devices.empty());
@@ -277,15 +264,11 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckPciBus) {
   auto&& telemetry_info_ptr =
       chromeos::cros_healthd::mojom::TelemetryInfo::New();
   telemetry_info_ptr->bus_result =
-      chromeos::cros_healthd::mojom::BusResult::New();
-  auto& bus_result_ptr = telemetry_info_ptr->bus_result;
-  bus_result_ptr->set_bus_devices({});
-  auto& bus_devices_ptr = bus_result_ptr->get_bus_devices();
+      chromeos::cros_healthd::mojom::BusResult::NewBusDevices({});
+  auto& bus_devices_ptr = telemetry_info_ptr->bus_result->get_bus_devices();
 
   bus_devices_ptr.emplace_back(chromeos::cros_healthd::mojom::BusDevice::New());
   auto& bus_device_ptr = bus_devices_ptr.back();
-  auto& bus_info_ptr = bus_device_ptr->bus_info;
-  bus_info_ptr = chromeos::cros_healthd::mojom::BusInfo::New();
 
   // Create PCI bus info.
   uint8_t class_id = 1;
@@ -295,13 +278,14 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckPciBus) {
   uint16_t device_id = 5;
   // Don't use driver after std::move.
   std::optional<std::string> driver = "some-driver";
-  bus_info_ptr->set_pci_bus_info(
-      chromeos::cros_healthd::mojom::PciBusInfo::New(class_id,
-                                                     subclass_id,
-                                                     protocol_id,
-                                                     vendor_id,
-                                                     device_id,
-                                                     std::move(driver)));
+  bus_device_ptr->bus_info =
+      chromeos::cros_healthd::mojom::BusInfo::NewPciBusInfo(
+          chromeos::cros_healthd::mojom::PciBusInfo::New(class_id,
+                                                         subclass_id,
+                                                         protocol_id,
+                                                         vendor_id,
+                                                         device_id,
+                                                         std::move(driver)));
 
   cros_healthd_.ParseBusResult(&telemetry_info_ptr, &telemetry_info);
   ASSERT_EQ(telemetry_info.bus_devices.size(), 1);
@@ -319,19 +303,15 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckUsbBusDefault) {
   auto&& telemetry_info_ptr =
       chromeos::cros_healthd::mojom::TelemetryInfo::New();
   telemetry_info_ptr->bus_result =
-      chromeos::cros_healthd::mojom::BusResult::New();
-  auto& bus_result_ptr = telemetry_info_ptr->bus_result;
-  bus_result_ptr->set_bus_devices({});
-  auto& bus_devices_ptr = bus_result_ptr->get_bus_devices();
+      chromeos::cros_healthd::mojom::BusResult::NewBusDevices({});
+  auto& bus_devices_ptr = telemetry_info_ptr->bus_result->get_bus_devices();
 
   bus_devices_ptr.emplace_back(chromeos::cros_healthd::mojom::BusDevice::New());
   auto& bus_device_ptr = bus_devices_ptr.back();
-  auto& bus_info_ptr = bus_device_ptr->bus_info;
-  bus_info_ptr = chromeos::cros_healthd::mojom::BusInfo::New();
-
   // Create USB bus info.
-  bus_info_ptr->set_usb_bus_info(
-      chromeos::cros_healthd::mojom::UsbBusInfo::New());
+  bus_device_ptr->bus_info =
+      chromeos::cros_healthd::mojom::BusInfo::NewUsbBusInfo(
+          chromeos::cros_healthd::mojom::UsbBusInfo::New());
 
   cros_healthd_.ParseBusResult(&telemetry_info_ptr, &telemetry_info);
   EXPECT_FALSE(telemetry_info.bus_devices.empty());
@@ -342,15 +322,11 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckUsbBus) {
   auto&& telemetry_info_ptr =
       chromeos::cros_healthd::mojom::TelemetryInfo::New();
   telemetry_info_ptr->bus_result =
-      chromeos::cros_healthd::mojom::BusResult::New();
-  auto& bus_result_ptr = telemetry_info_ptr->bus_result;
-  bus_result_ptr->set_bus_devices({});
-  auto& bus_devices_ptr = bus_result_ptr->get_bus_devices();
+      chromeos::cros_healthd::mojom::BusResult::NewBusDevices({});
+  auto& bus_devices_ptr = telemetry_info_ptr->bus_result->get_bus_devices();
 
   bus_devices_ptr.emplace_back(chromeos::cros_healthd::mojom::BusDevice::New());
   auto& bus_device_ptr = bus_devices_ptr.back();
-  auto& bus_info_ptr = bus_device_ptr->bus_info;
-  bus_info_ptr = chromeos::cros_healthd::mojom::BusInfo::New();
 
   // Create USB bus info.
   uint8_t class_id = 1;
@@ -360,13 +336,15 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckUsbBus) {
   uint16_t product_id = 5;
   // Don't use interface after std::move.
   std::vector<chromeos::cros_healthd::mojom::UsbBusInterfaceInfoPtr> interfaces;
-  bus_info_ptr->set_usb_bus_info(
-      chromeos::cros_healthd::mojom::UsbBusInfo::New(class_id,
-                                                     subclass_id,
-                                                     protocol_id,
-                                                     vendor_id,
-                                                     product_id,
-                                                     std::move(interfaces)));
+  bus_device_ptr->bus_info =
+      chromeos::cros_healthd::mojom::BusInfo::NewUsbBusInfo(
+          chromeos::cros_healthd::mojom::UsbBusInfo::New(
+              class_id,
+              subclass_id,
+              protocol_id,
+              vendor_id,
+              product_id,
+              std::move(interfaces)));
 
   cros_healthd_.ParseBusResult(&telemetry_info_ptr, &telemetry_info);
   ASSERT_EQ(telemetry_info.bus_devices.size(), 1);
@@ -383,19 +361,15 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckThunderboltBusDefault) {
   auto&& telemetry_info_ptr =
       chromeos::cros_healthd::mojom::TelemetryInfo::New();
   telemetry_info_ptr->bus_result =
-      chromeos::cros_healthd::mojom::BusResult::New();
-  auto& bus_result_ptr = telemetry_info_ptr->bus_result;
-  bus_result_ptr->set_bus_devices({});
-  auto& bus_devices_ptr = bus_result_ptr->get_bus_devices();
+      chromeos::cros_healthd::mojom::BusResult::NewBusDevices({});
+  auto& bus_devices_ptr = telemetry_info_ptr->bus_result->get_bus_devices();
 
   bus_devices_ptr.emplace_back(chromeos::cros_healthd::mojom::BusDevice::New());
   auto& bus_device_ptr = bus_devices_ptr.back();
-  auto& bus_info_ptr = bus_device_ptr->bus_info;
-  bus_info_ptr = chromeos::cros_healthd::mojom::BusInfo::New();
-
   // Create Thunderbolt bus info.
-  bus_info_ptr->set_thunderbolt_bus_info(
-      chromeos::cros_healthd::mojom::ThunderboltBusInfo::New());
+  bus_device_ptr->bus_info =
+      chromeos::cros_healthd::mojom::BusInfo::NewThunderboltBusInfo(
+          chromeos::cros_healthd::mojom::ThunderboltBusInfo::New());
 
   cros_healthd_.ParseBusResult(&telemetry_info_ptr, &telemetry_info);
   // Thunderbolt is not parsed yet.
@@ -407,20 +381,18 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckThunderboltBus) {
   auto&& telemetry_info_ptr =
       chromeos::cros_healthd::mojom::TelemetryInfo::New();
   telemetry_info_ptr->bus_result =
-      chromeos::cros_healthd::mojom::BusResult::New();
-  auto& bus_result_ptr = telemetry_info_ptr->bus_result;
-  bus_result_ptr->set_bus_devices({});
-  auto& bus_devices_ptr = bus_result_ptr->get_bus_devices();
+      chromeos::cros_healthd::mojom::BusResult::NewBusDevices({});
+  auto& bus_devices_ptr = telemetry_info_ptr->bus_result->get_bus_devices();
 
   bus_devices_ptr.emplace_back(chromeos::cros_healthd::mojom::BusDevice::New());
   auto& bus_device_ptr = bus_devices_ptr.back();
-  auto& bus_info_ptr = bus_device_ptr->bus_info;
-  bus_info_ptr = chromeos::cros_healthd::mojom::BusInfo::New();
-
   // Create Thunderbolt bus info.
-  bus_info_ptr->set_thunderbolt_bus_info(
-      chromeos::cros_healthd::mojom::ThunderboltBusInfo::New());
-  auto& thunderbolt_bus_info_ptr = bus_info_ptr->get_thunderbolt_bus_info();
+  bus_device_ptr->bus_info =
+      chromeos::cros_healthd::mojom::BusInfo::NewThunderboltBusInfo(
+          chromeos::cros_healthd::mojom::ThunderboltBusInfo::New());
+
+  auto& thunderbolt_bus_info_ptr =
+      bus_device_ptr->bus_info->get_thunderbolt_bus_info();
   thunderbolt_bus_info_ptr->security_level =
       chromeos::cros_healthd::mojom::ThunderboltSecurityLevel::kNone;
   thunderbolt_bus_info_ptr->thunderbolt_interfaces.emplace_back(
@@ -436,10 +408,8 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckAllBus) {
   auto&& telemetry_info_ptr =
       chromeos::cros_healthd::mojom::TelemetryInfo::New();
   telemetry_info_ptr->bus_result =
-      chromeos::cros_healthd::mojom::BusResult::New();
-  auto& bus_result_ptr = telemetry_info_ptr->bus_result;
-  bus_result_ptr->set_bus_devices({});
-  auto& bus_devices_ptr = bus_result_ptr->get_bus_devices();
+      chromeos::cros_healthd::mojom::BusResult::NewBusDevices({});
+  auto& bus_devices_ptr = telemetry_info_ptr->bus_result->get_bus_devices();
 
   // Common usage across creating bus.
   uint8_t class_id = 1;
@@ -453,17 +423,16 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckAllBus) {
     bus_devices_ptr.emplace_back(
         chromeos::cros_healthd::mojom::BusDevice::New());
     auto& bus_device_ptr = bus_devices_ptr.back();
-    auto& bus_info_ptr = bus_device_ptr->bus_info;
-    bus_info_ptr = chromeos::cros_healthd::mojom::BusInfo::New();
     // Don't use driver after std::move.
     std::optional<std::string> driver = "some-driver";
-    bus_info_ptr->set_pci_bus_info(
-        chromeos::cros_healthd::mojom::PciBusInfo::New(class_id,
-                                                       subclass_id,
-                                                       protocol_id,
-                                                       vendor_id,
-                                                       device_id,
-                                                       std::move(driver)));
+    bus_device_ptr->bus_info =
+        chromeos::cros_healthd::mojom::BusInfo::NewPciBusInfo(
+            chromeos::cros_healthd::mojom::PciBusInfo::New(class_id,
+                                                           subclass_id,
+                                                           protocol_id,
+                                                           vendor_id,
+                                                           device_id,
+                                                           std::move(driver)));
   }
 
   // Create USB bus info.
@@ -472,18 +441,18 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckAllBus) {
     bus_devices_ptr.emplace_back(
         chromeos::cros_healthd::mojom::BusDevice::New());
     auto& bus_device_ptr = bus_devices_ptr.back();
-    auto& bus_info_ptr = bus_device_ptr->bus_info;
-    bus_info_ptr = chromeos::cros_healthd::mojom::BusInfo::New();
     // Don't use interface after std::move.
     std::vector<chromeos::cros_healthd::mojom::UsbBusInterfaceInfoPtr>
         interfaces;
-    bus_info_ptr->set_usb_bus_info(
-        chromeos::cros_healthd::mojom::UsbBusInfo::New(class_id,
-                                                       subclass_id,
-                                                       protocol_id,
-                                                       vendor_id,
-                                                       product_id,
-                                                       std::move(interfaces)));
+    bus_device_ptr->bus_info =
+        chromeos::cros_healthd::mojom::BusInfo::NewUsbBusInfo(
+            chromeos::cros_healthd::mojom::UsbBusInfo::New(
+                class_id,
+                subclass_id,
+                protocol_id,
+                vendor_id,
+                product_id,
+                std::move(interfaces)));
   }
 
   // Create Thunderbolt bus info.
@@ -491,11 +460,11 @@ TEST_F(CrosHealthdTest, ParseBusResultCheckAllBus) {
     bus_devices_ptr.emplace_back(
         chromeos::cros_healthd::mojom::BusDevice::New());
     auto& bus_device_ptr = bus_devices_ptr.back();
-    auto& bus_info_ptr = bus_device_ptr->bus_info;
-    bus_info_ptr = chromeos::cros_healthd::mojom::BusInfo::New();
-    bus_info_ptr->set_thunderbolt_bus_info(
-        chromeos::cros_healthd::mojom::ThunderboltBusInfo::New());
-    auto& thunderbolt_bus_info_ptr = bus_info_ptr->get_thunderbolt_bus_info();
+    bus_device_ptr->bus_info =
+        chromeos::cros_healthd::mojom::BusInfo::NewThunderboltBusInfo(
+            chromeos::cros_healthd::mojom::ThunderboltBusInfo::New());
+    auto& thunderbolt_bus_info_ptr =
+        bus_device_ptr->bus_info->get_thunderbolt_bus_info();
     thunderbolt_bus_info_ptr->security_level =
         chromeos::cros_healthd::mojom::ThunderboltSecurityLevel::kNone;
     thunderbolt_bus_info_ptr->thunderbolt_interfaces.emplace_back(

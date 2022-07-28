@@ -309,7 +309,7 @@ bool CrosHealthd::ParseBusResult(
       if (!bus_device->bus_info)
         continue;
       switch (bus_device->bus_info->which()) {
-        case chromeos::cros_healthd::mojom::BusInfo::Tag::PCI_BUS_INFO: {
+        case chromeos::cros_healthd::mojom::BusInfo::Tag::kPciBusInfo: {
           const auto& pci_bus_info = bus_device->bus_info->get_pci_bus_info();
           telemetry_info->bus_devices.push_back({
               .device_class =
@@ -326,7 +326,7 @@ bool CrosHealthd::ParseBusResult(
           });
           break;
         }
-        case chromeos::cros_healthd::mojom::BusInfo::Tag::USB_BUS_INFO: {
+        case chromeos::cros_healthd::mojom::BusInfo::Tag::kUsbBusInfo: {
           const auto& usb_bus_info = bus_device->bus_info->get_usb_bus_info();
           telemetry_info->bus_devices.push_back({
               .device_class =
@@ -340,8 +340,7 @@ bool CrosHealthd::ParseBusResult(
           });
           break;
         }
-        case chromeos::cros_healthd::mojom::BusInfo::Tag::
-            THUNDERBOLT_BUS_INFO: {
+        case chromeos::cros_healthd::mojom::BusInfo::Tag::kThunderboltBusInfo: {
           break;
         }
       }
