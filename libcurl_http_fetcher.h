@@ -167,6 +167,8 @@ class LibcurlHttpFetcher : public HttpFetcher {
 
  private:
   FRIEND_TEST(LibcurlHttpFetcherTest, HostResolvedTest);
+  FRIEND_TEST(LibcurlHttpFetcherTest, PartialContentHttpResponseRetryTest);
+  FRIEND_TEST(LibcurlHttpFetcherTest, SuccessHttpResponseCappedRetryTest);
 
   // libcurl's CURLOPT_CLOSESOCKETFUNCTION callback function. Called when
   // closing a socket created with the CURLOPT_OPENSOCKETFUNCTION callback.
@@ -185,6 +187,11 @@ class LibcurlHttpFetcher : public HttpFetcher {
   // Checks whether stored HTTP response is within the success range.
   inline bool IsHttpResponseSuccess() {
     return (http_response_code_ >= 200 && http_response_code_ < 300);
+  }
+
+  // Checks whether stored HTTP response is partial data.
+  inline bool IsHttpResponseSuccessPartialContent() {
+    return http_response_code_ == 206;
   }
 
   // Checks whether stored HTTP response is within the error range. This
@@ -226,7 +233,7 @@ class LibcurlHttpFetcher : public HttpFetcher {
 
   // Cleans up the following if they are non-null:
   // curl(m) handles, fd_controller_maps_(fd_task_maps_), timeout_id_.
-  void CleanUp();
+  virtual void CleanUp();
 
   // Force terminate the transfer. This will invoke the delegate's (if any)
   // TransferTerminated callback so, after returning, this fetcher instance may

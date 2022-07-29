@@ -23,6 +23,7 @@
 #include <gtest/gtest.h>
 
 #include "update_engine/common/fake_hardware.h"
+#include "update_engine/common/mock_http_fetcher_delegate.h"
 #include "update_engine/common/mock_proxy_resolver.h"
 #include "update_engine/mock_libcurl_http_fetcher.h"
 
@@ -200,6 +201,57 @@ TEST_F(LibcurlHttpFetcherTest, HttpFetcherStateMachineNoRetryTest) {
   state_machine_.UpdateState(false);
   EXPECT_EQ(state_machine_.GetState(),
             UnresolvedHostStateMachine::State::kInit);
+}
+
+TEST_F(LibcurlHttpFetcherTest, PartialContentHttpResponseRetryTest) {
+  libcurl_fetcher_.set_max_retry_count(1);
+
+  // TODO(kimjae): Mock out/split logic to make testing easier.
+  auto partial_content_func = [this]() {
+    libcurl_fetcher_.http_response_code_ = 206;
+  };
+  EXPECT_CALL(libcurl_fetcher_, GetHttpResponseCode())
+      .WillOnce(testing::Invoke(partial_content_func))
+      .WillOnce(testing::Invoke(partial_content_func))
+      .WillOnce(testing::Invoke(partial_content_func))
+      .WillRepeatedly(testing::Invoke(
+          [this]() { libcurl_fetcher_.http_response_code_ = 0; }));
+
+  // Less bytes downloaded than required.
+  libcurl_fetcher_.transfer_size_ = 2;
+  libcurl_fetcher_.transfer_in_progress_ = true;
+  libcurl_fetcher_.url_ = "https://bad-url.invalid";
+
+  libcurl_fetcher_.CurlPerformOnce();
+
+  while (loop_.PendingTasks()) {
+    loop_.RunOnce(true);
+    EXPECT_EQ(libcurl_fetcher_.retry_count_, 0);
+  }
+}
+
+TEST_F(LibcurlHttpFetcherTest, SuccessHttpResponseCappedRetryTest) {
+  MockHttpFetcherDelegate mock_http_fetcher_delegate;
+  libcurl_fetcher_.set_delegate(&mock_http_fetcher_delegate);
+
+  EXPECT_CALL(mock_http_fetcher_delegate, TransferComplete(testing::_, false))
+      .Times(1);
+
+  // TODO(kimjae): Mock out/split logic to make testing easier.
+  auto success_func = [this]() { libcurl_fetcher_.http_response_code_ = 299; };
+  EXPECT_CALL(libcurl_fetcher_, GetHttpResponseCode())
+      .WillRepeatedly(testing::Invoke(success_func));
+
+  // Less bytes downloaded than required.
+  libcurl_fetcher_.transfer_size_ = 2;
+  libcurl_fetcher_.transfer_in_progress_ = true;
+  libcurl_fetcher_.url_ = "https://bad-url.invalid";
+
+  libcurl_fetcher_.CurlPerformOnce();
+
+  while (loop_.PendingTasks()) {
+    loop_.RunOnce(true);
+  }
 }
 
 }  // namespace chromeos_update_engine

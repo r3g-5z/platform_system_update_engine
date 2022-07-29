@@ -539,12 +539,25 @@ void LibcurlHttpFetcher::CurlPerformOnce() {
       return;
     }
   } else if ((transfer_size_ >= 0) && (bytes_downloaded_ < transfer_size_)) {
-    if (!ignore_failure_)
+    // If the response happens to be partial data, don't increase the retry
+    // count, as we should retry without treating it as an error.
+    bool partial_content = IsHttpResponseSuccessPartialContent();
+    if (!ignore_failure_ && !partial_content)
       retry_count_++;
-    LOG(INFO) << "Transfer interrupted after downloading " << bytes_downloaded_
-              << " of " << transfer_size_ << " bytes. "
-              << transfer_size_ - bytes_downloaded_ << " bytes remaining "
-              << "after " << retry_count_ << " attempt(s)";
+
+    auto bytes_left = transfer_size_ - bytes_downloaded_;
+    if (partial_content) {
+      LOG(INFO) << "Transfer partial content after downloading "
+                << bytes_downloaded_ << " of " << transfer_size_ << " bytes. "
+                << bytes_left << " bytes remaining as partial content returned "
+                << "by server. Not incrementing retry count, still at "
+                << retry_count_ << " attempt(s)";
+    } else {
+      LOG(INFO) << "Transfer interrupted after downloading "
+                << bytes_downloaded_ << " of " << transfer_size_ << " bytes. "
+                << bytes_left << " bytes remaining "
+                << "after " << retry_count_ << " attempt(s)";
+    }
 
     if (retry_count_ > max_retry_count_) {
       LOG(INFO) << "Reached max attempts (" << retry_count_ << ")";

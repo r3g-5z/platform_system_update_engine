@@ -29,7 +29,7 @@ class MockLibcurlHttpFetcher : public LibcurlHttpFetcher {
                          HardwareInterface* hardware)
       : LibcurlHttpFetcher(proxy_resolver, hardware) {}
 
-  MOCK_METHOD0(GetHttpResponseCode, void());
+  MOCK_METHOD(void, GetHttpResponseCode, (), (override));
 };
 
 }  // namespace chromeos_update_engine
