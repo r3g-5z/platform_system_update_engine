@@ -34,11 +34,10 @@ enum class TelemetryCategoryEnum {
   kStatefulPartition = 7,
   kBluetooth = 8,
   kSystem = 9,
-  kSystem2 = 10,
-  kNetwork = 11,
-  kAudio = 12,
-  kBootPerformance = 13,
-  kBus = 14,
+  kNetwork = 10,
+  kAudio = 11,
+  kBootPerformance = 12,
+  kBus = 13,
 };
 
 // Represents the telemetry information collected from `cros_healthd`.

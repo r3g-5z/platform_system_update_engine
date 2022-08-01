@@ -56,7 +56,6 @@ static const std::unordered_map<TelemetryCategoryEnum, ProbeCategoryEnum>
         SET_MOJO_VALUE(kStatefulPartition),
         SET_MOJO_VALUE(kBluetooth),
         SET_MOJO_VALUE(kSystem),
-        SET_MOJO_VALUE(kSystem2),
         SET_MOJO_VALUE(kNetwork),
         SET_MOJO_VALUE(kAudio),
         SET_MOJO_VALUE(kBootPerformance),

@@ -93,7 +93,7 @@ void DaemonChromeOS::OnDBusRegistered(bool succeeded) {
                 TelemetryCategoryEnum::kNonRemovableBlockDevices,
                 TelemetryCategoryEnum::kCpu,
                 TelemetryCategoryEnum::kMemory,
-                TelemetryCategoryEnum::kSystem2,
+                TelemetryCategoryEnum::kSystem,
                 TelemetryCategoryEnum::kBus,
             },
             base::BindOnce([](const TelemetryInfo&) {
