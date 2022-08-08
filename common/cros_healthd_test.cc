@@ -32,81 +32,81 @@ class CrosHealthdTest : public ::testing::Test {
   CrosHealthd cros_healthd_;
 };
 
-TEST_F(CrosHealthdTest, ParseSystemResultV2Check) {
+TEST_F(CrosHealthdTest, ParseSystemResultCheck) {
   {
     TelemetryInfo telemetry_info{};
     auto telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
-    cros_healthd_.ParseSystemResultV2(&telemetry_info_ptr, &telemetry_info);
-    EXPECT_EQ("", telemetry_info.system_v2_info.dmi_info.sys_vendor);
-    EXPECT_EQ("", telemetry_info.system_v2_info.dmi_info.product_name);
-    EXPECT_EQ("", telemetry_info.system_v2_info.dmi_info.product_version);
-    EXPECT_EQ("", telemetry_info.system_v2_info.dmi_info.bios_version);
-    EXPECT_EQ(TelemetryInfo::SystemV2Info::OsInfo::BootMode::kUnknown,
-              telemetry_info.system_v2_info.os_info.boot_mode);
+    cros_healthd_.ParseSystemResult(&telemetry_info_ptr, &telemetry_info);
+    EXPECT_EQ("", telemetry_info.system_info.dmi_info.sys_vendor);
+    EXPECT_EQ("", telemetry_info.system_info.dmi_info.product_name);
+    EXPECT_EQ("", telemetry_info.system_info.dmi_info.product_version);
+    EXPECT_EQ("", telemetry_info.system_info.dmi_info.bios_version);
+    EXPECT_EQ(TelemetryInfo::SystemInfo::OsInfo::BootMode::kUnknown,
+              telemetry_info.system_info.os_info.boot_mode);
   }
   {
     TelemetryInfo telemetry_info{};
     auto&& telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
-    telemetry_info_ptr->system_result_v2 =
-        chromeos::cros_healthd::mojom::SystemResultV2::NewSystemInfoV2(
-            chromeos::cros_healthd::mojom::SystemInfoV2::New());
-    auto& system_info_v2_ptr =
-        telemetry_info_ptr->system_result_v2->get_system_info_v2();
+    telemetry_info_ptr->system_result =
+        chromeos::cros_healthd::mojom::SystemResult::New();
+    auto& system_result_ptr = telemetry_info_ptr->system_result;
+    system_result_ptr->set_system_info(
+        chromeos::cros_healthd::mojom::SystemInfo::New());
+    auto& system_info_ptr = system_result_ptr->get_system_info();
 
-    system_info_v2_ptr->dmi_info =
-        chromeos::cros_healthd::mojom::DmiInfo::New();
-    auto& dmi_info_ptr = system_info_v2_ptr->dmi_info;
+    system_info_ptr->dmi_info = chromeos::cros_healthd::mojom::DmiInfo::New();
+    auto& dmi_info_ptr = system_info_ptr->dmi_info;
     // Missing values.
     dmi_info_ptr->product_name = "fake-product-name";
     dmi_info_ptr->bios_version = "fake-bios-version";
 
-    system_info_v2_ptr->os_info = chromeos::cros_healthd::mojom::OsInfo::New();
-    auto& os_info_ptr = system_info_v2_ptr->os_info;
+    system_info_ptr->os_info = chromeos::cros_healthd::mojom::OsInfo::New();
+    auto& os_info_ptr = system_info_ptr->os_info;
     os_info_ptr->boot_mode = chromeos::cros_healthd::mojom::BootMode::kCrosEfi;
 
-    cros_healthd_.ParseSystemResultV2(&telemetry_info_ptr, &telemetry_info);
+    cros_healthd_.ParseSystemResult(&telemetry_info_ptr, &telemetry_info);
     EXPECT_EQ("fake-product-name",
-              telemetry_info.system_v2_info.dmi_info.product_name);
+              telemetry_info.system_info.dmi_info.product_name);
     EXPECT_EQ("fake-bios-version",
-              telemetry_info.system_v2_info.dmi_info.bios_version);
-    EXPECT_EQ(TelemetryInfo::SystemV2Info::OsInfo::BootMode::kCrosEfi,
-              telemetry_info.system_v2_info.os_info.boot_mode);
+              telemetry_info.system_info.dmi_info.bios_version);
+    EXPECT_EQ(TelemetryInfo::SystemInfo::OsInfo::BootMode::kCrosEfi,
+              telemetry_info.system_info.os_info.boot_mode);
   }
   {
     TelemetryInfo telemetry_info{};
     auto&& telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
-    telemetry_info_ptr->system_result_v2 =
-        chromeos::cros_healthd::mojom::SystemResultV2::NewSystemInfoV2(
-            chromeos::cros_healthd::mojom::SystemInfoV2::New());
-    auto& system_info_v2_ptr =
-        telemetry_info_ptr->system_result_v2->get_system_info_v2();
+    telemetry_info_ptr->system_result =
+        chromeos::cros_healthd::mojom::SystemResult::New();
+    auto& system_result_ptr = telemetry_info_ptr->system_result;
+    system_result_ptr->set_system_info(
+        chromeos::cros_healthd::mojom::SystemInfo::New());
+    auto& system_info_ptr = system_result_ptr->get_system_info();
 
-    system_info_v2_ptr->dmi_info =
-        chromeos::cros_healthd::mojom::DmiInfo::New();
-    auto& dmi_info_ptr = system_info_v2_ptr->dmi_info;
+    system_info_ptr->dmi_info = chromeos::cros_healthd::mojom::DmiInfo::New();
+    auto& dmi_info_ptr = system_info_ptr->dmi_info;
     dmi_info_ptr->sys_vendor = "fake-sys-vendor";
     dmi_info_ptr->product_name = "fake-product-name";
     dmi_info_ptr->product_version = "fake-product-version";
     dmi_info_ptr->bios_version = "fake-bios-version";
 
-    system_info_v2_ptr->os_info = chromeos::cros_healthd::mojom::OsInfo::New();
-    auto& os_info_ptr = system_info_v2_ptr->os_info;
+    system_info_ptr->os_info = chromeos::cros_healthd::mojom::OsInfo::New();
+    auto& os_info_ptr = system_info_ptr->os_info;
     os_info_ptr->boot_mode = chromeos::cros_healthd::mojom::BootMode::kCrosEfi;
 
-    cros_healthd_.ParseSystemResultV2(&telemetry_info_ptr, &telemetry_info);
+    cros_healthd_.ParseSystemResult(&telemetry_info_ptr, &telemetry_info);
     EXPECT_EQ("fake-sys-vendor",
-              telemetry_info.system_v2_info.dmi_info.sys_vendor);
+              telemetry_info.system_info.dmi_info.sys_vendor);
     EXPECT_EQ("fake-product-name",
-              telemetry_info.system_v2_info.dmi_info.product_name);
+              telemetry_info.system_info.dmi_info.product_name);
     EXPECT_EQ("fake-product-version",
-              telemetry_info.system_v2_info.dmi_info.product_version);
+              telemetry_info.system_info.dmi_info.product_version);
     EXPECT_EQ("fake-bios-version",
-              telemetry_info.system_v2_info.dmi_info.bios_version);
-    EXPECT_EQ(TelemetryInfo::SystemV2Info::OsInfo::BootMode::kCrosEfi,
-              telemetry_info.system_v2_info.os_info.boot_mode);
+              telemetry_info.system_info.dmi_info.bios_version);
+    EXPECT_EQ(TelemetryInfo::SystemInfo::OsInfo::BootMode::kCrosEfi,
+              telemetry_info.system_info.os_info.boot_mode);
   }
 }
 

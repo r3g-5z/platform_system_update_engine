@@ -54,7 +54,7 @@ class CrosHealthd : public CrosHealthdInterface {
       ProbeTelemetryInfoCallback once_callback) override;
 
  private:
-  FRIEND_TEST(CrosHealthdTest, ParseSystemResultV2Check);
+  FRIEND_TEST(CrosHealthdTest, ParseSystemResultCheck);
   FRIEND_TEST(CrosHealthdTest, ParseMemoryResultCheck);
   FRIEND_TEST(CrosHealthdTest, ParseNonRemovableBlockDeviceResultCheck);
   FRIEND_TEST(CrosHealthdTest, ParseCpuResultCheck);
@@ -79,7 +79,7 @@ class CrosHealthd : public CrosHealthdInterface {
       chromeos::cros_healthd::mojom::TelemetryInfoPtr result);
 
   // Parsing helpers for `OnProbTelemetryInfo()` .
-  bool ParseSystemResultV2(
+  bool ParseSystemResult(
       chromeos::cros_healthd::mojom::TelemetryInfoPtr* result,
       TelemetryInfo* telemetry_info);
   bool ParseMemoryResult(

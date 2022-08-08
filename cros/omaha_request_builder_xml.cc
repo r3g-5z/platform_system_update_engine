@@ -528,16 +528,15 @@ string OmahaRequestBuilderXml::GetHw() const {
       " wireless_ids=\"%s\""
       " gpu_ids=\"%s\""
       " />\n",
-      XmlEncodeWithDefault(telemetry_info->system_v2_info.dmi_info.sys_vendor)
+      XmlEncodeWithDefault(telemetry_info->system_info.dmi_info.sys_vendor)
           .c_str(),
-      XmlEncodeWithDefault(telemetry_info->system_v2_info.dmi_info.product_name)
+      XmlEncodeWithDefault(telemetry_info->system_info.dmi_info.product_name)
           .c_str(),
-      XmlEncodeWithDefault(
-          telemetry_info->system_v2_info.dmi_info.product_version)
+      XmlEncodeWithDefault(telemetry_info->system_info.dmi_info.product_version)
           .c_str(),
-      XmlEncodeWithDefault(telemetry_info->system_v2_info.dmi_info.bios_version)
+      XmlEncodeWithDefault(telemetry_info->system_info.dmi_info.bios_version)
           .c_str(),
-      static_cast<int32_t>(telemetry_info->system_v2_info.os_info.boot_mode),
+      static_cast<int32_t>(telemetry_info->system_info.os_info.boot_mode),
       telemetry_info->memory_info.total_memory_kib,
       // Note: Summing the entire non-removable disk sizes.
       std::accumulate(std::begin(telemetry_info->block_device_info),

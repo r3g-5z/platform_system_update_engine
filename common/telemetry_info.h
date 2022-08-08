@@ -42,7 +42,7 @@ enum class TelemetryCategoryEnum {
 
 // Represents the telemetry information collected from `cros_healthd`.
 typedef struct TelemetryInfo {
-  typedef struct SystemV2Info {
+  typedef struct SystemInfo {
     typedef struct DmiInfo {
       std::string sys_vendor;
       std::string product_name;
@@ -61,8 +61,8 @@ typedef struct TelemetryInfo {
       BootMode boot_mode;
     } OsInfo;
     OsInfo os_info;
-  } SystemV2Info;
-  SystemV2Info system_v2_info;
+  } SystemInfo;
+  SystemInfo system_info;
 
   typedef struct MemoryInfo {
     uint32_t total_memory_kib;
