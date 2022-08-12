@@ -31,6 +31,9 @@ class PowerManagerInterface {
   // Request the power manager to restart the device. Returns true on success.
   virtual bool RequestReboot() = 0;
 
+  // Request the power manager to shutdown the device. Returns true on success.
+  virtual bool RequestShutdown() = 0;
+
  protected:
   PowerManagerInterface() = default;
 };

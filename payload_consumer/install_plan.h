@@ -41,7 +41,8 @@ std::string InstallPayloadTypeToString(InstallPayloadType type);
 enum class DeferUpdateAction {
   kOff,
   kHold,
-  kApply,
+  kApplyAndReboot,
+  kApplyAndShutdown,
 };
 
 struct InstallPlan {

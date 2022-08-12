@@ -1023,7 +1023,7 @@ bool UpdateAttempter::CheckForUpdate(
   return true;
 }
 
-bool UpdateAttempter::ApplyDeferredUpdate() {
+bool UpdateAttempter::ApplyDeferredUpdate(bool shutdown) {
   if (status_ != UpdateStatus::UPDATED_BUT_DEFERRED) {
     LOG(ERROR) << "Cannot apply deferred update when there isn't one "
                   "deferred.";
@@ -1035,7 +1035,12 @@ bool UpdateAttempter::ApplyDeferredUpdate() {
   auto* boot_control = SystemState::Get()->boot_control();
 
   install_plan_->run_post_install = true;
-  install_plan_->defer_update_action = DeferUpdateAction::kApply;
+
+  if (shutdown) {
+    install_plan_->defer_update_action = DeferUpdateAction::kApplyAndShutdown;
+  } else {
+    install_plan_->defer_update_action = DeferUpdateAction::kApplyAndReboot;
+  }
 
   // Since CrOS is A/B, it's okay to get the first inactive slot.
   install_plan_->source_slot = boot_control->GetCurrentSlot();
@@ -1116,6 +1121,13 @@ bool UpdateAttempter::RebootIfNeeded() {
   return RebootDirectly();
 }
 
+bool UpdateAttempter::ShutdownIfNeeded() {
+  if (SystemState::Get()->power_manager()->RequestShutdown())
+    return true;
+
+  return ShutdownDirectly();
+}
+
 void UpdateAttempter::WriteUpdateCompletedMarker() {
   string boot_id;
   if (!utils::GetBootId(&boot_id))
@@ -1128,6 +1140,13 @@ void UpdateAttempter::WriteUpdateCompletedMarker() {
 
 bool UpdateAttempter::RebootDirectly() {
   vector<string> command = {"/sbin/shutdown", "-r", "now"};
+  int rc = 0;
+  Subprocess::SynchronousExec(command, &rc, nullptr, nullptr);
+  return rc == 0;
+}
+
+bool UpdateAttempter::ShutdownDirectly() {
+  vector<string> command = {"/sbin/shutdown", "-P", "now"};
   int rc = 0;
   Subprocess::SynchronousExec(command, &rc, nullptr, nullptr);
   return rc == 0;
@@ -1303,7 +1322,7 @@ void UpdateAttempter::ProcessingDoneUpdate(const ActionProcessor* processor,
         ScheduleUpdates();
         LOG(INFO) << "Deferred update hold action was successful.";
         return;
-      case DeferUpdateAction::kApply:
+      case DeferUpdateAction::kApplyAndReboot:
         SetStatusAndNotify(UpdateStatus::UPDATED_BUT_DEFERRED);
         LOG(INFO) << "Deferred update apply action was successful, "
                      "proceeding with reboot.";
@@ -1311,6 +1330,15 @@ void UpdateAttempter::ProcessingDoneUpdate(const ActionProcessor* processor,
           LOG(WARNING) << "Failed to reset status.";
         }
         RebootIfNeeded();
+        return;
+      case DeferUpdateAction::kApplyAndShutdown:
+        SetStatusAndNotify(UpdateStatus::UPDATED_BUT_DEFERRED);
+        LOG(INFO) << "Deferred update apply action was successful, "
+                     "proceeding with shutdown.";
+        if (!ResetStatus()) {
+          LOG(WARNING) << "Failed to reset status.";
+        }
+        ShutdownIfNeeded();
         return;
     }
   } else {
@@ -1867,8 +1895,10 @@ bool UpdateAttempter::ScheduleErrorEventAction() {
         /*success=*/false, install_plan_->version);
   }
 
-  if (install_plan_ &&
-      install_plan_->defer_update_action == DeferUpdateAction::kApply) {
+  if (install_plan_ && (install_plan_->defer_update_action ==
+                            DeferUpdateAction::kApplyAndReboot ||
+                        install_plan_->defer_update_action ==
+                            DeferUpdateAction::kApplyAndShutdown)) {
     // TODO(kimjae): Report deferred update apply action failure metric.
   }
 

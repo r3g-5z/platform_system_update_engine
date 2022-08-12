@@ -28,6 +28,7 @@ class MockPowerManager : public PowerManagerInterface {
   MockPowerManager() = default;
 
   MOCK_METHOD0(RequestReboot, bool(void));
+  MOCK_METHOD0(RequestShutdown, bool(void));
 };
 
 }  // namespace chromeos_update_engine

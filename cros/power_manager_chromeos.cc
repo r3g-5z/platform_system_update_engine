@@ -46,4 +46,14 @@ bool PowerManagerChromeOS::RequestReboot() {
       &error);
 }
 
+bool PowerManagerChromeOS::RequestShutdown() {
+  LOG(INFO) << "Calling " << ::power_manager::kPowerManagerInterface << "."
+            << ::power_manager::kRequestShutdownMethod;
+  brillo::ErrorPtr error;
+  return power_manager_proxy_.RequestShutdown(
+      ::power_manager::REQUEST_SHUTDOWN_FOR_USER,
+      "update_engine applying update",
+      &error);
+}
+
 }  // namespace chromeos_update_engine

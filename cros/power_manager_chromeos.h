@@ -33,6 +33,7 @@ class PowerManagerChromeOS : public PowerManagerInterface {
 
   // PowerManagerInterface overrides.
   bool RequestReboot() override;
+  bool RequestShutdown() override;
 
  private:
   // Real DBus proxy using the DBus connection.

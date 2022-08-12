@@ -84,8 +84,8 @@ bool UpdateEngineService::Update(
   return true;
 }
 
-bool UpdateEngineService::ApplyDeferredUpdate(ErrorPtr* error) {
-  if (!SystemState::Get()->update_attempter()->ApplyDeferredUpdate()) {
+bool UpdateEngineService::ApplyDeferredUpdate(ErrorPtr* error, bool shutdown) {
+  if (!SystemState::Get()->update_attempter()->ApplyDeferredUpdate(shutdown)) {
     LogAndSetError(error, FROM_HERE, "Failed to apply deferred update.");
     return false;
   }

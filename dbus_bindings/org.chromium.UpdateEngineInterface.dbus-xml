@@ -29,7 +29,17 @@
                     value="update_engine::UpdateParams"/>
       </arg>
     </method>
+    <!-- TODO(b/242813465): DEPRECATE -->
     <method name="ApplyDeferredUpdate">
+    </method>
+    <method name="ApplyDeferredUpdateAdvanced">
+      <arg type="ay" name="config" direction="in">
+        <tp:docstring>
+          The configuration for applying the update.
+        </tp:docstring>
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="update_engine::ApplyUpdateConfig"/>
+      </arg>
     </method>
     <method name="AttemptInstall">
       <arg type="s" name="omaha_url" direction="in" />

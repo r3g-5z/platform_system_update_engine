@@ -103,7 +103,8 @@ void PostinstallRunnerAction::PerformPartitionPostinstall() {
       }
       break;
     case DeferUpdateAction::kHold:
-    case DeferUpdateAction::kApply:
+    case DeferUpdateAction::kApplyAndReboot:
+    case DeferUpdateAction::kApplyAndShutdown:
       break;
   }
 
@@ -190,7 +191,8 @@ void PostinstallRunnerAction::PerformPartitionPostinstall() {
       LOG(INFO) << "Defer update action: hold";
       command.push_back("--defer_update_action=hold");
       break;
-    case DeferUpdateAction::kApply:
+    case DeferUpdateAction::kApplyAndReboot:
+    case DeferUpdateAction::kApplyAndShutdown:
       LOG(INFO) << "Defer update action: apply";
       command.push_back("--defer_update_action=apply");
       break;
@@ -358,7 +360,8 @@ void PostinstallRunnerAction::CompletePostinstall(ErrorCode error_code) {
           error_code = ErrorCode::kUpdatedButNotActive;
           break;
         case DeferUpdateAction::kHold:
-        case DeferUpdateAction::kApply:
+        case DeferUpdateAction::kApplyAndReboot:
+        case DeferUpdateAction::kApplyAndShutdown:
           error_code = ErrorCode::kSuccess;
           break;
       }

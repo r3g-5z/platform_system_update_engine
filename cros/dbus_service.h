@@ -47,6 +47,10 @@ class DBusUpdateEngineService
 
   bool ApplyDeferredUpdate(brillo::ErrorPtr* error) override;
 
+  bool ApplyDeferredUpdateAdvanced(
+      brillo::ErrorPtr* error,
+      const update_engine::ApplyUpdateConfig& config) override;
+
   bool AttemptInstall(brillo::ErrorPtr* error,
                       const std::string& in_omaha_url,
                       const std::vector<std::string>& dlc_ids) override;

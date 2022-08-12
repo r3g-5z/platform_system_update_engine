@@ -143,8 +143,10 @@ class UpdateAttempter : public ActionProcessorDelegate,
   virtual bool CheckForUpdate(const update_engine::UpdateParams& update_params);
 
   // This is the internal entry point to apply a deferred update, will return
-  // false if there wasn't a deferred update to apply or on failure.
-  virtual bool ApplyDeferredUpdate();
+  // false if there wasn't a deferred update to apply or on failure. When
+  // `shutdown` is set to true, shutdown instead of rebooting after applying the
+  // update.
+  virtual bool ApplyDeferredUpdate(bool shutdown);
 
   // This is the version of CheckForUpdate called by AttemptInstall API.
   virtual bool CheckForInstall(const std::vector<std::string>& dlc_ids,
@@ -167,6 +169,10 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // Initiates a reboot if the current state is
   // UPDATED_NEED_REBOOT. Returns true on success, false otherwise.
   bool RebootIfNeeded();
+
+  // Initiates a shutdown after applied the deferred update. Returns true on
+  // success, false otherwise.
+  bool ShutdownIfNeeded();
 
   // Sets the DLC as active or inactive. See chromeos/common_service.h
   virtual bool SetDlcActiveValue(bool is_active, const std::string& dlc_id);
@@ -454,6 +460,10 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // Reboots the system directly by calling /sbin/shutdown. Returns true on
   // success.
   bool RebootDirectly();
+
+  // Shutdown the system directly by calling /sbin/shutdown. Returns true on
+  // success.
+  bool ShutdownDirectly();
 
   // Callback for the async update check allowed policy request. If |status| is
   // |EvalStatus::kSucceeded|, either runs or suppresses periodic update checks,

@@ -72,7 +72,13 @@ bool DBusUpdateEngineService::Update(
 }
 
 bool DBusUpdateEngineService::ApplyDeferredUpdate(ErrorPtr* error) {
-  return common_->ApplyDeferredUpdate(error);
+  return common_->ApplyDeferredUpdate(error, /*shutdown=*/false);
+}
+
+bool DBusUpdateEngineService::ApplyDeferredUpdateAdvanced(
+    ErrorPtr* error, const update_engine::ApplyUpdateConfig& config) {
+  return common_->ApplyDeferredUpdate(
+      error, config.done_action() == update_engine::UpdateDoneAction::SHUTDOWN);
 }
 
 bool DBusUpdateEngineService::AttemptInstall(ErrorPtr* error,
