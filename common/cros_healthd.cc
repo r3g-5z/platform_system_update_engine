@@ -343,6 +343,11 @@ bool CrosHealthd::ParseBusResult(
         case chromeos::cros_healthd::mojom::BusInfo::Tag::kThunderboltBusInfo: {
           break;
         }
+        case chromeos::cros_healthd::mojom::BusInfo::Tag::kUnmappedField: {
+          LOG(ERROR) << "Get unmapped Mojo fields by retrieving bus info from "
+                        "cros_healthd";
+          break;
+        }
       }
     }
   }
