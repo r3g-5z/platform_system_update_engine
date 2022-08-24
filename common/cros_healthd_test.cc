@@ -35,7 +35,7 @@ class CrosHealthdTest : public ::testing::Test {
 TEST_F(CrosHealthdTest, ParseSystemResultCheck) {
   {
     TelemetryInfo telemetry_info{};
-    auto telemetry_info_ptr =
+    auto&& telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
     cros_healthd_.ParseSystemResult(&telemetry_info_ptr, &telemetry_info);
     EXPECT_EQ("", telemetry_info.system_info.dmi_info.sys_vendor);
@@ -50,11 +50,10 @@ TEST_F(CrosHealthdTest, ParseSystemResultCheck) {
     auto&& telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
     telemetry_info_ptr->system_result =
-        chromeos::cros_healthd::mojom::SystemResult::New();
-    auto& system_result_ptr = telemetry_info_ptr->system_result;
-    system_result_ptr->set_system_info(
-        chromeos::cros_healthd::mojom::SystemInfo::New());
-    auto& system_info_ptr = system_result_ptr->get_system_info();
+        chromeos::cros_healthd::mojom::SystemResult::NewSystemInfo(
+            chromeos::cros_healthd::mojom::SystemInfo::New());
+    auto& system_info_ptr =
+        telemetry_info_ptr->system_result->get_system_info();
 
     system_info_ptr->dmi_info = chromeos::cros_healthd::mojom::DmiInfo::New();
     auto& dmi_info_ptr = system_info_ptr->dmi_info;
@@ -79,11 +78,10 @@ TEST_F(CrosHealthdTest, ParseSystemResultCheck) {
     auto&& telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
     telemetry_info_ptr->system_result =
-        chromeos::cros_healthd::mojom::SystemResult::New();
-    auto& system_result_ptr = telemetry_info_ptr->system_result;
-    system_result_ptr->set_system_info(
-        chromeos::cros_healthd::mojom::SystemInfo::New());
-    auto& system_info_ptr = system_result_ptr->get_system_info();
+        chromeos::cros_healthd::mojom::SystemResult::NewSystemInfo(
+            chromeos::cros_healthd::mojom::SystemInfo::New());
+    auto& system_info_ptr =
+        telemetry_info_ptr->system_result->get_system_info();
 
     system_info_ptr->dmi_info = chromeos::cros_healthd::mojom::DmiInfo::New();
     auto& dmi_info_ptr = system_info_ptr->dmi_info;
@@ -113,7 +111,7 @@ TEST_F(CrosHealthdTest, ParseSystemResultCheck) {
 TEST_F(CrosHealthdTest, ParseMemoryResultCheck) {
   {
     TelemetryInfo telemetry_info{};
-    auto telemetry_info_ptr =
+    auto&& telemetry_info_ptr =
         chromeos::cros_healthd::mojom::TelemetryInfo::New();
     cros_healthd_.ParseMemoryResult(&telemetry_info_ptr, &telemetry_info);
     EXPECT_EQ(uint32_t(0), telemetry_info.memory_info.total_memory_kib);
