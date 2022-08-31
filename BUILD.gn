@@ -61,7 +61,7 @@ group("all") {
 pkg_config("target_defaults") {
   cflags_cc = [
     "-fno-strict-aliasing",
-    "-Wnon-virtual-dtor",
+    "-Wdelete-non-virtual-dtor",
   ]
   cflags = [ "-ffunction-sections" ]
   ldflags = [ "-Wl,--gc-sections" ]
