@@ -82,6 +82,10 @@ constexpr char kVirtualAbEnabled[] = "ro.virtual_ab.enabled";
 constexpr char kVirtualAbRetrofit[] = "ro.virtual_ab.retrofit";
 constexpr char kVirtualAbCompressionEnabled[] =
     "ro.virtual_ab.compression.enabled";
+constexpr auto&& kVirtualAbCompressionXorEnabled =
+    "ro.virtual_ab.compression.xor.enabled";
+constexpr char kVirtualAbUserspaceSnapshotsEnabled[] =
+    "ro.virtual_ab.userspace.snapshots.enabled";
 
 // Currently, android doesn't have a retrofit prop for VAB Compression. However,
 // struct FeatureFlag forces us to determine if a feature is 'retrofit'. So this
@@ -96,7 +100,8 @@ constexpr std::chrono::milliseconds kMapTimeout{1000};
 constexpr std::chrono::milliseconds kMapSnapshotTimeout{10000};
 
 DynamicPartitionControlAndroid::~DynamicPartitionControlAndroid() {
-  Cleanup();
+  UnmapAllPartitions();
+  metadata_device_.reset();
 }
 
 static FeatureFlag GetFeatureFlag(const char* enable_prop,
@@ -126,6 +131,10 @@ DynamicPartitionControlAndroid::DynamicPartitionControlAndroid(
       virtual_ab_(GetFeatureFlag(kVirtualAbEnabled, kVirtualAbRetrofit)),
       virtual_ab_compression_(GetFeatureFlag(kVirtualAbCompressionEnabled,
                                              kVirtualAbCompressionRetrofit)),
+      virtual_ab_compression_xor_(
+          GetFeatureFlag(kVirtualAbCompressionXorEnabled, "")),
+      virtual_ab_userspace_snapshots_(
+          GetFeatureFlag(kVirtualAbUserspaceSnapshotsEnabled, nullptr)),
       source_slot_(source_slot) {
   if (GetVirtualAbFeatureFlag().IsEnabled()) {
     snapshot_ = SnapshotManager::New();
@@ -150,6 +159,11 @@ DynamicPartitionControlAndroid::GetVirtualAbCompressionFeatureFlag() {
     return FeatureFlag(FeatureFlag::Value::NONE);
   }
   return virtual_ab_compression_;
+}
+
+FeatureFlag
+DynamicPartitionControlAndroid::GetVirtualAbCompressionXorFeatureFlag() {
+  return virtual_ab_compression_xor_;
 }
 
 bool DynamicPartitionControlAndroid::OptimizeOperation(
@@ -303,6 +317,12 @@ bool DynamicPartitionControlAndroid::UnmapAllPartitions() {
 void DynamicPartitionControlAndroid::Cleanup() {
   UnmapAllPartitions();
   metadata_device_.reset();
+  if (GetVirtualAbFeatureFlag().IsEnabled()) {
+    snapshot_ = SnapshotManager::New();
+  } else {
+    snapshot_ = SnapshotManagerStub::New();
+  }
+  CHECK(snapshot_ != nullptr) << "Cannot initialize SnapshotManager.";
 }
 
 bool DynamicPartitionControlAndroid::DeviceExists(const std::string& path) {
@@ -1485,6 +1505,11 @@ bool DynamicPartitionControlAndroid::IsDynamicPartition(
 bool DynamicPartitionControlAndroid::UpdateUsesSnapshotCompression() {
   return GetVirtualAbFeatureFlag().IsEnabled() &&
          snapshot_->UpdateUsesCompression();
+}
+
+FeatureFlag
+DynamicPartitionControlAndroid::GetVirtualAbUserspaceSnapshotsFeatureFlag() {
+  return virtual_ab_userspace_snapshots_;
 }
 
 }  // namespace chromeos_update_engine
