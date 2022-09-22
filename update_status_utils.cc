@@ -46,6 +46,7 @@ const char kNewVersion[] = "NEW_VERSION";
 const char kProgress[] = "PROGRESS";
 const char kWillPowerwashAfterReboot[] = "WILL_POWERWASH_AFTER_REBOOT";
 const char kLastAttemptError[] = "LAST_ATTEMPT_ERROR";
+const char kIsInteractive[] = "IS_INTERACTIVE";
 
 }  // namespace
 
@@ -101,6 +102,7 @@ string UpdateEngineStatusToString(const UpdateEngineStatus& status) {
   key_value_store.SetString(kLastAttemptError,
                             utils::ErrorCodeToString(static_cast<ErrorCode>(
                                 status.last_attempt_error)));
+  key_value_store.SetBoolean(kIsInteractive, status.is_interactive);
 
   return key_value_store.SaveToString();
 }

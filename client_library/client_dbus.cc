@@ -62,6 +62,7 @@ void ConvertToUpdateEngineStatus(const StatusResult& status,
   out_status->update_urgency_internal =
       static_cast<UpdateUrgencyInternal>(status.update_urgency());
   out_status->last_attempt_error = status.last_attempt_error();
+  out_status->is_interactive = status.is_interactive();
 }
 }  // namespace
 

@@ -58,6 +58,7 @@ void ConvertToStatusResult(const UpdateEngineStatus& ue_status,
     out_feature->set_name(feature.name);
     out_feature->set_enabled(feature.enabled);
   }
+  out_status->set_is_interactive(ue_status.is_interactive);
 }
 }  // namespace
 
