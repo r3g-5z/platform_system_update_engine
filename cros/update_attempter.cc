@@ -1772,6 +1772,9 @@ bool UpdateAttempter::GetStatus(UpdateEngineStatus* out_status) {
   }
   out_status->features = std::move(features);
   out_status->is_interactive = omaha_request_params_->interactive();
+  out_status->will_defer_update =
+      install_plan_ &&
+      install_plan_->defer_update_action == DeferUpdateAction::kHold;
 
   return true;
 }

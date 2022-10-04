@@ -119,6 +119,8 @@ struct UpdateEngineStatus {
   FeatureInternalList features;
   // Whether the update is interactive.
   bool is_interactive;
+  // The update will be downloaded but deferred.
+  bool will_defer_update;
 };
 
 }  // namespace update_engine
