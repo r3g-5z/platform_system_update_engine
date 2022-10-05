@@ -74,6 +74,7 @@ pkg_config("target_defaults") {
     "USE_HWID_OVERRIDE=${use.hwid_override}",
     "USE_HW_DETAILS=${use.hw_details}",
     "USE_REPORT_REQUISITION=${use.report_requisition}",
+    "USE_LVM_STATEFUL_PARTITION=${use.lvm_stateful_partition}",
   ]
   include_dirs = [
     # We need this include dir because we include all the local code as

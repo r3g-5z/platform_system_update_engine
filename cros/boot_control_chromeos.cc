@@ -27,6 +27,10 @@
 #include <base/logging.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
+#if USE_LVM_STATEFUL_PARTITION
+#include <brillo/blkdev_utils/lvm.h>
+#include <brillo/blkdev_utils/lvm_device.h>
+#endif  // USE_LVM_STATEFUL_PARTITION
 #include <chromeos/constants/imageloader.h>
 #include <rootdev/rootdev.h>
 
@@ -52,6 +56,7 @@ const char* kChromeOSPartitionNameMiniOS = "minios";
 const char* kAndroidPartitionNameKernel = "boot";
 const char* kAndroidPartitionNameRoot = "system";
 
+// TODO(kimjae): Create constants/enum values for partitions in system_api.
 const int kMiniOsPartitionANum = 9;
 
 const char kPartitionNamePrefixDlc[] = "dlc";
@@ -108,6 +113,15 @@ string GetBootDeviceForMiniOs() {
   LOG(INFO) << "Running in MiniOs, set boot device to: " << boot_device;
   return boot_device;
 }
+
+// Use macros as it's LVM stateful partition specific.
+#if USE_LVM_STATEFUL_PARTITION
+std::string DlcLogicalVolumeName(
+    const std::string& dlc_id,
+    chromeos_update_engine::BootControlInterface::Slot slot) {
+  return "dlc_" + dlc_id + (slot == 0 ? "_a" : "_b");
+}
+#endif  // USE_LVM_STATEFUL_PARTITION
 
 }  // namespace
 
@@ -247,6 +261,29 @@ bool BootControlChromeOS::GetPartitionDevice(const std::string& partition_name,
                   .Append(slot == 0 ? kPartitionNameDlcA : kPartitionNameDlcB)
                   .Append(kPartitionNameDlcImage)
                   .value();
+#if USE_LVM_STATEFUL_PARTITION
+    // Override with logical volume path if valid.
+    // DLC logical volumes follow a specific naming scheme.
+    brillo::LogicalVolumeManager lvm;
+    std::string lv_name = DlcLogicalVolumeName(dlc_id, slot);
+    // Stateful is always partition number 1 in CrOS.
+    auto stateful_part = utils::MakePartitionName(boot_disk_name_, 1);
+    if (auto pv = lvm.GetPhysicalVolume(base::FilePath(stateful_part));
+        !pv || !pv->IsValid()) {
+      LOG(WARNING) << "Could not get physical volume from " << stateful_part;
+    } else if (auto vg = lvm.GetVolumeGroup(*pv); !vg || !vg->IsValid()) {
+      LOG(WARNING) << "Could not get volume group from "
+                   << pv->GetPath().value();
+    } else if (auto lv = lvm.GetLogicalVolume(*vg, lv_name);
+               !lv || !lv->IsValid()) {
+      LOG(WARNING) << "Could not get logical volume (" << lv_name << ") from "
+                   << vg->GetName();
+    } else {
+      auto lv_path = lv->GetPath().value();
+      LOG(INFO) << "Overriding to logical volume path at " << lv_path;
+      *device = lv_path;
+    }
+#endif  // USE_LVM_STATEFUL_PARTITION
     return true;
   }
   int partition_num = GetPartitionNumber(partition_name, slot);
