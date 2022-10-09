@@ -18,9 +18,11 @@
 #define UPDATE_ENGINE_COMMON_FAKE_HARDWARE_H_
 
 #include <map>
+#include <memory>
 #include <string>
 #include <utility>
 
+#include <base/json/json_string_value_serializer.h>
 #include <base/time/time.h>
 
 #include "update_engine/common/error_code.h"
@@ -104,6 +106,20 @@ class FakeHardware : public HardwareInterface {
     return true;
   }
 
+  bool IsEnrollmentRecoveryModeEnabled(
+      const base::Value* local_state) const override {
+    return is_enrollment_recovery_enabled_;
+  }
+
+  std::unique_ptr<base::Value> ReadLocalState() const override {
+    int error_code;
+    std::string error_msg;
+
+    JSONStringValueDeserializer deserializer(local_state_contents_);
+
+    return deserializer.Deserialize(&error_code, &error_msg);
+  }
+
   bool SetMaxKernelKeyRollforward(int kernel_max_rollforward) override {
     kernel_max_rollforward_ = kernel_max_rollforward;
     return true;
@@ -180,6 +196,14 @@ class FakeHardware : public HardwareInterface {
 
   void UnsetIsOOBEComplete() { is_oobe_complete_ = false; }
 
+  void SetIsEnrollmentRecoveryMode(bool enrollment_recovery) {
+    is_enrollment_recovery_enabled_ = enrollment_recovery;
+  }
+
+  void SetLocalState(std::string local_state) {
+    local_state_contents_ = local_state;
+  }
+
   void SetHardwareClass(const std::string& hardware_class) {
     hardware_class_ = hardware_class;
   }
@@ -233,6 +257,8 @@ class FakeHardware : public HardwareInterface {
   bool are_dev_features_enabled_{false};
   bool is_oobe_enabled_{true};
   bool is_oobe_complete_{true};
+  bool is_enrollment_recovery_enabled_{false};
+  std::string local_state_contents_;
   // Jan 20, 2007
   base::Time oobe_timestamp_{base::Time::FromTimeT(1169280000)};
   std::string hardware_class_{"Fake HWID BLAH-1234"};

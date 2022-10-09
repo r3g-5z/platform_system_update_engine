@@ -20,6 +20,7 @@
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/json/json_file_value_serializer.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
@@ -91,6 +92,9 @@ const char kKernelCmdline[] = "proc/cmdline";
 
 const char kRunningFromMiniOSLabel[] = "cros_minios";
 
+constexpr char kLocalStatePath[] = "/home/chronos/Local State";
+
+constexpr char kEnrollmentRecoveryRequired[] = "EnrollmentRecoveryRequired";
 }  // namespace
 
 namespace chromeos_update_engine {
@@ -209,8 +213,7 @@ string HardwareChromeOS::GetHardwareClass() const {
 
 string HardwareChromeOS::GetDeviceRequisition() const {
 #if USE_CFM || USE_REPORT_REQUISITION
-  const char* kLocalStatePath = "/home/chronos/Local State";
-  return ReadDeviceRequisition(base::FilePath(kLocalStatePath));
+  return ReadDeviceRequisition(ReadLocalState().get());
 #else
   return "";
 #endif
@@ -377,6 +380,46 @@ bool HardwareChromeOS::SetFirstActiveOmahaPingSent() {
     LOG(INFO) << "dump_vpd_log succeeded but with error logs: " << error;
   }
   return true;
+}
+
+std::unique_ptr<base::Value> HardwareChromeOS::ReadLocalState() const {
+  base::FilePath local_state_file = base::FilePath(kLocalStatePath);
+
+  JSONFileValueDeserializer deserializer(local_state_file);
+
+  int error_code;
+  std::string error_msg;
+  std::unique_ptr<base::Value> root =
+      deserializer.Deserialize(&error_code, &error_msg);
+
+  if (!root) {
+    if (error_code != 0) {
+      LOG(ERROR) << "Unable to deserialize Local State with exit code: "
+                 << error_code << " and error: " << error_msg;
+    }
+    return nullptr;
+  }
+
+  return root;
+}
+
+// Check for given given Local State the value of the enrollment
+// recovery mode. Returns true if Recoverymode is set on CrOS.
+bool HardwareChromeOS::IsEnrollmentRecoveryModeEnabled(
+    const base::Value* local_state) const {
+  if (!local_state) {
+    return false;
+  }
+
+  auto* path = local_state->FindPath(kEnrollmentRecoveryRequired);
+
+  if (!path || !path->is_bool()) {
+    LOG(INFO) << "EnrollmentRecoveryRequired path does not exist in"
+              << "Local State or is incorrectly formatted.";
+    return false;
+  }
+
+  return path->GetBool();
 }
 
 int HardwareChromeOS::GetActiveMiniOsPartition() const {

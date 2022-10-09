@@ -39,7 +39,7 @@ constexpr char kNoRequisition[] = "none";
 
 namespace chromeos_update_engine {
 
-string ReadDeviceRequisition(const base::FilePath& local_state) {
+string ReadDeviceRequisition(const base::Value* local_state) {
   string requisition;
   bool vpd_retval = utils::GetVpdValue(kOemRequisitionKey, &requisition);
 
@@ -49,20 +49,8 @@ string ReadDeviceRequisition(const base::FilePath& local_state) {
   // OR
   // 2. Requisition value mistakenly set to "none".
   if ((requisition.empty() || requisition == kNoRequisition || !vpd_retval) &&
-      base::PathExists(local_state)) {
-    int error_code;
-    std::string error_msg;
-    JSONFileValueDeserializer deserializer(local_state);
-    std::unique_ptr<base::Value> root =
-        deserializer.Deserialize(&error_code, &error_msg);
-    if (!root) {
-      if (error_code != 0) {
-        LOG(ERROR) << "Unable to deserialize Local State with exit code: "
-                   << error_code << " and error: " << error_msg;
-      }
-      return "";
-    }
-    auto* path = root->FindPath({"enrollment", "device_requisition"});
+      local_state) {
+    auto* path = local_state->FindPath({"enrollment", "device_requisition"});
     if (!path || !path->is_string()) {
       return "";
     }

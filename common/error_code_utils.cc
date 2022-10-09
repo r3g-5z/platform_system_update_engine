@@ -183,6 +183,8 @@ string ErrorCodeToString(ErrorCode code) {
       return "ErrorCode::kOmahaUpdateIgnoredOverMetered";
     case ErrorCode::kScaledInstallationError:
       return "ErrorCode::kScaledInstallationError";
+    case ErrorCode::kNonCriticalUpdateEnrollmentRecovery:
+      return "ErrorCode::kNonCriticalUpdateEnrollmentRecovery";
       // Don't add a default case to let the compiler warn about newly added
       // error codes which should be added here.
   }

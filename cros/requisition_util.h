@@ -17,15 +17,17 @@
 #ifndef UPDATE_ENGINE_CROS_REQUISITION_UTIL_H_
 #define UPDATE_ENGINE_CROS_REQUISITION_UTIL_H_
 
+#include <memory>
 #include <string>
 
 #include <base/files/file_path.h>
+#include <base/values.h>
 
 namespace chromeos_update_engine {
 
 // Checks the VPD and Local State for the device's requisition and returns it,
 // or an empty string if the device has no requisition.
-std::string ReadDeviceRequisition(const base::FilePath& local_state);
+std::string ReadDeviceRequisition(const base::Value* local_state);
 
 }  // namespace chromeos_update_engine
 

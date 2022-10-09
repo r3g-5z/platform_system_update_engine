@@ -50,6 +50,9 @@ class HardwareChromeOS final : public HardwareInterface {
   bool IsOOBEComplete(base::Time* out_time_of_oobe) const override;
   std::string GetHardwareClass() const override;
   std::string GetDeviceRequisition() const override;
+  std::unique_ptr<base::Value> ReadLocalState() const override;
+  bool IsEnrollmentRecoveryModeEnabled(
+      const base::Value* local_state) const override;
   int GetMinKernelKeyVersion() const override;
   int GetMinFirmwareKeyVersion() const override;
   int GetMaxFirmwareKeyRollforward() const override;

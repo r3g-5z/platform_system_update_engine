@@ -1128,6 +1128,29 @@ TEST_F(OmahaRequestActionTest, SkipNonCriticalUpdatesBeforeOOBERollback) {
 }
 
 // Verify that non-critical updates are skipped by reporting the
+// kNonCriticalUpdateEnrollmentRecovery error code.
+TEST_F(OmahaRequestActionTest, SkipNonCriticalUpdatesEnrollmentRecoveryMode) {
+  FakeSystemState::Get()->fake_hardware()->SetIsEnrollmentRecoveryMode(true);
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+  tuc_params_.expected_code = ErrorCode::kNonCriticalUpdateEnrollmentRecovery;
+  tuc_params_.expected_check_result = metrics::CheckResult::kParsingError;
+  tuc_params_.expected_check_reaction = metrics::CheckReaction::kUnset;
+
+  ASSERT_FALSE(TestUpdateCheck());
+
+  EXPECT_FALSE(response_.update_exists);
+}
+
+TEST_F(OmahaRequestActionTest, ValidUpdateForNonEnrollmentRecoveryMode) {
+  FakeSystemState::Get()->fake_hardware()->SetIsEnrollmentRecoveryMode(false);
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+
+  ASSERT_TRUE(TestUpdateCheck());
+
+  EXPECT_TRUE(response_.update_exists);
+}
+
+// Verify that non-critical updates are skipped by reporting the
 // kNonCriticalUpdateInOOBE error code when attempted over cellular network -
 // i.e. when the update would need user permission. Note that reporting
 // kOmahaUpdateIgnoredOverCellular error in this case  might cause undesired UX

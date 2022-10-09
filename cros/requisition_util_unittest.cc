@@ -17,10 +17,12 @@
 #include "update_engine/cros/requisition_util.h"
 
 #include <string>
+#include <utility>
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/json/json_string_value_serializer.h>
 #include <gtest/gtest.h>
 
 #include "update_engine/common/test_utils.h"
@@ -59,36 +61,34 @@ namespace chromeos_update_engine {
 
 class RequisitionUtilTest : public ::testing::Test {
  protected:
-  void SetUp() override { ASSERT_TRUE(root_dir_.CreateUniqueTempDir()); }
+  std::unique_ptr<base::Value> JsonToUniquePtrValue(const string& json_string) {
+    int error_code;
+    std::string error_msg;
 
-  void WriteJsonToFile(const string& json) {
-    path_ =
-        base::FilePath(root_dir_.GetPath().value() + "/chronos/Local State");
-    ASSERT_TRUE(base::CreateDirectory(path_.DirName()));
-    ASSERT_TRUE(WriteFileString(path_.value(), json));
+    JSONStringValueDeserializer deserializer(json_string);
+
+    return deserializer.Deserialize(&error_code, &error_msg);
   }
-
-  base::ScopedTempDir root_dir_;
-  base::FilePath path_;
 };
 
 TEST_F(RequisitionUtilTest, BadJsonReturnsEmpty) {
-  WriteJsonToFile("this isn't JSON");
-  EXPECT_EQ("", ReadDeviceRequisition(path_));
+  std::unique_ptr<base::Value> root = JsonToUniquePtrValue("this isn't JSON");
+  EXPECT_EQ("", ReadDeviceRequisition(root.get()));
 }
 
 TEST_F(RequisitionUtilTest, NoFileReturnsEmpty) {
-  EXPECT_EQ("", ReadDeviceRequisition(path_));
+  std::unique_ptr<base::Value> root = nullptr;
+  EXPECT_EQ("", ReadDeviceRequisition(root.get()));
 }
 
 TEST_F(RequisitionUtilTest, EnrollmentRequisition) {
-  WriteJsonToFile(kRemoraJSON);
-  EXPECT_EQ("remora", ReadDeviceRequisition(path_));
+  std::unique_ptr<base::Value> root = JsonToUniquePtrValue(kRemoraJSON);
+  EXPECT_EQ("remora", ReadDeviceRequisition(root.get()));
 }
 
 TEST_F(RequisitionUtilTest, BlankEnrollment) {
-  WriteJsonToFile(kNoEnrollmentJSON);
-  EXPECT_EQ("", ReadDeviceRequisition(path_));
+  std::unique_ptr<base::Value> root = JsonToUniquePtrValue(kNoEnrollmentJSON);
+  EXPECT_EQ("", ReadDeviceRequisition(root.get()));
 }
 
 }  // namespace chromeos_update_engine

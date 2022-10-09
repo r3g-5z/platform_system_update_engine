@@ -19,11 +19,13 @@
 
 #include <stdint.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #include <base/files/file_path.h>
 #include <base/time/time.h>
+#include <base/values.h>
 
 #include "update_engine/common/error_code.h"
 
@@ -70,6 +72,14 @@ class HardwareInterface {
   // Returns the OEM device requisition or an empty string if the system does
   // not have a requisition, or if not running Chrome OS.
   virtual std::string GetDeviceRequisition() const = 0;
+
+  // Returns the Local State root as base::Value
+  virtual std::unique_ptr<base::Value> ReadLocalState() const = 0;
+
+  // Returns true if enrollment recovery mode is set on
+  // given Local State
+  virtual bool IsEnrollmentRecoveryModeEnabled(
+      const base::Value* local_state) const = 0;
 
   // Returns the minimum kernel key version that verified boot on Chrome OS
   // will allow to boot. This is the value of crossystem tpm_kernver. Returns

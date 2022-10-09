@@ -63,6 +63,9 @@ using std::string;
 
 namespace chromeos_update_engine {
 namespace {
+
+constexpr char kCriticalAppVersion[] = "ForcedUpdate";
+
 // Parses |str| and returns |true| iff its value is "true".
 bool ParseBool(const string& str) {
   return str == "true";
@@ -1240,8 +1243,9 @@ void OmahaRequestAction::ActionCompleted(ErrorCode code) {
 }
 
 bool OmahaRequestAction::ShouldIgnoreUpdate(ErrorCode* error) const {
+  const auto* hardware = SystemState::Get()->hardware();
   // Never ignore valid update when running from MiniOS.
-  if (SystemState::Get()->hardware()->IsRunningFromMiniOs())
+  if (hardware->IsRunningFromMiniOs())
     return false;
 
   // Note: policy decision to not update to a version we rolled back from.
@@ -1261,13 +1265,22 @@ bool OmahaRequestAction::ShouldIgnoreUpdate(ErrorCode* error) const {
     return true;
   }
 
-  if (SystemState::Get()->hardware()->IsOOBEEnabled() &&
-      !SystemState::Get()->hardware()->IsOOBEComplete(nullptr) &&
+  if (hardware->IsOOBEEnabled() && !hardware->IsOOBEComplete(nullptr) &&
       (response_.deadline.empty() ||
        SystemState::Get()->payload_state()->GetRollbackHappened()) &&
-      params->app_version() != "ForcedUpdate") {
+      params->app_version() != kCriticalAppVersion) {
     LOG(INFO) << "Ignoring a non-critical Omaha update before OOBE completion.";
     *error = ErrorCode::kNonCriticalUpdateInOOBE;
+    return true;
+  }
+
+  if (hardware->IsEnrollmentRecoveryModeEnabled(
+          hardware->ReadLocalState().get()) &&
+      response_.deadline.empty() &&
+      params->app_version() != kCriticalAppVersion) {
+    LOG(INFO) << "Ignoring non-critical Omaha update as enrollment "
+              << "recovery mode is enabled.";
+    *error = ErrorCode::kNonCriticalUpdateEnrollmentRecovery;
     return true;
   }
 

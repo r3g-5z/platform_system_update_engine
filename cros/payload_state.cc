@@ -380,6 +380,7 @@ void PayloadState::UpdateFailed(ErrorCode error) {
     case ErrorCode::kInvalidateLastUpdate:
     case ErrorCode::kOmahaUpdateIgnoredOverMetered:
     case ErrorCode::kScaledInstallationError:
+    case ErrorCode::kNonCriticalUpdateEnrollmentRecovery:
       LOG(INFO) << "Not incrementing URL index or failure count for this error";
       break;
 

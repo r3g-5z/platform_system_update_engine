@@ -20,6 +20,7 @@
 
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/json/json_string_value_serializer.h>
 #include <brillo/file_utils.h>
 #include <gtest/gtest.h>
 
@@ -30,6 +31,30 @@
 
 using chromeos_update_engine::test_utils::WriteFileString;
 using std::string;
+
+namespace {
+
+constexpr char kEnrollmentReCoveryTrueJSON[] = R"({
+  "the_list": [ "val1", "val2" ],
+  "EnrollmentRecoveryRequired": true,
+  "some_String": "1337",
+  "some_int": 42
+})";
+
+constexpr char kEnrollmentReCoveryFalseJSON[] = R"({
+  "the_list": [ "val1", "val2" ],
+  "EnrollmentRecoveryRequired": false,
+  "some_String": "1337",
+  "some_int": 42
+})";
+
+constexpr char kNoEnrollmentRecoveryJSON[] = R"({
+  "the_list": [ "val1", "val2" ],
+  "some_String": "1337",
+  "some_int": 42
+})";
+
+}  // namespace
 
 namespace chromeos_update_engine {
 
@@ -56,9 +81,42 @@ class HardwareChromeOSTest : public ::testing::Test {
     hardware_.LoadConfig(root_dir_.GetPath().value(), normal_mode);
   }
 
+  std::unique_ptr<base::Value> JSONToUniquePtrValue(const string& json_string) {
+    int error_code;
+    std::string error_msg;
+
+    JSONStringValueDeserializer deserializer(json_string);
+
+    return deserializer.Deserialize(&error_code, &error_msg);
+  }
+
   HardwareChromeOS hardware_;
   base::ScopedTempDir root_dir_;
 };
+
+TEST_F(HardwareChromeOSTest, NoLocalFile) {
+  std::unique_ptr<base::Value> root = nullptr;
+
+  EXPECT_FALSE(hardware_.IsEnrollmentRecoveryModeEnabled(root.get()));
+}
+
+TEST_F(HardwareChromeOSTest, LocalFileWithEnrollmentRecoveryTrue) {
+  std::unique_ptr<base::Value> root =
+      JSONToUniquePtrValue(kEnrollmentReCoveryTrueJSON);
+  EXPECT_TRUE(hardware_.IsEnrollmentRecoveryModeEnabled(root.get()));
+}
+
+TEST_F(HardwareChromeOSTest, LocalFileWithEnrollmentRecoveryFalse) {
+  std::unique_ptr<base::Value> root =
+      JSONToUniquePtrValue(kEnrollmentReCoveryFalseJSON);
+  EXPECT_FALSE(hardware_.IsEnrollmentRecoveryModeEnabled(root.get()));
+}
+
+TEST_F(HardwareChromeOSTest, LocalFileWithNoEnrollmentRecoveryPath) {
+  std::unique_ptr<base::Value> root =
+      JSONToUniquePtrValue(kNoEnrollmentRecoveryJSON);
+  EXPECT_FALSE(hardware_.IsEnrollmentRecoveryModeEnabled(root.get()));
+}
 
 TEST_F(HardwareChromeOSTest, NoFileFoundReturnsDefault) {
   CallLoadConfig(true /* normal_mode */);
