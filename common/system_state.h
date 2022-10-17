@@ -46,6 +46,7 @@ class ConnectionManagerInterface;
 class CrosHealthdInterface;
 class DlcServiceInterface;
 class HardwareInterface;
+class HibernateInterface;
 class MetricsReporterInterface;
 class OmahaRequestParams;
 class P2PManager;
@@ -82,6 +83,9 @@ class SystemState {
 
   // Gets the hardware interface object.
   virtual HardwareInterface* hardware() = 0;
+
+  // Gets the hibernate interface object.
+  virtual HibernateInterface* hibernate() = 0;
 
   // Gets the Metrics Library interface for reporting UMA stats.
   virtual MetricsReporterInterface* metrics_reporter() = 0;

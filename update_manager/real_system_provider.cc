@@ -24,6 +24,7 @@
 
 #include "update_engine/common/boot_control_interface.h"
 #include "update_engine/common/hardware_interface.h"
+#include "update_engine/common/hibernate_interface.h"
 #include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/cros/omaha_request_params.h"
@@ -126,6 +127,11 @@ bool RealSystemProvider::Init() {
 
   var_is_updating_.reset(new ConstCopyVariable<bool>(
       "is_updating", SystemState::Get()->update_attempter()->IsUpdating()));
+
+  var_is_resuming_from_hibernate_.reset(new CallCopyVariable<bool>(
+      "is_resuming_from_hibernate",
+      base::Bind(&chromeos_update_engine::HibernateInterface::IsResuming,
+                 base::Unretained(SystemState::Get()->hibernate()))));
 
   return true;
 }
