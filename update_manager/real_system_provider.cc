@@ -133,6 +133,12 @@ bool RealSystemProvider::Init() {
       base::Bind(&chromeos_update_engine::HibernateInterface::IsResuming,
                  base::Unretained(SystemState::Get()->hibernate()))));
 
+  var_abort_resume_from_hibernate_.reset(new CallCopyVariable<bool>(
+      "abort_resume_from_hibernate",
+      base::Bind(&chromeos_update_engine::HibernateInterface::AbortResume,
+                 base::Unretained(SystemState::Get()->hibernate()),
+                 "System update pending for too long")));
+
   return true;
 }
 

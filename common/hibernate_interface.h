@@ -18,6 +18,7 @@
 #define UPDATE_ENGINE_COMMON_HIBERNATE_INTERFACE_H_
 
 #include <memory>
+#include <string>
 
 namespace chromeos_update_engine {
 
@@ -32,6 +33,9 @@ class HibernateInterface {
 
   // Returns true if the system is resuming from hibernate.
   virtual bool IsResuming() = 0;
+
+  // Aborts a resume from hibernate, if one is in progress.
+  virtual bool AbortResume(const std::string& reason) = 0;
 
  protected:
   HibernateInterface() = default;

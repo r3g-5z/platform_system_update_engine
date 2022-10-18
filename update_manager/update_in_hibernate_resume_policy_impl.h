@@ -18,9 +18,17 @@
 
 #include <string>
 
+#include <base/time/time.h>
+
 #include "update_engine/update_manager/policy_interface.h"
 
 namespace chromeos_update_manager {
+
+// Define the amount of time that resume from hibernation can block an update
+// from being applied. This value should be a balance between 1) the convenience
+// of hibernate for the user in having all of their state nicely restored and 2)
+// the importance of applying updates in a timely manner.
+constexpr base::TimeDelta kMaxHibernateResumeTime = base::Hours(2);
 
 // Policy that ensures updates are not applied when a resume from hibernation is
 // in progress.

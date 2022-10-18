@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
+#include "update_engine/cros/dbus_connection.h"
 #include "update_engine/cros/hibernate_chromeos.h"
+
+#include <utility>
 
 #include <base/files/file_util.h>
 #include <dbus/hiberman/dbus-constants.h>
@@ -22,7 +25,14 @@
 namespace chromeos_update_engine {
 
 std::unique_ptr<HibernateInterface> CreateHibernateService() {
-  return std::make_unique<HibernateChromeOS>();
+  std::unique_ptr<HibernateChromeOS> hibernate(new HibernateChromeOS());
+  hibernate->Init();
+  return std::move(hibernate);
+}
+
+void HibernateChromeOS::Init() {
+  hiberman_resume_proxy_.reset(new org::chromium::HibernateResumeInterfaceProxy(
+      DBusConnection::Get()->GetDBus()));
 }
 
 bool HibernateChromeOS::IsResuming() {
@@ -41,6 +51,24 @@ bool HibernateChromeOS::IsResuming() {
   // transitions there. Cache a negative result.
   not_resuming_from_hibernate_ = true;
   return false;
+}
+
+bool HibernateChromeOS::AbortResume(const std::string& reason) {
+  brillo::ErrorPtr err;
+
+  if (!hiberman_resume_proxy_) {
+    LOG(ERROR) << "Hibernate resume proxy unavailable.";
+    return false;
+  }
+
+  if (!hiberman_resume_proxy_->AbortResume(reason, &err)) {
+    LOG(ERROR) << "Failed to abort resume from hibernate: "
+               << "ErrorCode=" << err->GetCode()
+               << ", ErrMsg=" << err->GetMessage();
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace chromeos_update_engine

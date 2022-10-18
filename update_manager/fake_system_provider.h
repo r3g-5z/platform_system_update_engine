@@ -62,6 +62,10 @@ class FakeSystemProvider : public SystemProvider {
     return &var_is_resuming_from_hibernate_;
   }
 
+  FakeVariable<bool>* var_abort_resume_from_hibernate() override {
+    return &var_abort_resume_from_hibernate_;
+  }
+
  private:
   FakeVariable<bool> var_is_normal_boot_mode_{"is_normal_boot_mode",
                                               kVariableModeConst};
@@ -77,6 +81,8 @@ class FakeSystemProvider : public SystemProvider {
   FakeVariable<bool> var_is_updating_{"is_updating", kVariableModeConst};
   FakeVariable<bool> var_is_resuming_from_hibernate_{
       "is_resuming_from_hibernate", kVariableModePoll};
+  FakeVariable<bool> var_abort_resume_from_hibernate_{
+      "abort_resume_from_hibernate", kVariableModePoll};
 };
 
 }  // namespace chromeos_update_manager

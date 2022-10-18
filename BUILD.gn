@@ -194,7 +194,6 @@ static_library("libupdate_engine") {
     "cros/dbus_service.cc",
     "cros/download_action_chromeos.cc",
     "cros/hardware_chromeos.cc",
-    "cros/hibernate_chromeos.cc",
     "cros/image_properties_chromeos.cc",
     "cros/install_action.cc",
     "cros/logging.cc",
@@ -294,6 +293,13 @@ static_library("libupdate_engine") {
 
   if (use.dlc) {
     all_dependent_pkg_deps += [ "libdlcservice-client" ]
+  }
+
+  if (use.hibernate) {
+    sources += [ "cros/hibernate_chromeos.cc" ]
+    all_dependent_pkg_deps += [ "libhibernate-client" ]
+  } else {
+    sources += [ "common/hibernate_stub.cc" ]
   }
 
   if (use.chrome_network_proxy) {
