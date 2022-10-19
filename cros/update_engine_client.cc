@@ -218,6 +218,38 @@ void UpdateWaitHandler::HandleStatusUpdate(const UpdateEngineStatus& status) {
   }
 }
 
+class InstallWaitHandler : public ExitingStatusUpdateHandler {
+ public:
+  explicit InstallWaitHandler(update_engine::UpdateEngineClient* client)
+      : client_(client) {}
+
+  ~InstallWaitHandler() override = default;
+
+  void HandleStatusUpdate(const UpdateEngineStatus& status) override;
+
+ private:
+  update_engine::UpdateEngineClient* client_;
+};
+
+void InstallWaitHandler::HandleStatusUpdate(const UpdateEngineStatus& status) {
+  if (status.status == UpdateStatus::IDLE) {
+    auto success = static_cast<int>(ErrorCode::kSuccess);
+    auto last_attempt_error = success;
+    ErrorCode code = ErrorCode::kSuccess;
+    if (client_ && client_->GetLastAttemptError(&last_attempt_error))
+      code = static_cast<ErrorCode>(last_attempt_error);
+
+    if (last_attempt_error == success) {
+      LOG(INFO) << "Install succeeded.";
+      exit(0);
+    }
+    LOG(ERROR) << "Install failed, current operation is "
+               << UpdateStatusToString(status.status) << ", last error code is "
+               << ErrorCodeToString(code) << "(" << last_attempt_error << ")";
+    exit(1);
+  }
+}
+
 int UpdateEngineClient::ProcessFlags() {
   DEFINE_string(app_version, "", "Force the current app version.");
   DEFINE_string(channel,
@@ -231,10 +263,12 @@ int UpdateEngineClient::ProcessFlags() {
               "Apply the deferred update if there is one.");
   DEFINE_string(
       cohort_hint, "", "Set the current cohort hint to the passed value.");
+  DEFINE_string(dlc, "", "The ID/name of the DLC to install.");
   DEFINE_bool(follow,
               false,
               "Wait for any update operations to complete."
               "Exit status is 0 if the update succeeded, and 1 otherwise.");
+  DEFINE_bool(install, false, "Set to perform an installation.");
   DEFINE_bool(interactive, true, "Mark the update request as interactive.");
   DEFINE_string(omaha_url, "", "The URL of the Omaha update server.");
   DEFINE_string(p2p_update,
@@ -493,6 +527,22 @@ int UpdateEngineClient::ProcessFlags() {
       return 1;
     }
     return 0;
+  }
+
+  if (FLAGS_install) {
+    if (FLAGS_dlc.empty()) {
+      LOG(ERROR) << "Must pass in a DLC when performing an install.";
+      return 1;
+    }
+    if (!client_->AttemptInstall(FLAGS_omaha_url, {FLAGS_dlc})) {
+      LOG(ERROR) << "Failed to install DLC=" << FLAGS_dlc;
+      return 1;
+    }
+    LOG(INFO) << "Waiting for install to complete.";
+    auto handler = new InstallWaitHandler(client_.get());
+    handlers_.emplace_back(handler);
+    client_->RegisterStatusUpdateHandler(handler);
+    return kContinueRunning;
   }
 
   bool do_update_request = FLAGS_check_for_update || FLAGS_update ||
