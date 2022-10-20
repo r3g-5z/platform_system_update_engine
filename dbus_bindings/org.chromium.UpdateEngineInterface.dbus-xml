@@ -14,7 +14,8 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 !-->
-<node name="/org/chromium/UpdateEngine">
+<node name="/org/chromium/UpdateEngine"
+      xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
   <interface name="org.chromium.UpdateEngineInterface">
     <annotation name="org.freedesktop.DBus.GLib.CSymbol"
                 value="update_engine_service" />
