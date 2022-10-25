@@ -89,6 +89,11 @@ bool DBusUpdateEngineService::AttemptInstall(ErrorPtr* error,
   return common_->AttemptInstall(error, in_omaha_url, dlc_ids);
 }
 
+bool DBusUpdateEngineService::Install(
+    ErrorPtr* error, const update_engine::InstallParams& install_params) {
+  return common_->Install(error, install_params);
+}
+
 bool DBusUpdateEngineService::AttemptRollback(ErrorPtr* error,
                                               bool in_powerwash) {
   return common_->AttemptRollback(error, in_powerwash);

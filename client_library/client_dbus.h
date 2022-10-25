@@ -47,6 +47,8 @@ class DBusUpdateEngineClient : public UpdateEngineClient {
   bool AttemptInstall(const std::string& omaha_url,
                       const std::vector<std::string>& dlc_ids) override;
 
+  bool Install(const update_engine::InstallParams& install_params) override;
+
   bool SetDlcActiveValue(bool is_active, const std::string& dlc_id) override;
 
   bool GetStatus(UpdateEngineStatus* out_status) const override;

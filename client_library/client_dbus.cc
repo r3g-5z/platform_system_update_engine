@@ -93,6 +93,11 @@ bool DBusUpdateEngineClient::AttemptInstall(const string& omaha_url,
   return proxy_->AttemptInstall(omaha_url, dlc_ids, nullptr);
 }
 
+bool DBusUpdateEngineClient::Install(
+    const update_engine::InstallParams& install_params) {
+  return proxy_->Install(install_params, nullptr);
+}
+
 bool DBusUpdateEngineClient::SetDlcActiveValue(bool is_active,
                                                const std::string& dlc_id) {
   return proxy_->SetDlcActiveValue(is_active, dlc_id, /*error=*/nullptr);

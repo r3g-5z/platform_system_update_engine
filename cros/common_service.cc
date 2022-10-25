@@ -95,10 +95,25 @@ bool UpdateEngineService::ApplyDeferredUpdate(ErrorPtr* error, bool shutdown) {
 bool UpdateEngineService::AttemptInstall(brillo::ErrorPtr* error,
                                          const string& omaha_url,
                                          const vector<string>& dlc_ids) {
-  if (!SystemState::Get()->update_attempter()->CheckForInstall(dlc_ids,
-                                                               omaha_url)) {
+  if (!SystemState::Get()->update_attempter()->CheckForInstall(
+          dlc_ids,
+          omaha_url,
+          /*scaled=*/false)) {
     // TODO(xiaochu): support more detailed error messages.
-    LogAndSetError(error, FROM_HERE, "Could not schedule install operation.");
+    LogAndSetError(error, FROM_HERE, "Could not schedule install.");
+    return false;
+  }
+  return true;
+}
+
+bool UpdateEngineService::Install(
+    brillo::ErrorPtr* error,
+    const update_engine::InstallParams& install_params) {
+  if (!SystemState::Get()->update_attempter()->CheckForInstall(
+          {install_params.id()},
+          install_params.omaha_url(),
+          install_params.scaled())) {
+    LogAndSetError(error, FROM_HERE, "Could not schedule scaled install.");
     return false;
   }
   return true;

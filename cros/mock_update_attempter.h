@@ -50,9 +50,10 @@ class MockUpdateAttempter : public UpdateAttempter {
               (const update_engine::UpdateParams&),
               (override));
 
-  MOCK_METHOD2(CheckForInstall,
+  MOCK_METHOD3(CheckForInstall,
                bool(const std::vector<std::string>& dlc_ids,
-                    const std::string& omaha_url));
+                    const std::string& omaha_url,
+                    bool scaled));
 
   MOCK_METHOD2(SetDlcActiveValue, bool(bool, const std::string&));
 

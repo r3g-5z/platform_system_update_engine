@@ -379,6 +379,7 @@ void PayloadState::UpdateFailed(ErrorCode error) {
     case ErrorCode::kRepeatedFpFromOmahaError:
     case ErrorCode::kInvalidateLastUpdate:
     case ErrorCode::kOmahaUpdateIgnoredOverMetered:
+    case ErrorCode::kScaledInstallationError:
       LOG(INFO) << "Not incrementing URL index or failure count for this error";
       break;
 

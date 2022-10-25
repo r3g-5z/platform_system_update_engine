@@ -123,6 +123,7 @@ metrics::AttemptResult GetAttemptResult(ErrorCode code) {
     case ErrorCode::kPackageExcludedFromUpdate:
     case ErrorCode::kInvalidateLastUpdate:
     case ErrorCode::kOmahaUpdateIgnoredOverMetered:
+    case ErrorCode::kScaledInstallationError:
       return metrics::AttemptResult::kInternalError;
 
     case ErrorCode::kOmahaUpdateDeferredPerPolicy:
@@ -250,6 +251,7 @@ metrics::DownloadErrorCode GetDownloadErrorCode(ErrorCode code) {
     case ErrorCode::kRepeatedFpFromOmahaError:
     case ErrorCode::kInvalidateLastUpdate:
     case ErrorCode::kOmahaUpdateIgnoredOverMetered:
+    case ErrorCode::kScaledInstallationError:
       break;
 
     // Special flags. These can't happen (we mask them out above) but

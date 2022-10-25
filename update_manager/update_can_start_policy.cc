@@ -145,6 +145,7 @@ bool HandleErrorCode(ErrorCode err_code, int* url_num_error_p) {
     case ErrorCode::kRepeatedFpFromOmahaError:
     case ErrorCode::kInvalidateLastUpdate:
     case ErrorCode::kOmahaUpdateIgnoredOverMetered:
+    case ErrorCode::kScaledInstallationError:
       LOG(INFO) << "Not changing URL index or failure count due to error "
                 << chromeos_update_engine::utils::ErrorCodeToString(err_code)
                 << " (" << static_cast<int>(err_code) << ")";

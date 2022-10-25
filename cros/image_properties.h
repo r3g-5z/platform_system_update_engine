@@ -58,6 +58,9 @@ struct ImageProperties {
 
   // The Omaha URL this image should get updates from.
   std::string omaha_url;
+
+  // The release builder path.
+  std::string builder_path;
 };
 
 // The mutable image properties are read-write image properties, initialized

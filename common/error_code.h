@@ -90,6 +90,7 @@ enum class ErrorCode : int {
   kRepeatedFpFromOmahaError = 64,
   kInvalidateLastUpdate = 65,
   kOmahaUpdateIgnoredOverMetered = 66,
+  kScaledInstallationError = 67,
 
   // VERY IMPORTANT! When adding new error codes:
   //

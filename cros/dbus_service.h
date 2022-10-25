@@ -55,6 +55,9 @@ class DBusUpdateEngineService
                       const std::string& in_omaha_url,
                       const std::vector<std::string>& dlc_ids) override;
 
+  bool Install(brillo::ErrorPtr* err,
+               const update_engine::InstallParams& install_params) override;
+
   bool AttemptRollback(brillo::ErrorPtr* error, bool in_powerwash) override;
 
   // Checks if the system rollback is available by verifying if the secondary

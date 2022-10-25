@@ -54,6 +54,9 @@ class UpdateEngineService {
                       const std::string& omaha_url,
                       const std::vector<std::string>& dlc_ids);
 
+  bool Install(brillo::ErrorPtr* error,
+               const update_engine::InstallParams& install_params);
+
   bool AttemptRollback(brillo::ErrorPtr* error, bool in_powerwash);
 
   // Checks if the system rollback is available by verifying if the secondary

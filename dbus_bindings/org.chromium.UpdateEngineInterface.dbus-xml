@@ -41,12 +41,22 @@
                     value="update_engine::ApplyUpdateConfig"/>
       </arg>
     </method>
+    <!-- TODO(b/219067273): DEPRECATE -->
     <method name="AttemptInstall">
       <arg type="s" name="omaha_url" direction="in" />
       <arg type="as" name="dlc_ids" direction="in">
         <tp:docstring>
           The list of DLC IDs that needs to be installed.
         </tp:docstring>
+      </arg>
+    </method>
+    <method name="Install">
+      <arg type="ay" name="install_params" direction="in">
+        <tp:docstring>
+          The install parameters for DLC.
+        </tp:docstring>
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="update_engine::InstallParams"/>
       </arg>
     </method>
     <method name="AttemptRollback">

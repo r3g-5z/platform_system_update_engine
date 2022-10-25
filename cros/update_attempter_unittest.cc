@@ -139,7 +139,7 @@ struct OnUpdateScheduledTestParams {
 
 struct ProcessingDoneTestParams {
   // Setups + Inputs:
-  bool is_install = false;
+  ProcessMode pm = ProcessMode::UPDATE;
   UpdateStatus status = UpdateStatus::CHECKING_FOR_UPDATE;
   ActionProcessor* processor = nullptr;
   ErrorCode code = ErrorCode::kSuccess;
@@ -147,7 +147,7 @@ struct ProcessingDoneTestParams {
   bool skip_applying = false;
 
   // Expects:
-  const bool kExpectedIsInstall = false;
+  const ProcessMode kExpectedProcessMode = ProcessMode::UPDATE;
   bool should_schedule_updates_be_called = true;
   UpdateStatus expected_exit_status = UpdateStatus::IDLE;
   bool should_install_completed_be_called = false;
@@ -375,7 +375,7 @@ void UpdateAttempterTest::TestCheckForUpdate() {
 void UpdateAttempterTest::TestProcessingDone() {
   // Setup
   attempter_.DisableScheduleUpdates();
-  attempter_.is_install_ = pd_params_.is_install;
+  attempter_.pm_ = pd_params_.pm;
   attempter_.status_ = pd_params_.status;
   attempter_.omaha_request_params_->set_dlc_apps_params(
       pd_params_.dlc_apps_params);
@@ -399,7 +399,7 @@ void UpdateAttempterTest::TestProcessingDone() {
   attempter_.ProcessingDone(pd_params_.processor, pd_params_.code);
 
   // Verify
-  EXPECT_EQ(pd_params_.kExpectedIsInstall, attempter_.is_install_);
+  EXPECT_EQ(pd_params_.kExpectedProcessMode, attempter_.pm_);
   EXPECT_EQ(pd_params_.should_schedule_updates_be_called,
             attempter_.WasScheduleUpdatesCalled());
   EXPECT_EQ(pd_params_.expected_exit_status, attempter_.status_);
@@ -1651,10 +1651,22 @@ TEST_F(UpdateAttempterTest, CheckForInstallTest) {
   EXPECT_EQ("", attempter_.forced_omaha_url());
 }
 
+TEST_F(UpdateAttempterTest, CheckForInstallScaledTest) {
+  FakeSystemState::Get()->fake_hardware()->SetIsOfficialBuild(true);
+  FakeSystemState::Get()->fake_hardware()->SetAreDevFeaturesEnabled(false);
+  EXPECT_FALSE(attempter_.CheckForInstall({}, "autest", /*scaled=*/true));
+
+  EXPECT_TRUE(attempter_.CheckForInstall({"dlc_a"}, "autest", /*scaled=*/true));
+  EXPECT_EQ(constants::kOmahaDefaultAUTestURL, attempter_.forced_omaha_url());
+
+  EXPECT_FALSE(attempter_.CheckForInstall(
+      {"dlc_a", "dlc_b"}, "autest", /*scaled=*/true));
+}
+
 TEST_F(UpdateAttempterTest, InstallSetsStatusIdle) {
   attempter_.CheckForInstall({}, "http://foo.bar");
   attempter_.status_ = UpdateStatus::DOWNLOADING;
-  EXPECT_TRUE(attempter_.is_install_);
+  EXPECT_FALSE(attempter_.IsUpdating());
   attempter_.ProcessingDone(nullptr, ErrorCode::kSuccess);
   UpdateEngineStatus status;
   attempter_.GetStatus(&status);
@@ -1663,15 +1675,27 @@ TEST_F(UpdateAttempterTest, InstallSetsStatusIdle) {
 }
 
 TEST_F(UpdateAttempterTest, RollbackAfterInstall) {
-  attempter_.is_install_ = true;
+  attempter_.pm_ = ProcessMode::INSTALL;
   attempter_.Rollback(false);
-  EXPECT_FALSE(attempter_.is_install_);
+  EXPECT_TRUE(attempter_.IsUpdating());
+}
+
+TEST_F(UpdateAttempterTest, RollbackAfterScaledInstall) {
+  attempter_.pm_ = ProcessMode::SCALED_INSTALL;
+  attempter_.Rollback(false);
+  EXPECT_TRUE(attempter_.IsUpdating());
 }
 
 TEST_F(UpdateAttempterTest, UpdateAfterInstall) {
-  attempter_.is_install_ = true;
+  attempter_.pm_ = ProcessMode::INSTALL;
   attempter_.CheckForUpdate({});
-  EXPECT_FALSE(attempter_.is_install_);
+  EXPECT_TRUE(attempter_.IsUpdating());
+}
+
+TEST_F(UpdateAttempterTest, UpdateAfterScaledInstall) {
+  attempter_.pm_ = ProcessMode::SCALED_INSTALL;
+  attempter_.CheckForUpdate({});
+  EXPECT_TRUE(attempter_.IsUpdating());
 }
 
 TEST_F(UpdateAttempterTest, TargetVersionPrefixSetAndReset) {
@@ -2006,7 +2030,7 @@ TEST_F(UpdateAttempterTest, ProcessingDoneSkipApplying) {
 
 TEST_F(UpdateAttempterTest, ProcessingDoneInstalled) {
   // GIVEN an install finished.
-  pd_params_.is_install = true;
+  pd_params_.pm = ProcessMode::INSTALL;
 
   // THEN update_engine should call install completion.
   pd_params_.should_install_completed_be_called = true;
@@ -2018,7 +2042,7 @@ TEST_F(UpdateAttempterTest, ProcessingDoneInstalled) {
 
 TEST_F(UpdateAttempterTest, ProcessingDoneInstalledDlcFilter) {
   // GIVEN an install finished.
-  pd_params_.is_install = true;
+  pd_params_.pm = ProcessMode::INSTALL;
   // GIVEN DLC |AppParams| list.
   auto dlc_1 = "dlc_1", dlc_2 = "dlc_2";
   pd_params_.dlc_apps_params = {{dlc_1, {.name = dlc_1, .updated = false}},
@@ -2035,7 +2059,7 @@ TEST_F(UpdateAttempterTest, ProcessingDoneInstalledDlcFilter) {
 
 TEST_F(UpdateAttempterTest, ProcessingDoneInstallReportingError) {
   // GIVEN an install finished.
-  pd_params_.is_install = true;
+  pd_params_.pm = ProcessMode::INSTALL;
   // GIVEN a reporting error occurred.
   pd_params_.status = UpdateStatus::REPORTING_ERROR_EVENT;
 
@@ -2060,7 +2084,7 @@ TEST_F(UpdateAttempterTest, ProcessingDoneNoUpdate) {
 
 TEST_F(UpdateAttempterTest, ProcessingDoneNoInstall) {
   // GIVEN an install finished.
-  pd_params_.is_install = true;
+  pd_params_.pm = ProcessMode::INSTALL;
   // GIVEN an action error occured.
   pd_params_.code = ErrorCode::kNoUpdate;
 
@@ -2123,7 +2147,7 @@ TEST_F(UpdateAttempterTest, ProcessingDoneUpdateError) {
 
 TEST_F(UpdateAttempterTest, ProcessingDoneInstallError) {
   // GIVEN an install finished.
-  pd_params_.is_install = true;
+  pd_params_.pm = ProcessMode::INSTALL;
   // GIVEN an action error occured.
   pd_params_.code = ErrorCode::kError;
   // GIVEN an event error is set.
@@ -2422,7 +2446,7 @@ TEST_F(UpdateAttempterTest, SetStatusAndNotifyTest) {
 
 TEST_F(UpdateAttempterTest, CalculateDlcParamsInstallTest) {
   string dlc_id = "dlc0";
-  attempter_.is_install_ = true;
+  attempter_.pm_ = ProcessMode::INSTALL;
   attempter_.dlc_ids_ = {dlc_id};
   attempter_.CalculateDlcParams();
 
@@ -2448,7 +2472,7 @@ TEST_F(UpdateAttempterTest, CalculateDlcParamsNoPrefFilesTest) {
       .WillOnce(
           DoAll(SetArgPointee<0>(std::vector<string>({dlc_id})), Return(true)));
 
-  attempter_.is_install_ = false;
+  attempter_.pm_ = ProcessMode::UPDATE;
   attempter_.CalculateDlcParams();
 
   OmahaRequestParams* params = FakeSystemState::Get()->request_params();
@@ -2482,7 +2506,7 @@ TEST_F(UpdateAttempterTest, CalculateDlcParamsNonParseableValuesTest) {
   FakeSystemState::Get()->prefs()->SetString(active_key, "z2yz");
   FakeSystemState::Get()->prefs()->SetString(last_active_key, "z2yz");
   FakeSystemState::Get()->prefs()->SetString(last_rollcall_key, "z2yz");
-  attempter_.is_install_ = false;
+  attempter_.pm_ = ProcessMode::UPDATE;
   attempter_.CalculateDlcParams();
 
   OmahaRequestParams* params = FakeSystemState::Get()->request_params();
@@ -2517,7 +2541,7 @@ TEST_F(UpdateAttempterTest, CalculateDlcParamsValidValuesTest) {
   FakeSystemState::Get()->prefs()->SetInt64(last_active_key, 78);
   FakeSystemState::Get()->prefs()->SetInt64(last_rollcall_key, 99);
   FakeSystemState::Get()->prefs()->SetString(last_fp_key, "3.75");
-  attempter_.is_install_ = false;
+  attempter_.pm_ = ProcessMode::UPDATE;
   attempter_.CalculateDlcParams();
 
   OmahaRequestParams* params = FakeSystemState::Get()->request_params();
@@ -2535,7 +2559,7 @@ TEST_F(UpdateAttempterTest, CalculateDlcParamsValidValuesTest) {
 
 TEST_F(UpdateAttempterTest, ConsecutiveUpdateBeforeRebootSuccess) {
   FakeSystemState::Get()->prefs()->SetString(kPrefsLastFp, "3.75");
-  attempter_.is_install_ = false;
+  attempter_.pm_ = ProcessMode::UPDATE;
   attempter_.install_plan_.reset(new InstallPlan);
   attempter_.install_plan_->payloads.push_back(
       {.size = 1234ULL, .type = InstallPayloadType::kFull, .fp = "4.0"});
@@ -2620,7 +2644,7 @@ TEST_F(UpdateAttempterTest, CalculateDlcParamsRemoveStaleMetadata) {
   EXPECT_TRUE(FakeSystemState::Get()->prefs()->Exists(last_rollcall_key));
 
   attempter_.dlc_ids_ = {dlc_id};
-  attempter_.is_install_ = true;
+  attempter_.pm_ = ProcessMode::INSTALL;
   attempter_.CalculateDlcParams();
 
   EXPECT_FALSE(FakeSystemState::Get()->prefs()->Exists(last_active_key));
@@ -2715,4 +2739,23 @@ TEST_F(UpdateAttempterTest, ResetUpdatePrefs) {
   EXPECT_FALSE(fake_prefs->Exists(kPrefsLastFp));
   EXPECT_FALSE(fake_prefs->Exists(kPrefsPreviousVersion));
 }
+
+TEST_F(UpdateAttempterTest, InstallZeroDlcTest) {
+  attempter_.Install();
+  EXPECT_EQ(UpdateStatus::IDLE, attempter_.status_);
+}
+
+TEST_F(UpdateAttempterTest, InstallSingleDlcTest) {
+  attempter_.dlc_ids_ = {"dlc_a"};
+  attempter_.Install();
+  EXPECT_EQ(UpdateStatus::CHECKING_FOR_UPDATE, attempter_.status_);
+  loop_.BreakLoop();
+}
+
+TEST_F(UpdateAttempterTest, InstallMultiDlcTest) {
+  attempter_.dlc_ids_ = {"dlc_a", "dlc_b"};
+  attempter_.Install();
+  EXPECT_EQ(UpdateStatus::IDLE, attempter_.status_);
+}
+
 }  // namespace chromeos_update_engine

@@ -269,6 +269,7 @@ int UpdateEngineClient::ProcessFlags() {
               "Wait for any update operations to complete."
               "Exit status is 0 if the update succeeded, and 1 otherwise.");
   DEFINE_bool(install, false, "Set to perform an installation.");
+  DEFINE_bool(scaled, false, "Set to perform a scaled installation.");
   DEFINE_bool(interactive, true, "Mark the update request as interactive.");
   DEFINE_string(omaha_url, "", "The URL of the Omaha update server.");
   DEFINE_string(p2p_update,
@@ -534,11 +535,19 @@ int UpdateEngineClient::ProcessFlags() {
       LOG(ERROR) << "Must pass in a DLC when performing an install.";
       return 1;
     }
-    if (!client_->AttemptInstall(FLAGS_omaha_url, {FLAGS_dlc})) {
+
+    update_engine::InstallParams install_params;
+    install_params.set_id(FLAGS_dlc);
+    install_params.set_omaha_url(FLAGS_omaha_url);
+    install_params.set_scaled(FLAGS_scaled);
+
+    if (!client_->Install(install_params)) {
       LOG(ERROR) << "Failed to install DLC=" << FLAGS_dlc;
       return 1;
     }
+
     LOG(INFO) << "Waiting for install to complete.";
+
     auto handler = new InstallWaitHandler(client_.get());
     handlers_.emplace_back(handler);
     client_->RegisterStatusUpdateHandler(handler);

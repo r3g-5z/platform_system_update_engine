@@ -53,6 +53,7 @@ class UpdateEngineClient {
   //     A list of DLC module IDs.
   virtual bool AttemptInstall(const std::string& omaha_url,
                               const std::vector<std::string>& dlc_ids) = 0;
+  virtual bool Install(const update_engine::InstallParams& install_params) = 0;
 
   // Returns the entire update engine status struct.
   virtual bool GetStatus(UpdateEngineStatus* out_status) const = 0;

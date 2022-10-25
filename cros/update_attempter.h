@@ -41,6 +41,7 @@
 #include "update_engine/common/service_observer_interface.h"
 #include "update_engine/common/system_state.h"
 #include "update_engine/cros/chrome_browser_proxy_resolver.h"
+#include "update_engine/cros/install_action.h"
 #include "update_engine/cros/omaha_request_builder_xml.h"
 #include "update_engine/cros/omaha_request_params.h"
 #include "update_engine/cros/omaha_response_handler_action.h"
@@ -56,9 +57,17 @@ class PolicyProvider;
 
 namespace chromeos_update_engine {
 
+// The different types of top level operations that are processed through.
+enum class ProcessMode {
+  UPDATE,
+  INSTALL,
+  SCALED_INSTALL,
+};
+
 class UpdateAttempter : public ActionProcessorDelegate,
                         public DownloadActionDelegate,
                         public CertificateChecker::Observer,
+                        public InstallActionDelegate,
                         public PostinstallRunnerAction::DelegateInterface,
                         public DaemonStateInterface {
  public:
@@ -84,6 +93,9 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // Checks for update and, if a newer version is available, attempts to update
   // the system.
   virtual void Update(const chromeos_update_manager::UpdateCheckParams& params);
+
+  // Performs a scaled install of a DLC.
+  virtual void Install();
 
   // ActionProcessorDelegate methods:
   void ProcessingDone(const ActionProcessor* processor,
@@ -150,7 +162,8 @@ class UpdateAttempter : public ActionProcessorDelegate,
 
   // This is the version of CheckForUpdate called by AttemptInstall API.
   virtual bool CheckForInstall(const std::vector<std::string>& dlc_ids,
-                               const std::string& omaha_url);
+                               const std::string& omaha_url,
+                               bool scaled = false);
 
   // This is the internal entry point for going through a rollback. This will
   // attempt to run the postinstall on the non-active partition and set it as
@@ -177,10 +190,16 @@ class UpdateAttempter : public ActionProcessorDelegate,
   // Sets the DLC as active or inactive. See chromeos/common_service.h
   virtual bool SetDlcActiveValue(bool is_active, const std::string& dlc_id);
 
+  // Broadcasts the download/install progress.
+  void ProgressUpdate(uint64_t bytes_received, uint64_t total);
+
   // DownloadActionDelegate methods:
   void BytesReceived(uint64_t bytes_progressed,
                      uint64_t bytes_received,
                      uint64_t total) override;
+
+  // InstallActionDelegate methods:
+  void BytesReceived(uint64_t bytes_received, uint64_t total) override;
 
   // Returns that the update should be canceled when the download channel was
   // changed.
@@ -317,6 +336,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest, ReportDailyMetrics);
   FRIEND_TEST(UpdateAttempterTest, RollbackNotAllowed);
   FRIEND_TEST(UpdateAttempterTest, RollbackAfterInstall);
+  FRIEND_TEST(UpdateAttempterTest, RollbackAfterScaledInstall);
   FRIEND_TEST(UpdateAttempterTest, RollbackAllowed);
   FRIEND_TEST(UpdateAttempterTest, RollbackAllowedSetAndReset);
   FRIEND_TEST(UpdateAttempterTest, ChannelDowngradeNoRollback);
@@ -334,6 +354,7 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest, TargetChannelHintSetAndReset);
   FRIEND_TEST(UpdateAttempterTest, TargetVersionPrefixSetAndReset);
   FRIEND_TEST(UpdateAttempterTest, UpdateAfterInstall);
+  FRIEND_TEST(UpdateAttempterTest, UpdateAfterScaledInstall);
   FRIEND_TEST(UpdateAttempterTest, UpdateFlagsCachedAtUpdateStart);
   FRIEND_TEST(UpdateAttempterTest, UpdateDeferredByPolicyTest);
   FRIEND_TEST(UpdateAttempterTest, UpdateIsNotRunningWhenUpdateAvailable);
@@ -347,6 +368,9 @@ class UpdateAttempter : public ActionProcessorDelegate,
   FRIEND_TEST(UpdateAttempterTest, ConsecutiveUpdateFailureMetric);
   FRIEND_TEST(UpdateAttempterTest, ResetUpdatePrefs);
   FRIEND_TEST(UpdateAttempterTest, ProcessingDoneSkipApplying);
+  FRIEND_TEST(UpdateAttempterTest, InstallZeroDlcTest);
+  FRIEND_TEST(UpdateAttempterTest, InstallSingleDlcTest);
+  FRIEND_TEST(UpdateAttempterTest, InstallMultiDlcTest);
 
   // Returns the special flags to be added to ErrorCode values based on the
   // parameters used in the current update attempt.
@@ -614,9 +638,9 @@ class UpdateAttempter : public ActionProcessorDelegate,
 
   // A list of DLC module IDs.
   std::vector<std::string> dlc_ids_;
-  // Whether the operation is install (write to the current slot not the
-  // inactive slot).
-  bool is_install_;
+
+  // What type of operation is happening/scheduled.
+  ProcessMode pm_{ProcessMode::UPDATE};
 
   // If this is not TimeDelta(), then that means staging is turned on.
   base::TimeDelta staging_wait_time_;

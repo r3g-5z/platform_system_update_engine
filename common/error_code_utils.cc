@@ -181,6 +181,8 @@ string ErrorCodeToString(ErrorCode code) {
       return "ErrorCode::kInvalidateLastUpdate";
     case ErrorCode::kOmahaUpdateIgnoredOverMetered:
       return "ErrorCode::kOmahaUpdateIgnoredOverMetered";
+    case ErrorCode::kScaledInstallationError:
+      return "ErrorCode::kScaledInstallationError";
       // Don't add a default case to let the compiler warn about newly added
       // error codes which should be added here.
   }

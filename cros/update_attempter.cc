@@ -55,6 +55,7 @@
 #include "update_engine/common/system_state.h"
 #include "update_engine/common/utils.h"
 #include "update_engine/cros/download_action_chromeos.h"
+#include "update_engine/cros/install_action.h"
 #include "update_engine/cros/omaha_request_action.h"
 #include "update_engine/cros/omaha_request_params.h"
 #include "update_engine/cros/omaha_response_handler_action.h"
@@ -107,6 +108,18 @@ constexpr TimeDelta kBroadcastThreshold = base::Seconds(10);
 // different params are passed to CheckForUpdate().
 const char kAUTestURLRequest[] = "autest";
 const char kScheduledAUTestURLRequest[] = "autest-scheduled";
+
+string ConvertToString(ProcessMode op) {
+  switch (op) {
+    case ProcessMode::UPDATE:
+      return "update";
+    case ProcessMode::INSTALL:
+      return "install";
+    case ProcessMode::SCALED_INSTALL:
+      return "scaled install";
+  }
+}
+
 }  // namespace
 
 ErrorCode GetErrorCodeForAction(AbstractAction* action, ErrorCode code) {
@@ -129,7 +142,6 @@ ErrorCode GetErrorCodeForAction(AbstractAction* action, ErrorCode code) {
 UpdateAttempter::UpdateAttempter(CertificateChecker* cert_checker)
     : processor_(new ActionProcessor()),
       cert_checker_(cert_checker),
-      is_install_(false),
       weak_ptr_factory_(this) {}
 
 UpdateAttempter::~UpdateAttempter() {
@@ -174,7 +186,7 @@ void UpdateAttempter::Init() {
 }
 
 bool UpdateAttempter::IsUpdating() {
-  return !is_install_;
+  return pm_ == ProcessMode::UPDATE;
 }
 
 bool UpdateAttempter::ScheduleUpdates() {
@@ -351,6 +363,30 @@ void UpdateAttempter::Update(const UpdateCheckParams& params) {
   // response is received, but this will prevent us from repeatedly scheduling
   // checks in the case where a response is not received.
   UpdateLastCheckedTime();
+
+  ScheduleProcessingStart();
+}
+
+void UpdateAttempter::Install() {
+  CHECK(!processor_->IsRunning());
+  processor_->set_delegate(this);
+
+  if (dlc_ids_.size() != 1) {
+    LOG(ERROR) << "Could not kick off installation.";
+    return;
+  }
+  const auto& dlc_id = dlc_ids_[0];
+
+  auto http_fetcher = std::make_unique<LibcurlHttpFetcher>(
+      GetProxyResolver(), SystemState::Get()->hardware());
+  auto install_action = std::make_unique<InstallAction>(
+      std::move(http_fetcher), dlc_id, /*slotting=*/"");
+  install_action->set_delegate(this);
+  SetOutPipe(install_action.get());
+  processor_->EnqueueAction(std::move(install_action));
+
+  // Simply go into CHECKING status.
+  SetStatusAndNotify(UpdateStatus::CHECKING_FOR_UPDATE);
 
   ScheduleProcessingStart();
 }
@@ -728,7 +764,7 @@ int64_t UpdateAttempter::GetPingMetadata(const string& metadata_key) const {
 void UpdateAttempter::CalculateDlcParams() {
   // Set the |dlc_ids_| only for an update. This is required to get the
   // currently installed DLC(s).
-  if (!is_install_ &&
+  if (IsUpdating() &&
       !SystemState::Get()->dlcservice()->GetDlcsToUpdate(&dlc_ids_)) {
     LOG(INFO) << "Failed to retrieve DLC module IDs from dlcservice. Check the "
                  "state of dlcservice, will not update DLC modules.";
@@ -739,7 +775,7 @@ void UpdateAttempter::CalculateDlcParams() {
         .active_counting_type = OmahaRequestParams::kDateBased,
         .name = dlc_id,
         .send_ping = false};
-    if (is_install_) {
+    if (!IsUpdating()) {
       // In some cases, |SetDlcActiveValue| might fail to reset the DLC prefs
       // when a DLC is uninstalled. To avoid having stale values from that
       // scenario, we reset the metadata values on a new install request.
@@ -775,7 +811,7 @@ void UpdateAttempter::CalculateDlcParams() {
     dlc_apps_params[omaha_request_params_->GetDlcAppId(dlc_id)] = dlc_params;
   }
   omaha_request_params_->set_dlc_apps_params(dlc_apps_params);
-  omaha_request_params_->set_is_install(is_install_);
+  omaha_request_params_->set_is_install(!IsUpdating());
 }
 
 void UpdateAttempter::BuildUpdateActions(bool interactive) {
@@ -864,7 +900,7 @@ void UpdateAttempter::BuildUpdateActions(bool interactive) {
 }
 
 bool UpdateAttempter::Rollback(bool powerwash) {
-  is_install_ = false;
+  pm_ = ProcessMode::UPDATE;
   if (!CanRollback()) {
     return false;
   }
@@ -963,14 +999,13 @@ bool UpdateAttempter::CheckForUpdate(
   if (status_ != UpdateStatus::IDLE &&
       status_ != UpdateStatus::UPDATED_NEED_REBOOT) {
     LOG(INFO) << "Refusing to do an update as there is an "
-              << (is_install_ ? "install" : "update")
-              << " already in progress.";
+              << ConvertToString(pm_) << " already in progress.";
     return false;
   }
 
   const auto& update_flags = update_params.update_flags();
   bool interactive = !update_flags.non_interactive();
-  is_install_ = false;
+  pm_ = ProcessMode::UPDATE;
   if (update_params.skip_applying()) {
     skip_applying_ = true;
     LOG(INFO) << "Update check is only going to query server for update, will "
@@ -1076,16 +1111,24 @@ bool UpdateAttempter::ApplyDeferredUpdate(bool shutdown) {
 }
 
 bool UpdateAttempter::CheckForInstall(const vector<string>& dlc_ids,
-                                      const string& omaha_url) {
+                                      const string& omaha_url,
+                                      bool scaled) {
   if (status_ != UpdateStatus::IDLE) {
     LOG(INFO) << "Refusing to do an install as there is an "
-              << (is_install_ ? "install" : "update")
-              << " already in progress.";
+              << ConvertToString(pm_) << " already in progress.";
     return false;
   }
 
   dlc_ids_ = dlc_ids;
-  is_install_ = true;
+  pm_ = ProcessMode::INSTALL;
+  if (scaled) {
+    pm_ = ProcessMode::SCALED_INSTALL;
+    if (dlc_ids_.size() != 1) {
+      LOG(ERROR) << "Can't install more than one scaled DLC at a time.";
+      return false;
+    }
+  }
+
   forced_omaha_url_.clear();
 
   // Certain conditions must be met to allow setting custom version and update
@@ -1170,7 +1213,7 @@ void UpdateAttempter::OnUpdateScheduled(EvalStatus status) {
     }
 
     LOG(INFO) << "Running " << (params.interactive ? "interactive" : "periodic")
-              << " update.";
+              << " " << ConvertToString(pm_);
 
     if (!params.interactive) {
       // Cache the update attempt flags that will be used by this update attempt
@@ -1178,7 +1221,15 @@ void UpdateAttempter::OnUpdateScheduled(EvalStatus status) {
       current_update_flags_ = update_flags_;
     }
 
-    Update(params);
+    switch (pm_) {
+      case ProcessMode::UPDATE:
+      case ProcessMode::INSTALL:
+        Update(params);
+        break;
+      case ProcessMode::SCALED_INSTALL:
+        Install();
+        break;
+    }
     // Always clear the forced app_version and omaha_url after an update attempt
     // so the next update uses the defaults.
     forced_app_version_.clear();
@@ -1277,10 +1328,14 @@ void UpdateAttempter::ProcessingDoneInternal(const ActionProcessor* processor,
   prefs_->Delete(kPrefsUpdateFirstSeenAt);
 
   // Note: below this comment should only be on |ErrorCode::kSuccess|.
-  if (is_install_) {
-    ProcessingDoneInstall(processor, code);
-  } else {
-    ProcessingDoneUpdate(processor, code);
+  switch (pm_) {
+    case ProcessMode::UPDATE:
+      ProcessingDoneUpdate(processor, code);
+      break;
+    case ProcessMode::INSTALL:
+    case ProcessMode::SCALED_INSTALL:
+      ProcessingDoneInstall(processor, code);
+      break;
   }
 }
 
@@ -1395,7 +1450,7 @@ void UpdateAttempter::ProcessingDone(const ActionProcessor* processor,
 
   // Note: do cleanups here for any variables that need to be reset after a
   // failure, error, update, or install.
-  is_install_ = false;
+  pm_ = ProcessMode::UPDATE;
   skip_applying_ = false;
 }
 
@@ -1491,7 +1546,15 @@ void UpdateAttempter::ActionCompleted(ActionProcessor* processor,
       cpu_limiter_.StartLimiter();
       SetStatusAndNotify(UpdateStatus::UPDATE_AVAILABLE);
     }
+  } else if (type == InstallAction::StaticType()) {
+    // TODO(b/236008158): Report metrics here.
+    if (code == ErrorCode::kSuccess) {
+      LOG(INFO) << "InstallAction succeeded.";
+    } else {
+      LOG(INFO) << "InstallAction failed.";
+    }
   }
+
   // General failure cases.
   if (code != ErrorCode::kSuccess) {
     // Best effort to invalidate the previous update by resetting the active
@@ -1557,13 +1620,7 @@ void UpdateAttempter::ActionCompleted(ActionProcessor* processor,
   }
 }
 
-void UpdateAttempter::BytesReceived(uint64_t bytes_progressed,
-                                    uint64_t bytes_received,
-                                    uint64_t total) {
-  // The PayloadState keeps track of how many bytes were actually downloaded
-  // from a given URL for the URL skipping logic.
-  SystemState::Get()->payload_state()->DownloadProgress(bytes_progressed);
-
+void UpdateAttempter::ProgressUpdate(uint64_t bytes_received, uint64_t total) {
   double progress = 0;
   if (total)
     progress = static_cast<double>(bytes_received) / static_cast<double>(total);
@@ -1573,6 +1630,19 @@ void UpdateAttempter::BytesReceived(uint64_t bytes_progressed,
   } else {
     ProgressUpdate(progress);
   }
+}
+
+void UpdateAttempter::BytesReceived(uint64_t bytes_progressed,
+                                    uint64_t bytes_received,
+                                    uint64_t total) {
+  // The PayloadState keeps track of how many bytes were actually downloaded
+  // from a given URL for the URL skipping logic.
+  SystemState::Get()->payload_state()->DownloadProgress(bytes_progressed);
+  ProgressUpdate(bytes_received, total);
+}
+
+void UpdateAttempter::BytesReceived(uint64_t bytes_received, uint64_t total) {
+  ProgressUpdate(bytes_received, total);
 }
 
 void UpdateAttempter::ResetUpdateStatus() {
@@ -1737,7 +1807,8 @@ bool UpdateAttempter::GetStatus(UpdateEngineStatus* out_status) {
   out_status->new_version = new_version_;
   out_status->is_enterprise_rollback =
       install_plan_ && install_plan_->is_rollback;
-  out_status->is_install = is_install_;
+  out_status->is_install =
+      (pm_ == ProcessMode::INSTALL || pm_ == ProcessMode::SCALED_INSTALL);
   out_status->update_urgency_internal =
       install_plan_ ? install_plan_->update_urgency
                     : update_engine::UpdateUrgencyInternal::REGULAR;
