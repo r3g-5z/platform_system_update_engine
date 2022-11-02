@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-#ifndef UPDATE_ENGINE_COMMON_DOWNLOAD_ACTION_CHROMEOS_H_
-#define UPDATE_ENGINE_COMMON_DOWNLOAD_ACTION_CHROMEOS_H_
+#ifndef UPDATE_ENGINE_CROS_DOWNLOAD_ACTION_CHROMEOS_H_
+#define UPDATE_ENGINE_CROS_DOWNLOAD_ACTION_CHROMEOS_H_
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -177,4 +177,4 @@ static_assert(8 == sizeof(off_t), "off_t not 64 bit");
 
 }  // namespace chromeos_update_engine
 
-#endif  // UPDATE_ENGINE_COMMON_DOWNLOAD_ACTION_CHROMEOS_H_
+#endif  // UPDATE_ENGINE_CROS_DOWNLOAD_ACTION_CHROMEOS_H_
