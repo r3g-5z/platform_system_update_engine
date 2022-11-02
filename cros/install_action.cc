@@ -42,7 +42,7 @@ constexpr char kLorryUrl[] = "https://dl.google.com/dlc";
 
 constexpr char kDefaultArtifact[] = "dlc.img";
 constexpr char kDefaultPackage[] = "package";
-constexpr char kDefaultSlotting[] = "dlc";
+constexpr char kDefaultSlotting[] = "dlc-scaled";
 
 constexpr char kManifestFile[] = "imageloader.json";
 
