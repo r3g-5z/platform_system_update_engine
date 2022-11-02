@@ -171,6 +171,7 @@ static_library("libpayload_consumer") {
   all_dependent_pkg_deps = [
     "libbspatch",
     "libcrypto",
+    "libimageloader-manifest",
     "libpuffpatch",
     "xz-embedded",
   ]
@@ -261,7 +262,6 @@ static_library("libupdate_engine") {
     "expat",
     "libcurl",
     "libdebugd-client",
-    "libimageloader-manifest",
     "libmetrics",
     "libpower_manager-client",
     "libsession_manager-client",

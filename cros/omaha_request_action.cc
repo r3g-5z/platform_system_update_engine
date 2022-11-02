@@ -548,8 +548,10 @@ bool OmahaRequestAction::ParseResponse(ScopedActionCompleter* completer) {
     // non-critical package installations, let the errors propagate instead
     // of being handled inside update_engine as installations are a dlcservice
     // specific feature.
-    bool can_exclude = (!params->is_install() && params->IsDlcAppId(app.id)) ||
-                       params->IsMiniOSAppId(app.id);
+    bool can_exclude =
+        (!params->is_install() && params->IsDlcAppId(app.id) &&
+         !params->dlc_apps_params().at(app.id).critical_update) ||
+        params->IsMiniOSAppId(app.id);
     if (!ParsePackage(&app, can_exclude, completer))
       return false;
   }

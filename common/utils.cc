@@ -51,6 +51,7 @@
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/data_encoding.h>
+#include <libimageloader/manifest.h>
 
 #include "update_engine/common/constants.h"
 #include "update_engine/common/platform_constants.h"
@@ -83,6 +84,9 @@ const int kGetFileFormatMaxHeaderSize = 32;
 
 // The path to the kernel's boot_id.
 const char kBootIdPath[] = "/proc/sys/kernel/random/boot_id";
+
+// DLC manifest file name.
+constexpr char kDlcManifestFile[] = "imageloader.json";
 
 // If |path| is absolute, or explicit relative to the current working directory,
 // leaves it as is. Otherwise, uses the system's temp directory, as defined by
@@ -1028,6 +1032,30 @@ ErrorCode IsTimestampNewer(const std::string& old_version,
     return ErrorCode::kPayloadTimestampError;
   }
   return ErrorCode::kSuccess;
+}
+
+std::shared_ptr<imageloader::Manifest> LoadDlcManifest(
+    const std::string& manifest_dir,
+    const std::string& id,
+    const std::string& package) {
+  std::string json_str;
+  auto manifest_path = base::FilePath(manifest_dir)
+                           .Append(id)
+                           .Append(package)
+                           .Append(kDlcManifestFile);
+
+  if (!base::ReadFileToString(manifest_path, &json_str)) {
+    LOG(ERROR) << "Failed to read manifest at " << manifest_path.value();
+    return nullptr;
+  }
+
+  auto manifest = std::make_shared<imageloader::Manifest>();
+  if (!manifest->ParseManifest(json_str)) {
+    LOG(ERROR) << "Failed to parse manifest for DLC=" << id;
+    return nullptr;
+  }
+
+  return manifest;
 }
 
 }  // namespace utils

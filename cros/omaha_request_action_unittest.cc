@@ -3191,6 +3191,23 @@ TEST_F(OmahaRequestActionTest, OmahaResponseUpdateCanExcludeCheck) {
   EXPECT_TRUE(packages[1].can_exclude);
 }
 
+TEST_F(OmahaRequestActionTest, OmahaResponseCriticalDlcUpdateNotExcludedCheck) {
+  request_params_.set_dlc_apps_params(
+      {{request_params_.GetDlcAppId(kDlcId2),
+        {.critical_update = true, .name = kDlcId2}}});
+  fake_update_response_.dlc_app_update = true;
+  tuc_params_.http_response = fake_update_response_.GetUpdateResponse();
+
+  EXPECT_CALL(mock_excluder_, IsExcluded(_)).WillRepeatedly(Return(false));
+  ASSERT_TRUE(TestUpdateCheck());
+  ASSERT_TRUE(delegate_.omaha_response_);
+  const auto& packages = delegate_.omaha_response_->packages;
+  ASSERT_EQ(packages.size(), 2);
+
+  EXPECT_FALSE(packages[0].can_exclude);
+  EXPECT_FALSE(packages[1].can_exclude);
+}
+
 TEST_F(OmahaRequestActionTest, OmahaResponseInstallCannotExcludeCheck) {
   request_params_.set_is_install(true);
   request_params_.set_dlc_apps_params(

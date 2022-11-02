@@ -32,6 +32,7 @@
 
 #include "update_engine/common/boot_control.h"
 #include "update_engine/common/system_state.h"
+#include "update_engine/common/utils.h"
 #include "update_engine/cros/image_properties.h"
 
 namespace chromeos_update_engine {
@@ -43,32 +44,6 @@ constexpr char kLorryUrl[] = "https://dl.google.com/dlc";
 constexpr char kDefaultArtifact[] = "dlc.img";
 constexpr char kDefaultPackage[] = "package";
 constexpr char kDefaultSlotting[] = "dlc-scaled";
-
-constexpr char kManifestFile[] = "imageloader.json";
-
-std::shared_ptr<imageloader::Manifest> LoadManifest(
-    const std::string& manifest_dir,
-    const std::string& id,
-    const std::string& package) {
-  std::string json_str;
-  auto manifest_path = base::FilePath(manifest_dir)
-                           .Append(id)
-                           .Append(package)
-                           .Append(kManifestFile);
-
-  if (!base::ReadFileToString(manifest_path, &json_str)) {
-    LOG(ERROR) << "Failed to read manifest at " << manifest_path.value();
-    return nullptr;
-  }
-
-  auto manifest = std::make_shared<imageloader::Manifest>();
-  if (!manifest->ParseManifest(json_str)) {
-    LOG(ERROR) << "Failed to parse manifest for DLC=" << id;
-    return nullptr;
-  }
-
-  return manifest;
-}
 }  // namespace
 
 InstallAction::InstallAction(std::unique_ptr<HttpFetcher> http_fetcher,
@@ -88,7 +63,7 @@ InstallAction::~InstallAction() {}
 void InstallAction::PerformAction() {
   LOG(INFO) << "InstallAction performing action.";
 
-  manifest_ = LoadManifest(manifest_dir_, id_, kDefaultPackage);
+  manifest_ = utils::LoadDlcManifest(manifest_dir_, id_, kDefaultPackage);
   if (!manifest_) {
     LOG(ERROR) << "Could not retrieve manifest for " << id_;
     processor_->ActionComplete(this, ErrorCode::kScaledInstallationError);

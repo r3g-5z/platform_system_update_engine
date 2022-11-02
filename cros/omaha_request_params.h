@@ -62,6 +62,9 @@ class OmahaRequestParams {
 
   struct AppParams {
     ActiveCountingType active_counting_type;
+    // `critical_update` DLCs update with the OS, and will not be excluded if
+    // encountered error.
+    bool critical_update = false;
     // |name| is only used for DLCs to store the DLC ID.
     std::string name;
     int64_t ping_active;

@@ -37,6 +37,7 @@
 #include <brillo/data_encoding.h>
 #include <brillo/errors/error_codes.h>
 #include <brillo/message_loops/message_loop.h>
+#include <chromeos/constants/imageloader.h>
 #include <policy/device_policy.h>
 #include <policy/libpolicy.h>
 #include <update_engine/dbus-constants.h>
@@ -108,6 +109,9 @@ constexpr TimeDelta kBroadcastThreshold = base::Seconds(10);
 // different params are passed to CheckForUpdate().
 const char kAUTestURLRequest[] = "autest";
 const char kScheduledAUTestURLRequest[] = "autest-scheduled";
+
+// The default DLC package name.
+constexpr char kDlcPackage[] = "package";
 
 string ConvertToString(ProcessMode op) {
   switch (op) {
@@ -771,8 +775,15 @@ void UpdateAttempter::CalculateDlcParams() {
   }
   map<string, OmahaRequestParams::AppParams> dlc_apps_params;
   for (const auto& dlc_id : dlc_ids_) {
+    const auto& manifest = utils::LoadDlcManifest(
+        imageloader::kDlcManifestRootpath, dlc_id, kDlcPackage);
+    if (!manifest) {
+      LOG(ERROR) << "Unable to load the manifest for DLC '" << dlc_id
+                 << "', treat it as a non-critical DLC.";
+    }
     OmahaRequestParams::AppParams dlc_params{
         .active_counting_type = OmahaRequestParams::kDateBased,
+        .critical_update = manifest && manifest->critical_update(),
         .name = dlc_id,
         .send_ping = false};
     if (!IsUpdating()) {
