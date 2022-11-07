@@ -38,7 +38,7 @@
 namespace chromeos_update_engine {
 
 namespace {
-constexpr char kBandaidUrl[] = "https://redirector.gvt1.com/edgedl/dlc";
+constexpr char kBandaidUrl[] = "https://edgedl.me.gvt1.com/edgedl/dlc";
 constexpr char kLorryUrl[] = "https://dl.google.com/dlc";
 
 constexpr char kDefaultArtifact[] = "dlc.img";
