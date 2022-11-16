@@ -790,7 +790,7 @@ void UpdateAttempterTest::UpdateTestStart() {
   // Expect that the device policy is loaded by the |UpdateAttempter| at some
   // point by calling |RefreshDevicePolicy()|.
   auto device_policy = std::make_unique<policy::MockDevicePolicy>();
-  EXPECT_CALL(*device_policy, LoadPolicy())
+  EXPECT_CALL(*device_policy, LoadPolicy(false))
       .Times(testing::AtLeast(1))
       .WillRepeatedly(Return(true));
   attempter_.policy_provider_.reset(
@@ -823,7 +823,7 @@ void UpdateAttempterTest::RollbackTestStart(bool enterprise_rollback,
                                             bool valid_slot) {
   // Create a device policy so that we can change settings.
   auto device_policy = std::make_unique<policy::MockDevicePolicy>();
-  EXPECT_CALL(*device_policy, LoadPolicy()).WillRepeatedly(Return(true));
+  EXPECT_CALL(*device_policy, LoadPolicy(false)).WillRepeatedly(Return(true));
   FakeSystemState::Get()->set_device_policy(device_policy.get());
   if (enterprise_rollback) {
     // We return an empty owner as this is an enterprise.
@@ -1116,7 +1116,7 @@ void UpdateAttempterTest::ReadScatterFactorFromPolicyTestStart() {
   int64_t scatter_factor_in_seconds = 36000;
 
   auto device_policy = std::make_unique<policy::MockDevicePolicy>();
-  EXPECT_CALL(*device_policy, LoadPolicy()).WillRepeatedly(Return(true));
+  EXPECT_CALL(*device_policy, LoadPolicy(false)).WillRepeatedly(Return(true));
   FakeSystemState::Get()->set_device_policy(device_policy.get());
 
   EXPECT_CALL(*device_policy, GetScatterFactorInSeconds(_))
@@ -1152,7 +1152,7 @@ void UpdateAttempterTest::DecrementUpdateCheckCountTestStart() {
   int64_t scatter_factor_in_seconds = 10;
 
   auto device_policy = std::make_unique<policy::MockDevicePolicy>();
-  EXPECT_CALL(*device_policy, LoadPolicy()).WillRepeatedly(Return(true));
+  EXPECT_CALL(*device_policy, LoadPolicy(false)).WillRepeatedly(Return(true));
   FakeSystemState::Get()->set_device_policy(device_policy.get());
 
   EXPECT_CALL(*device_policy, GetScatterFactorInSeconds(_))
@@ -1211,7 +1211,7 @@ void UpdateAttempterTest::NoScatteringDoneDuringManualUpdateTestStart() {
   int64_t scatter_factor_in_seconds = 50;
 
   auto device_policy = std::make_unique<policy::MockDevicePolicy>();
-  EXPECT_CALL(*device_policy, LoadPolicy()).WillRepeatedly(Return(true));
+  EXPECT_CALL(*device_policy, LoadPolicy(false)).WillRepeatedly(Return(true));
   FakeSystemState::Get()->set_device_policy(device_policy.get());
 
   EXPECT_CALL(*device_policy, GetScatterFactorInSeconds(_))
@@ -1246,7 +1246,7 @@ void UpdateAttempterTest::SetUpStagingTest(const StagingSchedule& schedule) {
   attempter_.scatter_factor_ = base::Seconds(20);
 
   auto device_policy = std::make_unique<policy::MockDevicePolicy>();
-  EXPECT_CALL(*device_policy, LoadPolicy()).WillRepeatedly(Return(true));
+  EXPECT_CALL(*device_policy, LoadPolicy(false)).WillRepeatedly(Return(true));
   FakeSystemState::Get()->set_device_policy(device_policy.get());
   EXPECT_CALL(*device_policy, GetDeviceUpdateStagingSchedule(_))
       .WillRepeatedly(DoAll(SetArgPointee<0>(schedule), Return(true)));
