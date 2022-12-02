@@ -50,6 +50,7 @@
 #include "update_engine/common/utils.h"
 #include "update_engine/payload_consumer/partition_update_generator_interface.h"
 #include "update_engine/payload_consumer/partition_writer.h"
+#include "update_engine/update_metadata.pb.h"
 #if USE_FEC
 #include "update_engine/payload_consumer/fec_file_descriptor.h"
 #endif  // USE_FEC
@@ -199,6 +200,9 @@ bool DeltaPerformer::HandleOpResult(bool op_result,
 }
 
 int DeltaPerformer::Close() {
+  // Checkpoint update progress before canceling, so that subsequent attempts
+  // can resume from exactly where update_engine left last time.
+  CheckpointUpdateProgress(true);
   int err = -CloseCurrentPartition();
   LOG_IF(ERROR,
          !payload_hash_calculator_.Finalize() ||
@@ -461,6 +465,28 @@ bool DeltaPerformer::Write(const void* bytes, size_t count, ErrorCode* error) {
     block_size_ = manifest_.block_size();
 
     CheckSPLDowngrade();
+
+    // update estimate_cow_size if VABC is disabled
+    // new_cow_size per partition = partition_size - (#blocks in Copy
+    // operations part of the partition)
+    if (install_plan_->disable_vabc) {
+      LOG(INFO) << "Disabling VABC";
+      manifest_.mutable_dynamic_partition_metadata()
+          ->set_vabc_compression_param("none");
+      for (auto& partition : *manifest_.mutable_partitions()) {
+        int new_cow_size = partition.new_partition_info().size();
+        for (const auto& operation : partition.merge_operations()) {
+          if (operation.type() == CowMergeOperation::COW_COPY) {
+            new_cow_size -=
+                operation.dst_extent().num_blocks() * manifest_.block_size();
+          }
+        }
+        // Adding extra 8MB headroom. OTA will sometimes write labels/metadata
+        // to COW image. If we overrun reserved COW size, entire OTA will fail
+        // and no way for user to retry OTA
+        partition.set_estimate_cow_size(new_cow_size + (1024 * 1024 * 8));
+      }
+    }
 
     // This populates |partitions_| and the |install_plan.partitions| with the
     // list of partitions from the manifest.
@@ -1223,43 +1249,66 @@ bool DeltaPerformer::CanResumeUpdate(PrefsInterface* prefs,
                                      const string& update_check_response_hash) {
   int64_t next_operation = kUpdateStateOperationInvalid;
   if (!(prefs->GetInt64(kPrefsUpdateStateNextOperation, &next_operation) &&
-        next_operation != kUpdateStateOperationInvalid && next_operation > 0))
+        next_operation != kUpdateStateOperationInvalid && next_operation > 0)) {
+    LOG(WARNING) << "Failed to resume update " << kPrefsUpdateStateNextOperation
+                 << " invalid: " << next_operation;
     return false;
+  }
 
   string interrupted_hash;
   if (!(prefs->GetString(kPrefsUpdateCheckResponseHash, &interrupted_hash) &&
         !interrupted_hash.empty() &&
-        interrupted_hash == update_check_response_hash))
+        interrupted_hash == update_check_response_hash)) {
+    LOG(WARNING) << "Failed to resume update " << kPrefsUpdateCheckResponseHash
+                 << " mismatch, last hash: " << interrupted_hash
+                 << ", current hash: " << update_check_response_hash << "";
     return false;
+  }
 
   int64_t resumed_update_failures{};
   // Note that storing this value is optional, but if it is there it should
   // not be more than the limit.
   if (prefs->GetInt64(kPrefsResumedUpdateFailures, &resumed_update_failures) &&
-      resumed_update_failures > kMaxResumedUpdateFailures)
+      resumed_update_failures > kMaxResumedUpdateFailures) {
+    LOG(WARNING) << "Failed to resume update " << kPrefsResumedUpdateFailures
+                 << " invalid: " << resumed_update_failures;
     return false;
+  }
 
   // Validation check the rest.
   int64_t next_data_offset = -1;
   if (!(prefs->GetInt64(kPrefsUpdateStateNextDataOffset, &next_data_offset) &&
-        next_data_offset >= 0))
+        next_data_offset >= 0)) {
+    LOG(WARNING) << "Failed to resume update "
+                 << kPrefsUpdateStateNextDataOffset
+                 << " invalid: " << next_data_offset;
     return false;
+  }
 
   string sha256_context;
   if (!(prefs->GetString(kPrefsUpdateStateSHA256Context, &sha256_context) &&
-        !sha256_context.empty()))
+        !sha256_context.empty())) {
+    LOG(WARNING) << "Failed to resume update " << kPrefsUpdateStateSHA256Context
+                 << " is empty.";
     return false;
+  }
 
   int64_t manifest_metadata_size = 0;
   if (!(prefs->GetInt64(kPrefsManifestMetadataSize, &manifest_metadata_size) &&
-        manifest_metadata_size > 0))
+        manifest_metadata_size > 0)) {
+    LOG(WARNING) << "Failed to resume update " << kPrefsManifestMetadataSize
+                 << " invalid: " << manifest_metadata_size;
     return false;
+  }
 
   int64_t manifest_signature_size = 0;
   if (!(prefs->GetInt64(kPrefsManifestSignatureSize,
                         &manifest_signature_size) &&
-        manifest_signature_size >= 0))
+        manifest_signature_size >= 0)) {
+    LOG(WARNING) << "Failed to resume update " << kPrefsManifestSignatureSize
+                 << " invalid: " << manifest_signature_size;
     return false;
+  }
 
   return true;
 }

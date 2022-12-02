@@ -266,16 +266,8 @@ bool UpdateAttempterAndroid::ApplyPayload(
                             DeltaPerformer::CanResumeUpdate(prefs_, payload_id);
   if (!install_plan_.is_resume) {
     boot_control_->GetDynamicPartitionControl()->Cleanup();
-    // No need to reset dynamic_partititon_metadata_updated. If previous calls
-    // to AllocateSpaceForPayload uses the same payload_id, reuse preallocated
-    // space. Otherwise, DeltaPerformer re-allocates space when the payload is
-    // applied.
-    if (!DeltaPerformer::ResetUpdateProgress(
-            prefs_,
-            false /* quick */,
-            true /* skip_dynamic_partititon_metadata_updated */)) {
-      LOG(WARNING) << "Unable to reset the update progress.";
-    }
+    boot_control_->GetDynamicPartitionControl()->ResetUpdate(prefs_);
+
     if (!prefs_->SetString(kPrefsUpdateCheckResponseHash, payload_id)) {
       LOG(WARNING) << "Unable to save the update check response hash.";
     }
@@ -331,6 +323,10 @@ bool UpdateAttempterAndroid::ApplyPayload(
     LOG(FATAL) << "Unsupported sideload URI: " << payload_url;
 #else
     LibcurlHttpFetcher* libcurl_fetcher = new LibcurlHttpFetcher(hardware_);
+    if (!headers[kPayloadDownloadRetry].empty()) {
+      libcurl_fetcher->set_max_retry_count(
+          atoi(headers[kPayloadDownloadRetry].c_str()));
+    }
     libcurl_fetcher->set_server_to_check(ServerToCheck::kDownload);
     fetcher = libcurl_fetcher;
 #endif  // _UE_SIDELOAD
@@ -345,6 +341,9 @@ bool UpdateAttempterAndroid::ApplyPayload(
     LOG(INFO) << "Using proxy url from payload headers: "
               << headers[kPayloadPropertyNetworkProxy];
     fetcher->SetProxies({headers[kPayloadPropertyNetworkProxy]});
+  }
+  if (!headers[kPayloadDisableVABC].empty()) {
+    install_plan_.disable_vabc = true;
   }
 
   BuildUpdateActions(fetcher);
@@ -430,7 +429,7 @@ bool UpdateAttempterAndroid::ResetStatus(brillo::ErrorPtr* error) {
 
   if (!boot_control_->GetDynamicPartitionControl()->ResetUpdate(prefs_)) {
     LOG(WARNING) << "Failed to reset snapshots. UpdateStatus is IDLE but"
-                  << "space might not be freed.";
+                 << "space might not be freed.";
   }
   switch (status_) {
     case UpdateStatus::IDLE: {
@@ -1230,6 +1229,7 @@ bool UpdateAttempterAndroid::resetShouldSwitchSlotOnReboot(
     return LogAndSetError(
         error, FROM_HERE, "Already processing an update, cancel it first.");
   }
+  TEST_AND_RETURN_FALSE(ClearUpdateCompletedMarker());
   // Update the boot flags so the current slot has higher priority.
   if (!boot_control_->SetActiveBootSlot(GetCurrentSlot())) {
     return LogAndSetError(error, FROM_HERE, "Failed to SetActiveBootSlot");
